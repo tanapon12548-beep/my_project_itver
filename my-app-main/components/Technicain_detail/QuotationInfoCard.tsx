@@ -90,7 +90,7 @@ export default function QuotationInfoCard({
         bg: 'bg-amber-50',
         border: 'border-amber-300',
         text: 'text-amber-800',
-        label: 'ขอแก้ไข/เพิ่มเติมรายการ ⚠️',
+          label: 'ขอแก้ไข/เพิ่มเติมรายการ',
         icon: 'alert-circle-outline' as const,
       };
     }
@@ -142,7 +142,7 @@ export default function QuotationInfoCard({
               </Text>
             </View>
             <Text className="text-xs text-amber-950 font-medium pl-4">
-              "{quotation.customer_remark}"
+              &ldquo;{quotation.customer_remark}&rdquo;
             </Text>
           </View>
         ) : null}

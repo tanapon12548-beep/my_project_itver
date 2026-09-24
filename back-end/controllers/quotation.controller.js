@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const quotationQueries = require('../queries/quotation.queries');
 
 /**
  * POST /api/quotations
@@ -32,9 +33,7 @@ exports.create = async (req, res, next) => {
 
     // 1. สร้าง quotation
     const qResult = await pool.query(
-      `INSERT INTO quotation (job_id, total_repair_price, total_cancel_price, quote_status_id)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
+      quotationQueries.INSERT_QUOTATION,
       [numJobId, repairPrice, cancelPrice, isNaN(safeQuoteStatus) ? 1 : safeQuoteStatus]
     );
 
@@ -42,12 +41,7 @@ exports.create = async (req, res, next) => {
 
     // 2. อัปเดต repair_job (quotation_id, actual_symptom, total_amount, status_id = 4 [รอการอนุมัติ])
     await pool.query(
-      `UPDATE repair_job 
-       SET quotation_id = $1,
-           actual_symptom = COALESCE($2, actual_symptom),
-           total_amount = $3,
-           status_id = 4
-       WHERE job_id = $4`,
+      quotationQueries.UPDATE_REPAIR_FOR_NEW_QUOTATION,
       [quotation.quotation_id, diagnosedSymptom, repairPrice || cancelPrice, numJobId]
     );
 
@@ -62,17 +56,11 @@ exports.create = async (req, res, next) => {
           const price = Math.max(0, parseFloat(p.price || 0));
           let itemId = p.item_id || null;
           if (!itemId && p.name) {
-            const existItem = await pool.query(
-              'SELECT item_id FROM item WHERE LOWER(TRIM(item_name)) = LOWER(TRIM($1))',
-              [p.name.trim()]
-            );
+            const existItem = await pool.query(quotationQueries.FIND_ITEM_BY_NAME, [p.name.trim()]);
             if (existItem.rows.length > 0) {
               itemId = existItem.rows[0].item_id;
             } else {
-              const newItem = await pool.query(
-                'INSERT INTO item (item_name, item_type_id, selling_price) VALUES ($1, 1, $2) RETURNING item_id',
-                [p.name.trim(), price]
-              );
+              const newItem = await pool.query(quotationQueries.INSERT_NEW_ITEM, [p.name.trim(), price]);
               itemId = newItem.rows[0].item_id;
             }
           }
@@ -90,10 +78,7 @@ exports.create = async (req, res, next) => {
           const price = Math.max(0, parseFloat(s.price || 0));
           let itemId = s.item_id || null;
           if (!itemId && s.name) {
-            const existItem = await pool.query(
-              'SELECT item_id FROM item WHERE LOWER(TRIM(item_name)) = LOWER(TRIM($1))',
-              [s.name.trim()]
-            );
+            const existItem = await pool.query(quotationQueries.FIND_ITEM_BY_NAME, [s.name.trim()]);
             if (existItem.rows.length > 0) {
               itemId = existItem.rows[0].item_id;
             } else {
@@ -117,8 +102,7 @@ exports.create = async (req, res, next) => {
     // 4. Insert quotation_details
     for (const item of combinedItems) {
       await pool.query(
-        `INSERT INTO quotation_details (quote_id, item_id, quantity, unit_price, total_price)
-         VALUES ($1, $2, $3, $4, $5)`,
+        quotationQueries.INSERT_QUOTATION_DETAIL,
         [quotation.quotation_id, item.item_id, item.quantity, item.unit_price, item.total_price]
       );
     }
@@ -140,28 +124,14 @@ exports.getById = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'ID ใบเสนอราคาไม่ถูกต้อง' });
     }
 
-    const { rows } = await pool.query(
-      `SELECT q.*, qs.quote_status_name, rj.symptom_details, rj.actual_symptom
-       FROM quotation q
-       LEFT JOIN quotation_status qs ON q.quote_status_id = qs.quote_status_id
-       LEFT JOIN repair_job rj ON q.job_id = rj.job_id
-       WHERE q.quotation_id = $1`,
-      [numId]
-    );
+    const { rows } = await pool.query(quotationQueries.GET_QUOTATION_BY_ID, [numId]);
 
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'ไม่พบใบเสนอราคา' });
     }
 
     // ดึง details
-    const detailsRes = await pool.query(
-      `SELECT qd.*, i.item_name, i.item_type_id, it.item_type_name
-       FROM quotation_details qd
-       LEFT JOIN item i ON qd.item_id = i.item_id
-       LEFT JOIN item_type it ON i.item_type_id = it.item_type_id
-       WHERE qd.quote_id = $1`,
-      [numId]
-    );
+    const detailsRes = await pool.query(quotationQueries.GET_QUOTATION_DETAILS, [numId]);
 
     const items = detailsRes.rows;
     const parts = items.filter(it => it.item_type_id === 1);
@@ -223,36 +193,7 @@ exports.getAll = async (req, res, next) => {
       paramIdx++;
     }
 
-    const query = `
-      SELECT 
-        q.*,
-        'QUO-' || LPAD(q.quotation_id::text, 6, '0') AS quote_no,
-        'REP-' || LPAD(rj.job_id::text, 6, '0') AS job_no,
-        rj.status_id AS repair_status_id,
-        s.status_name AS repair_status_name,
-        rj.symptom_details,
-        rj.actual_symptom,
-        COALESCE(qs.quote_status_name, 'รอการอนุมัติ') AS quote_status_name,
-        COALESCE(p.first_name || ' ' || p.last_name, 'ไม่ระบุ') AS customer_name,
-        p.first_name, p.last_name, p.phone, p.email,
-        d.device_id, d.model, d.serial_number,
-        COALESCE(b.brand_name, '-') AS brand,
-        COALESCE(dt.device_type_name, '-') AS device_type,
-        COALESCE(q.total_repair_price, 0) AS total_parts,
-        0 AS total_services,
-        0 AS item_count
-      FROM quotation q
-      JOIN repair_job rj ON q.job_id = rj.job_id
-      LEFT JOIN quotation_status qs ON q.quote_status_id = qs.quote_status_id
-      LEFT JOIN status s ON rj.status_id = s.status_id
-      LEFT JOIN device d ON rj.device_id = d.device_id
-      LEFT JOIN device_types dt ON d.device_type_id = dt.device_type_id
-      LEFT JOIN brands b ON d.brand_id = b.brand_id
-      LEFT JOIN profiles p ON d.customer_id = p.id
-      ${whereClause}
-      ORDER BY q.quotation_id DESC
-    `;
-
+    const query = quotationQueries.BUILD_GET_ALL_QUOTATIONS(whereClause);
     const { rows } = await pool.query(query, params);
     res.json({ success: true, data: rows });
   } catch (err) {
@@ -287,16 +228,11 @@ exports.update = async (req, res, next) => {
     const rawCancel = total_cancel_price !== undefined ? total_cancel_price : 300;
     const repairPrice = Math.max(0, parseFloat(rawRepair) || 0);
     const cancelPrice = Math.max(0, parseFloat(rawCancel) || 0);
-    const nextQuoteStatus = quote_status_id ? parseInt(quote_status_id, 10) : 1; // 1: รอการอนุมัติ
+    const nextQuoteStatus = quote_status_id ? parseInt(quote_status_id, 10) : 1;
 
     // 1. อัปเดตใบเสนอราคา
     const { rows } = await pool.query(
-      `UPDATE quotation 
-       SET total_repair_price = $1, 
-           total_cancel_price = $2, 
-           quote_status_id = $3
-       WHERE quotation_id = $4
-       RETURNING *`,
+      quotationQueries.UPDATE_QUOTATION,
       [repairPrice, cancelPrice, isNaN(nextQuoteStatus) ? 1 : nextQuoteStatus, numId]
     );
 
@@ -310,15 +246,10 @@ exports.update = async (req, res, next) => {
     // 2. อัปเดตตาราง repair_job: ดันสถานะเป็น 4 (รออนุมัติ) และอัปเดตยอดรวม + อาการเสียจริง
     if (jobId) {
       await pool.query(
-        `UPDATE repair_job 
-         SET total_amount = $1,
-             status_id = 4,
-             actual_symptom = COALESCE($2, actual_symptom)
-         WHERE job_id = $3`,
+        quotationQueries.UPDATE_REPAIR_ON_QUOTATION_EDIT,
         [repairPrice, actual_symptom || null, jobId]
       );
 
-      // บันทึก action log (action_type_id: 3 = เสนอราคา/ปรับปรุงใบเสนอราคา)
       try {
         await pool.query(
           `INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark)
@@ -341,17 +272,11 @@ exports.update = async (req, res, next) => {
           const price = Math.max(0, parseFloat(p.price || 0));
           let itemId = p.item_id || null;
           if (!itemId && p.name) {
-            const existItem = await pool.query(
-              'SELECT item_id FROM item WHERE LOWER(TRIM(item_name)) = LOWER(TRIM($1))',
-              [p.name.trim()]
-            );
+            const existItem = await pool.query(quotationQueries.FIND_ITEM_BY_NAME, [p.name.trim()]);
             if (existItem.rows.length > 0) {
               itemId = existItem.rows[0].item_id;
             } else {
-              const newItem = await pool.query(
-                'INSERT INTO item (item_name, item_type_id, selling_price) VALUES ($1, 1, $2) RETURNING item_id',
-                [p.name.trim(), price]
-              );
+              const newItem = await pool.query(quotationQueries.INSERT_NEW_ITEM, [p.name.trim(), price]);
               itemId = newItem.rows[0].item_id;
             }
           }
@@ -369,10 +294,7 @@ exports.update = async (req, res, next) => {
           const price = Math.max(0, parseFloat(s.price || 0));
           let itemId = s.item_id || null;
           if (!itemId && s.name) {
-            const existItem = await pool.query(
-              'SELECT item_id FROM item WHERE LOWER(TRIM(item_name)) = LOWER(TRIM($1))',
-              [s.name.trim()]
-            );
+            const existItem = await pool.query(quotationQueries.FIND_ITEM_BY_NAME, [s.name.trim()]);
             if (existItem.rows.length > 0) {
               itemId = existItem.rows[0].item_id;
             } else {
@@ -395,11 +317,10 @@ exports.update = async (req, res, next) => {
 
     // 4. ลบของเก่าแล้วใส่ของใหม่
     if (combinedItems.length > 0) {
-      await pool.query('DELETE FROM quotation_details WHERE quote_id = $1', [numId]);
+      await pool.query(quotationQueries.DELETE_QUOTATION_DETAILS, [numId]);
       for (const item of combinedItems) {
         await pool.query(
-          `INSERT INTO quotation_details (quote_id, item_id, quantity, unit_price, total_price)
-           VALUES ($1, $2, $3, $4, $5)`,
+          quotationQueries.INSERT_QUOTATION_DETAIL,
           [numId, item.item_id, item.quantity, item.unit_price, item.total_price]
         );
       }
@@ -423,28 +344,19 @@ exports.delete = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'ID ใบเสนอราคาไม่ถูกต้อง' });
     }
 
-    // 1. ตรวจสอบว่ามีใบเสนอราคานี้หรือไม่
     const { rows: qRows } = await pool.query('SELECT * FROM quotation WHERE quotation_id = $1', [numId]);
     if (qRows.length === 0) {
       return res.status(404).json({ success: false, message: 'ไม่พบใบเสนอราคา' });
     }
     const q = qRows[0];
 
-    // 2. ลบรายละเอียดใบเสนอราคา
-    await pool.query('DELETE FROM quotation_details WHERE quote_id = $1', [numId]);
+    // ลบรายละเอียดใบเสนอราคา
+    await pool.query(quotationQueries.DELETE_QUOTATION_DETAILS, [numId]);
 
-    // 3. ปลดการเชื่อมโยงจาก repair_job และถอยสถานะเป็น 2 (ดำเนินการตรวจเช็ค)
+    // ปลดการเชื่อมโยงจาก repair_job และถอยสถานะเป็น 2 (ดำเนินการตรวจเช็ค)
     if (q.job_id) {
-      await pool.query(
-        `UPDATE repair_job 
-         SET quotation_id = NULL, 
-             total_amount = 0,
-             status_id = 2
-         WHERE job_id = $1 OR quotation_id = $2`,
-        [q.job_id, numId]
-      );
+      await pool.query(quotationQueries.RESET_REPAIR_ON_DELETE_QUOTATION, [q.job_id, numId]);
 
-      // บันทึก action log
       try {
         await pool.query(
           `INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark)
@@ -456,8 +368,8 @@ exports.delete = async (req, res, next) => {
       }
     }
 
-    // 4. ลบใบเสนอราคา
-    await pool.query('DELETE FROM quotation WHERE quotation_id = $1', [numId]);
+    // ลบใบเสนอราคา
+    await pool.query(quotationQueries.DELETE_QUOTATION, [numId]);
 
     res.json({ success: true, message: 'ลบใบเสนอราคาเรียบร้อยแล้ว' });
   } catch (err) {
@@ -504,7 +416,6 @@ exports.updateStatus = async (req, res, next) => {
 
     // Logic จัดการ Status งานซ่อมหลัก
     if (statusNum === 3) {
-      // ลูกค้ายกเลิกซ่อม -> ดันงานไปสถานะ 9 (ยกเลิกซ่อม) ค่าบริการตรวจเช็ค 300 บาท
       const cancelPrice = Number(quotation.total_cancel_price) || 300;
       await pool.query(
         'UPDATE repair_job SET status_id = 9, total_amount = $2 WHERE job_id = $1 OR quotation_id = $3',
@@ -521,7 +432,6 @@ exports.updateStatus = async (req, res, next) => {
         }
       }
     } else if (statusNum === 2) {
-      // ลูกค้ายืนยันซ่อม -> ดันงานไปสถานะ 5 (อนุมัติแล้ว/รอซ่อม)
       const repairPrice = Number(quotation.total_repair_price) || 0;
       await pool.query(
         'UPDATE repair_job SET status_id = 5, total_amount = CASE WHEN $2 > 0 THEN $2 ELSE total_amount END WHERE job_id = $1 OR quotation_id = $3',
@@ -538,7 +448,6 @@ exports.updateStatus = async (req, res, next) => {
         }
       }
     } else if (statusNum === 4 || statusNum === 5) {
-      // ลูกค้าขอแก้ไข/เพิ่มเติมรายการ (ตีกลับ) -> ถอยงานกลับไปสถานะ 3 (ดำเนินการเสนอราคา)
       await pool.query('UPDATE repair_job SET status_id = 3 WHERE job_id = $1 OR quotation_id = $2', [jobId, id]);
       if (jobId) {
         try {
@@ -551,7 +460,6 @@ exports.updateStatus = async (req, res, next) => {
         }
       }
     } else if (statusNum === 1) {
-      // ช่างอัปเดตใบเสนอราคากลับเป็น "รอลูกค้ายืนยัน" -> ดันงานไปสถานะ 4 (รออนุมัติ)
       await pool.query('UPDATE repair_job SET status_id = 4 WHERE job_id = $1 OR quotation_id = $2', [jobId, id]);
     }
 
@@ -560,4 +468,3 @@ exports.updateStatus = async (req, res, next) => {
     next(err);
   }
 };
-

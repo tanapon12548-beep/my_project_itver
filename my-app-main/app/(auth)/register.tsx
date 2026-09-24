@@ -1,5 +1,5 @@
 import { usePasswordStrength } from '@/hooks/use-password-strength';
-import { register, getRoleRedirectPath, User } from '@/lib/auth';
+import { register } from '@/lib/auth';
 import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -108,7 +108,7 @@ export default function RegisterScreen() {
 
 
 
-  const handleAuthSuccess = (user: User) => {
+  const handleAuthSuccess = () => {
     setToastMessage('ลงทะเบียนสำเร็จ');
     setPendingRedirect('/login');
     setShowToast(true);
@@ -133,14 +133,14 @@ export default function RegisterScreen() {
 
     setLoading(true);
     try {
-      const { user } = await register({
+      await register({
         email: email.trim(),
         password,
         first_name: firstName.trim(),
         last_name: lastName.trim(),
         phone: phone.replace(/-/g, ''),
       });
-      handleAuthSuccess(user);
+      handleAuthSuccess();
     } catch (err: any) {
       showAlert('ลงทะเบียนล้มเหลว', err.message || 'เกิดข้อผิดพลาด');
     } finally {
@@ -272,7 +272,7 @@ export default function RegisterScreen() {
 
             {/* Submit Button */}
             <TouchableOpacity
-              className={`rounded-xl py-4 justify-center items-center mt-4 ${isSubmitDisabled ? 'bg-[#D32F2F]/40' : 'bg-[#D32F2F] shadow-lg shadow-[#D32F2F]/20 elevation-4'}`}
+              className={`rounded-xl h-[52px] justify-center items-center mt-4 ${isSubmitDisabled ? 'bg-[#DC2626]/40' : 'bg-[#DC2626] shadow-lg shadow-[#DC2626]/20 elevation-4'}`}
               onPress={handleRegister}
               disabled={isSubmitDisabled}
               activeOpacity={0.8}
@@ -280,7 +280,7 @@ export default function RegisterScreen() {
               {loading ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <Text className="text-white text-base font-bold">
+                <Text className="text-white text-base font-bold font-heading">
                   ลงทะเบียน
                 </Text>
               )}
@@ -291,11 +291,12 @@ export default function RegisterScreen() {
 
             {/* Link back to Login */}
             <TouchableOpacity
-              className="items-center py-2.5"
+              className="items-center py-2.5 min-h-[44px] justify-center"
               onPress={() => router.replace('/login')}
               activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text className="text-slate-500 text-sm underline">
+              <Text className="text-slate-600 text-sm font-body underline">
                 มีบัญชีแล้ว? เข้าสู่ระบบ
               </Text>
             </TouchableOpacity>

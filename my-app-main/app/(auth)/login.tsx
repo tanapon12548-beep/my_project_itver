@@ -31,6 +31,7 @@ export default function LoginScreen() {
   // ── Toast ──
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [toastSubtitle, setToastSubtitle] = useState('');
   const [pendingRedirect, setPendingRedirect] = useState<string | null>(null);
 
   // ── Validation errors ──
@@ -82,6 +83,8 @@ export default function LoginScreen() {
 
   const handleAuthSuccess = (user: User) => {
     setToastMessage('เข้าสู่ระบบสำเร็จ');
+    const name = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
+    setToastSubtitle(`ยินดีต้อนรับ ${name} (${user.role_name})`);
     setPendingRedirect(getRoleRedirectPath(user));
     setShowToast(true);
   };
@@ -133,15 +136,17 @@ export default function LoginScreen() {
   // ════════════════════════════════════════════════════════
 
   return (
-    <SafeAreaView className="flex-1 bg-[#D32F2F]">
+    <SafeAreaView className="flex-1 bg-[#DC2626]">
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar barStyle="light-content" backgroundColor="#cc292b" />
+      <StatusBar barStyle="light-content" backgroundColor="#DC2626" />
 
       <SuccessToast
         visible={showToast}
         message={toastMessage}
+        subtitle={toastSubtitle}
         type="success"
-        duration={2000}
+        duration={1600}
+        showProgress={true}
         onHide={handleToastHide}
       />
 
@@ -156,7 +161,7 @@ export default function LoginScreen() {
         >
           {/* ═══ Red Header ═══ */}
           <View 
-            className="bg-[#D32F2F] pb-10 px-6 relative overflow-hidden"
+            className="bg-[#DC2626] pb-10 px-6 relative overflow-hidden"
             style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 40 : 60 }}
           >
             <View className="absolute w-[250px] h-[250px] rounded-full bg-white/5 -top-[50px] -right-[80px]" />
@@ -210,7 +215,7 @@ export default function LoginScreen() {
 
             {/* Submit Button */}
             <TouchableOpacity
-              className={`rounded-xl py-4 justify-center items-center mt-3 ${isSubmitDisabled ? 'bg-[#D32F2F]/40' : 'bg-[#D32F2F] shadow-lg shadow-[#D32F2F]/20 elevation-4'}`}
+              className={`rounded-xl h-[52px] justify-center items-center mt-3 ${isSubmitDisabled ? 'bg-[#DC2626]/40' : 'bg-[#DC2626] shadow-lg shadow-[#DC2626]/20 elevation-4'}`}
               onPress={handleLogin}
               disabled={isSubmitDisabled}
               activeOpacity={0.8}
@@ -218,31 +223,33 @@ export default function LoginScreen() {
               {loading ? (
                 <ActivityIndicator color="#ffffff" />
               ) : (
-                <Text className="text-white text-base font-bold">
+                <Text className="text-white text-base font-bold font-heading">
                   เข้าสู่ระบบ
                 </Text>
               )}
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="mt-4 items-center"
+              className="mt-3 py-2.5 items-center min-h-[44px] justify-center"
               onPress={handleForgotPassword}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text className="text-[#D32F2F] text-sm font-medium">
+              <Text className="text-[#DC2626] text-sm font-semibold font-heading">
                 ลืมรหัสผ่าน?
               </Text>
             </TouchableOpacity>
 
             {/* Divider */}
-            <View className="h-[1px] bg-slate-100 my-6" />
+            <View className="h-[1px] bg-slate-100 my-4" />
 
             {/* Link to Register Screen */}
             <TouchableOpacity
-              className="items-center py-3"
+              className="items-center py-2.5 min-h-[44px] justify-center"
               onPress={handleGoToRegister}
               activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text className="text-slate-500 text-sm underline">
+              <Text className="text-slate-600 text-sm font-body underline">
                 ยังไม่มีบัญชี? สมัครสมาชิก
               </Text>
             </TouchableOpacity>

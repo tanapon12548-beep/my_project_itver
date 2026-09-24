@@ -197,9 +197,9 @@ export default function StaffScreen() {
           </View>
         ) : (
           <ScrollView contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
-            <StaffTable title="พนักงานทั้งหมด" 
+            <StaffTable title="รายชื่อบุคลากรและลูกค้าในระบบ" 
               data={filteredStaff}
-              headerColor="#D62828"
+              headerColor="#0F172A"
               onPressDetails={handleEditStaff}
             />
           </ScrollView>

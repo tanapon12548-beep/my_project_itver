@@ -3,19 +3,7 @@ import { Modal, Text, TouchableOpacity, View } from 'react-native';
 
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
-
-interface RepairItem {
-  id: string;
-  job_no: string;
-  customer_name: string;
-  phone: string;
-  device?: string;
-  symptom?: string;
-  actual_symptom?: string;
-  status?: string;
-  date?: string;
-  technician?: string;
-}
+import type { RepairItem } from './types';
 
 interface RepairDetailsModalProps {
   visible: boolean;
@@ -32,8 +20,12 @@ export default function RepairDetailsModal({
 }: RepairDetailsModalProps) {
   if (!item) return null;
 
-  const device = item.device || 'ไม่ระบุอุปกรณ์';
-  const symptom = item.symptom || 'ไม่ระบุอาการเสีย';
+  const device =
+    [item.brand, item.model].filter(Boolean).join(' ') ||
+    item.device ||
+    item.device_type ||
+    'ไม่ระบุอุปกรณ์';
+  const symptom = item.symptom || item.symptoms || item.symptom_details || 'ไม่ระบุอาการเสีย';
   const status = item.status || 'รอตรวจเช็ค';
   const date = item.date || '-';
   const technician = item.technician || 'ช่างประจำศูนย์';

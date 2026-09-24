@@ -13,6 +13,7 @@ import ConfirmSendModal from '@/components/ui/ConfirmSendModal';
 import TechnicianQuoteCard from '@/components/Staff_verify_quote/TechnicianQuoteCard';
 import PageHeader from '@/components/ui/PageHeader';
 import CustomAlert from '@/components/ui/CustomAlert';
+import type { RepairJob } from '@/types/repair';
 
 interface QuoteItem {
   id: string;
@@ -36,6 +37,7 @@ export default function VerifyQuoteScreen() {
   const [isConfirmModalVisible, setConfirmModalVisible] = useState(false);
 
   // Quote Data
+  const [job, setJob] = useState<RepairJob | null>(null);
   const [parts, setParts] = useState<QuoteItem[]>([]);
   const [services, setServices] = useState<QuoteItem[]>([]);
   const [actualSymptom, setActualSymptom] = useState<string>('');
@@ -47,6 +49,7 @@ export default function VerifyQuoteScreen() {
     message: string;
     type: 'success' | 'warning' | 'danger' | 'info';
     confirmText?: string;
+    onConfirm?: () => void;
   }>({
     visible: false,
     title: '',
@@ -68,6 +71,7 @@ export default function VerifyQuoteScreen() {
         const res = await getRepair(numId);
         if (res.success && res.data) {
           const jobData = res.data;
+          setJob(jobData);
 
           const fullDevice = [jobData.brand, jobData.model].filter(Boolean).join(' ') || jobData.device_type || initialDeviceModel;
           setDeviceModel(fullDevice);
@@ -105,11 +109,10 @@ export default function VerifyQuoteScreen() {
 
             if (fetchedParts.length > 0) setParts(fetchedParts);
             if (fetchedServices.length > 0) setServices(fetchedServices);
-          }
- else {
-            // Fallback default mockup
-            setParts([{ id: '1', name: 'อะไหล่อุปกรณ์ซ่อม', price: Math.max((jobData.total_amount || 1300) - 500, 0) }]);
-            setServices([{ id: '2', name: 'ค่าแรงซ่อมและทดสอบ', price: 500 }]);
+          } else {
+            // ไม่มีรายการใบเสนอราคาจริง ไม่แสดงข้อมูลจำลอง
+            setParts([]);
+            setServices([]);
           }
         }
       } catch (err) {
@@ -122,8 +125,19 @@ export default function VerifyQuoteScreen() {
     fetchQuoteData();
   }, [jobNoParam]);
 
-  // เปิดป๊อปอัปยืนยันก่อนกดส่ง
+  // เปิดป๊อปอัปยืนยันก่อนกดส่ง (ตรวจสอบว่ามีรายการใบเสนอราคาจริง)
   const handleOpenConfirmModal = () => {
+    if (parts.length === 0 && services.length === 0 && (!job || !job.total_amount || job.total_amount <= 0)) {
+      setAlertConfig({
+        visible: true,
+        title: 'ไม่สามารถส่งได้',
+        message: 'ไม่พบรายการหรือยอดเงินในใบเสนอราคาจริง กรุณาสร้างใบเสนอราคาก่อนส่งให้ลูกค้า',
+        type: 'warning',
+        confirmText: 'ตกลง',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+      });
+      return;
+    }
     setConfirmModalVisible(true);
   };
 
@@ -132,6 +146,18 @@ export default function VerifyQuoteScreen() {
   // ยืนยันส่งให้ลูกค้า -> อัปเดตสถานะใน DB เป็น 4 (รอการอนุมัติ)
   const handleConfirmSend = async () => {
     if (sending) return;
+    if (parts.length === 0 && services.length === 0 && (!job || !job.total_amount || job.total_amount <= 0)) {
+      setConfirmModalVisible(false);
+      setAlertConfig({
+        visible: true,
+        title: 'ไม่สามารถส่งได้',
+        message: 'ไม่พบรายการหรือยอดเงินในใบเสนอราคาจริง กรุณาสร้างใบเสนอราคาก่อนส่งให้ลูกค้า',
+        type: 'warning',
+        confirmText: 'ตกลง',
+        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
+      });
+      return;
+    }
     setSending(true);
 
     try {
@@ -140,7 +166,8 @@ export default function VerifyQuoteScreen() {
         const res = await updateRepairStatus(jobNumericId, { status_id: 4 });
         if (!res.success) throw new Error(res.message);
 
-        await logRepairJobDetail(jobNumericId, 4);
+        // Action 3 = ออกใบเสนอราคา
+        await logRepairJobDetail(jobNumericId, 3, undefined, 'ส่งใบเสนอราคาให้ลูกค้าพิจารณา');
       }
 
       setConfirmModalVisible(false);

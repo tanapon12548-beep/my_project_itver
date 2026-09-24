@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const fs = require('fs');
 const path = require('path');
+const repairQueries = require('../queries/repair.queries');
 
 /**
  * GET /api/repairs
@@ -13,7 +14,6 @@ exports.getAll = async (req, res, next) => {
     let whereClause = '';
 
     if (isCustomer) {
-      // สำหรับ Customer: ดูได้เฉพาะของตัวเอง (เชื่อมโยงตาม customer_id หรือเบอร์โทร/อีเมล)
       whereClause = ' WHERE (d.customer_id = $1 OR (d.customer_id IS NULL AND (p.phone = $2 OR p.email = $3)))';
       params.push(req.user.id, req.user.phone || '', req.user.email || '');
     } else if (req.query.customer_id) {
@@ -21,55 +21,7 @@ exports.getAll = async (req, res, next) => {
       params.push(req.query.customer_id);
     }
 
-    const query = `
-      SELECT 
-        rj.*,
-        rj.job_id AS id,
-        'REP-' || LPAD(rj.job_id::text, 6, '0') AS job_number,
-        'REP-' || LPAD(rj.job_id::text, 6, '0') AS job_no,
-        COALESCE(dt.device_type_name, '-') AS device_type,
-        COALESCE(b.brand_name, '-') AS brand,
-        d.model,
-        d.serial_number,
-        d.included_accessories,
-        d.included_accessories AS accessories,
-        d.important_software,
-        d.important_software AS important_programs,
-        d.device_password,
-        d.device_password AS password,
-        d.warranty_year,
-        d.warranty_year AS warranty_years,
-        d.warranty_end_date,
-        d.customer_id,
-        COALESCE(rj.symptom_details, '-') AS symptom,
-        COALESCE(rj.symptom_details, '-') AS symptoms,
-        COALESCE(s.status_name, '-') AS status_name,
-        COALESCE(s.status_name, '-') AS status,
-        COALESCE(pm.payment_method_name, '-') AS payment_method_name,
-        COALESCE(p.first_name || ' ' || p.last_name, 'ไม่ระบุ') AS customer_name,
-        p.first_name, p.last_name, p.phone, p.email,
-        q.customer_remark,
-        '-' AS received_by,
-        '-' AS inspector_name,
-        CASE 
-          WHEN rj.status_id IN (7, 8) AND COALESCE(q.quote_status_id, 0) != 3 THEN 
-            COALESCE(p_rep_direct.first_name || ' ' || p_rep_direct.last_name, '-')
-          ELSE '-'
-        END AS repairer_name,
-        rj.repairer_id,
-        rj.repaired_at
-      FROM repair_job rj
-      LEFT JOIN device d ON rj.device_id = d.device_id
-      LEFT JOIN device_types dt ON d.device_type_id = dt.device_type_id
-      LEFT JOIN brands b ON d.brand_id = b.brand_id
-      LEFT JOIN status s ON rj.status_id = s.status_id
-      LEFT JOIN payment_method pm ON rj.payment_method_id = pm.payment_method_id
-      LEFT JOIN profiles p ON d.customer_id = p.id
-      LEFT JOIN profiles p_rep_direct ON rj.repairer_id = p_rep_direct.id
-      LEFT JOIN quotation q ON rj.quotation_id = q.quotation_id
-      ${whereClause}
-      ORDER BY rj.created_at DESC
-    `;
+    const query = repairQueries.BUILD_GET_ALL_REPAIRS(whereClause);
     const { rows } = await pool.query(query, params);
     res.json({ success: true, data: rows });
   } catch (err) {
@@ -87,55 +39,8 @@ exports.getById = async (req, res, next) => {
     if (isNaN(numId) || numId <= 0) {
       return res.status(400).json({ success: false, message: 'รหัสงานซ่อมไม่ถูกต้อง' });
     }
-    const query = `
-      SELECT 
-        rj.*,
-        rj.job_id AS id,
-        'REP-' || LPAD(rj.job_id::text, 6, '0') AS job_number,
-        'REP-' || LPAD(rj.job_id::text, 6, '0') AS job_no,
-        COALESCE(dt.device_type_name, '-') AS device_type,
-        COALESCE(b.brand_name, '-') AS brand,
-        d.model,
-        d.serial_number,
-        d.included_accessories,
-        d.included_accessories AS accessories,
-        d.important_software,
-        d.important_software AS important_programs,
-        d.device_password,
-        d.device_password AS password,
-        d.warranty_year,
-        d.warranty_year AS warranty_years,
-        d.warranty_end_date,
-        d.customer_id,
-        COALESCE(rj.symptom_details, '-') AS symptom,
-        COALESCE(rj.symptom_details, '-') AS symptoms,
-        COALESCE(s.status_name, '-') AS status_name,
-        COALESCE(s.status_name, '-') AS status,
-        COALESCE(pm.payment_method_name, '-') AS payment_method_name,
-        COALESCE(p.first_name || ' ' || p.last_name, 'ไม่ระบุ') AS customer_name,
-        p.first_name, p.last_name, p.phone, p.email,
-        q.customer_remark,
-        '-' AS received_by,
-        '-' AS inspector_name,
-        CASE 
-          WHEN rj.status_id IN (7, 8) AND COALESCE(q.quote_status_id, 0) != 3 THEN 
-            COALESCE(p_rep_direct.first_name || ' ' || p_rep_direct.last_name, '-')
-          ELSE '-'
-        END AS repairer_name,
-        rj.repairer_id,
-        rj.repaired_at
-      FROM repair_job rj
-      LEFT JOIN device d ON rj.device_id = d.device_id
-      LEFT JOIN device_types dt ON d.device_type_id = dt.device_type_id
-      LEFT JOIN brands b ON d.brand_id = b.brand_id
-      LEFT JOIN status s ON rj.status_id = s.status_id
-      LEFT JOIN payment_method pm ON rj.payment_method_id = pm.payment_method_id
-      LEFT JOIN profiles p ON d.customer_id = p.id
-      LEFT JOIN profiles p_rep_direct ON rj.repairer_id = p_rep_direct.id
-      LEFT JOIN quotation q ON rj.quotation_id = q.quotation_id
-      WHERE rj.job_id = $1
-    `;
-    const { rows } = await pool.query(query, [numId]);
+
+    const { rows } = await pool.query(repairQueries.GET_REPAIR_BY_ID, [numId]);
 
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'ไม่พบงานซ่อม' });
@@ -145,35 +50,19 @@ exports.getById = async (req, res, next) => {
     let quotation = null;
     let quotationId = rows[0].quotation_id;
     if (!quotationId) {
-      const findQ = await pool.query(
-        'SELECT quotation_id FROM quotation WHERE job_id = $1 ORDER BY created_at DESC LIMIT 1',
-        [numId]
-      );
+      const findQ = await pool.query(repairQueries.FIND_QUOTATION_BY_JOB_ID, [numId]);
       if (findQ.rows.length > 0) {
         quotationId = findQ.rows[0].quotation_id;
       }
     }
 
     if (quotationId) {
-      const qRes = await pool.query(
-        `SELECT q.*, qs.quote_status_name
-         FROM quotation q
-         LEFT JOIN quotation_status qs ON q.quote_status_id = qs.quote_status_id
-         WHERE q.quotation_id = $1`,
-        [quotationId]
-      );
+      const qRes = await pool.query(repairQueries.GET_QUOTATION_BY_ID, [quotationId]);
       if (qRes.rows.length > 0) {
         quotation = qRes.rows[0];
 
         // ดึง quotation items
-        const qdRes = await pool.query(
-          `SELECT qd.*, i.item_name, i.item_type_id, it.item_type_name
-           FROM quotation_details qd
-           LEFT JOIN item i ON qd.item_id = i.item_id
-           LEFT JOIN item_type it ON i.item_type_id = it.item_type_id
-           WHERE qd.quote_id = $1`,
-          [quotation.quotation_id]
-        );
+        const qdRes = await pool.query(repairQueries.GET_QUOTATION_ITEMS, [quotation.quotation_id]);
         const items = qdRes.rows;
         quotation.items = items;
         quotation.parts = items.filter(it => it.item_type_id === 1);
@@ -184,18 +73,7 @@ exports.getById = async (req, res, next) => {
     }
 
     // ดึง repair_job_detail (action log)
-    const detailRes = await pool.query(
-      `SELECT rjd.*, at.action_type_name,
-              COALESCE(p.first_name || ' ' || p.last_name, 'ไม่ระบุ') AS user_name,
-              p.role_id, r.name AS role_name
-       FROM repair_job_detail rjd
-       LEFT JOIN action_type at ON rjd.action_type_id = at.action_type_id
-       LEFT JOIN profiles p ON rjd.user_id = p.id
-       LEFT JOIN roles r ON p.role_id = r.id
-       WHERE rjd.job_id = $1
-       ORDER BY rjd.created_at ASC`,
-      [numId]
-    );
+    const detailRes = await pool.query(repairQueries.GET_ACTION_LOGS, [numId]);
 
     let received_by = rows[0].received_by && rows[0].received_by !== '-' ? rows[0].received_by : null;
     let inspector_name = rows[0].inspector_name && rows[0].inspector_name !== '-' ? rows[0].inspector_name : null;
@@ -250,7 +128,7 @@ exports.getById = async (req, res, next) => {
         return_date: return_date || null,
         payment_date: verifiedPaymentDate,
         quotation,
-        action_logs: detailRes.rows.reverse(), // ล่าสุดขึ้นก่อนสำหรับ action_logs
+        action_logs: detailRes.rows.reverse(),
       },
     });
   } catch (err) {
@@ -272,9 +150,7 @@ exports.create = async (req, res, next) => {
     const numStatusId = status_id ? parseInt(status_id, 10) : 1;
 
     const { rows } = await pool.query(
-      `INSERT INTO repair_job (device_id, symptom_details, appointment_date, status_id)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
+      repairQueries.INSERT_REPAIR_JOB,
       [numDeviceId, symptomText, appointment_date || null, isNaN(numStatusId) ? 1 : numStatusId]
     );
 
@@ -304,18 +180,7 @@ exports.update = async (req, res, next) => {
     const safeAmount = total_amount !== undefined ? Math.max(0, parseFloat(total_amount) || 0) : null;
 
     const { rows } = await pool.query(
-      `UPDATE repair_job SET
-        device_id = COALESCE($1, device_id), 
-        symptom_details = COALESCE($2, symptom_details), 
-        appointment_date = COALESCE($3, appointment_date), 
-        status_id = COALESCE($4, status_id),
-        total_amount = COALESCE($5, total_amount), 
-        slip_image = COALESCE($6, slip_image), 
-        payment_date = COALESCE($7, payment_date), 
-        payment_method_id = COALESCE($8, payment_method_id), 
-        quotation_id = COALESCE($9, quotation_id)
-       WHERE job_id = $10
-       RETURNING *`,
+      repairQueries.UPDATE_REPAIR_JOB,
       [numDeviceId, symptomText, appointment_date, numStatusId,
        safeAmount, slip_image, payment_date, payment_method_id, quotation_id, numId]
     );
@@ -355,14 +220,30 @@ exports.updateStatus = async (req, res, next) => {
     }
     const prevStatusId = prevRes.rows[0].status_id;
 
-    // ถ้าช่างซ่อมเสร็จสิ้น เปลี่ยนจาก อนุมัติ/รอซ่อม (5) เป็น รอชำระ (7)
-    // -> บันทึก repairer_id และ repaired_at ลงใน repair_job จริงๆ
     let updateSql = 'UPDATE repair_job SET status_id = $1';
     const updateParams = [numStatus, numId];
 
-    if (numStatus === 7 && (prevStatusId === 5 || prevStatusId === 6) && currentUserId) {
-      updateSql += ', repairer_id = $3, repaired_at = CURRENT_TIMESTAMP WHERE job_id = $2 RETURNING *';
-      updateParams.push(currentUserId);
+    if (numStatus === 9) {
+      const qRes = await pool.query(
+        'SELECT total_cancel_price FROM quotation WHERE job_id = $1 ORDER BY created_at DESC LIMIT 1',
+        [numId]
+      );
+      const cancelPrice = Number(qRes.rows[0]?.total_cancel_price) || 300;
+      updateSql += `, total_amount = $${updateParams.length + 1}`;
+      updateParams.push(cancelPrice);
+    }
+
+    if ((numStatus === 7 && (prevStatusId === 5 || prevStatusId === 6)) || (numStatus === 6 && prevStatusId === 5)) {
+      if (currentUserId) {
+        updateSql += ', repairer_id = $3';
+        if (numStatus === 7) {
+          updateSql += ', repaired_at = CURRENT_TIMESTAMP';
+        }
+        updateSql += ' WHERE job_id = $2 RETURNING *';
+        updateParams.push(currentUserId);
+      } else {
+        updateSql += ' WHERE job_id = $2 RETURNING *';
+      }
     } else {
       updateSql += ' WHERE job_id = $2 RETURNING *';
     }
@@ -375,12 +256,15 @@ exports.updateStatus = async (req, res, next) => {
 
     if (Number(status_id) === 7) {
       if (prevStatusId === 5 || prevStatusId === 6) {
-        actionTypeId = 5; // ซ่อมเสร็จสิ้น / ทดสอบเครื่อง
+        actionTypeId = 5;
         actionRemark = 'ช่างซ่อมเสร็จสิ้น / ทดสอบเครื่อง เปลี่ยนสถานะเป็นรอชำระ';
       } else if (prevStatusId === 9) {
         actionTypeId = 6;
         actionRemark = 'พนักงานปรับสถานะรอชำระค่าตรวจเช็ค (ยกเลิกซ่อม)';
       }
+    } else if (Number(status_id) === 6) {
+      actionTypeId = 4;
+      actionRemark = 'ช่างเริ่มดำเนินการซ่อมเครื่อง';
     } else if (Number(status_id) === 2) {
       actionTypeId = 2;
       actionRemark = 'ช่างเริ่มดำเนินการตรวจเช็คสภาพเครื่อง';
@@ -395,9 +279,8 @@ exports.updateStatus = async (req, res, next) => {
     if (actionTypeId && currentUserId) {
       try {
         await pool.query(
-          `INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark)
-           VALUES ($1, $2, $3, CURRENT_DATE, $4)`,
-          [numId, currentUserId, actionTypeId, actionRemark]
+          repairQueries.INSERT_ACTION_LOG,
+          [numId, currentUserId, actionTypeId, new Date().toISOString().slice(0, 10), actionRemark]
         );
       } catch (logErr) {
         console.warn('Could not auto log repair action:', logErr.message);
@@ -412,7 +295,7 @@ exports.updateStatus = async (req, res, next) => {
 
 /**
  * PATCH /api/repairs/:id/signature
- * บันทึกลายเซ็นลูกค้ารับเครื่อง — บันทึกภาพลง backend /pubilc และเก็บชื่อไฟล์ที่สื่อความหมายลง DB
+ * บันทึกลายเซ็นลูกค้ารับเครื่อง
  */
 exports.updateSignature = async (req, res, next) => {
   try {
@@ -431,7 +314,6 @@ exports.updateSignature = async (req, res, next) => {
 
     let savedFilename = signatureVal;
 
-    // หากส่งมาเป็น Base64 Data URL ให้บันทึกเป็นไฟล์ภาพลง /pubilc/signatures
     if (typeof signatureVal === 'string' && (signatureVal.startsWith('data:image/') || signatureVal.includes('base64,'))) {
       const sigDir = path.join(__dirname, '..', 'pubilc', 'signatures');
       if (!fs.existsSync(sigDir)) {
@@ -448,19 +330,14 @@ exports.updateSignature = async (req, res, next) => {
       const pad = (n) => String(n).padStart(2, '0');
       const dateStr = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
       
-      // ตั้งชื่อไฟล์ที่สื่อความหมาย เช่น signatures/signature_REP-000001_20260911_233512.png
       const jobCode = `REP-${String(numId).padStart(6, '0')}`;
       savedFilename = `signatures/signature_${jobCode}_${dateStr}.${ext}`;
       const filePath = path.join(__dirname, '..', 'pubilc', savedFilename);
       fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
     }
 
-    // บันทึกเฉพาะชื่อไฟล์ที่สื่อความหมายลงฐานข้อมูล พร้อมเวลาที่ลูกค้าเซ็นรับเครื่องคืน
     const { rows } = await pool.query(
-      `UPDATE repair_job 
-       SET customer_receive_signature = $1, return_date = COALESCE(return_date, NOW()) 
-       WHERE job_id = $2 
-       RETURNING *`,
+      repairQueries.UPDATE_REPAIR_SIGNATURE,
       [savedFilename, numId]
     );
 
@@ -497,9 +374,7 @@ exports.logDetail = async (req, res, next) => {
     const cleanRemark = remark ? String(remark).trim() : null;
 
     const { rows } = await pool.query(
-      `INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
+      repairQueries.INSERT_ACTION_LOG,
       [numId, currentUserId, numActionTypeId, currentDate, cleanRemark]
     );
 
@@ -520,7 +395,28 @@ exports.remove = async (req, res, next) => {
     if (isNaN(numId) || numId <= 0) {
       return res.status(400).json({ success: false, message: 'รหัสงานซ่อมไม่ถูกต้อง' });
     }
-    const { rowCount } = await pool.query('DELETE FROM repair_job WHERE job_id = $1', [numId]);
+
+    const { rows: jobRows } = await pool.query(
+      'SELECT job_id, quotation_id, payment_method_id, slip_image FROM repair_job WHERE job_id = $1',
+      [numId]
+    );
+    if (jobRows.length === 0) {
+      return res.status(404).json({ success: false, message: 'ไม่พบงานซ่อม' });
+    }
+
+    const job = jobRows[0];
+    const qCheck = await pool.query('SELECT quotation_id FROM quotation WHERE job_id = $1', [numId]);
+    const hasTransactions = (qCheck.rows.length > 0) || (job.quotation_id !== null) || (job.payment_method_id !== null) || (job.slip_image !== null);
+
+    if (hasTransactions) {
+      return res.status(400).json({
+        success: false,
+        message: 'ไม่สามารถลบงานซ่อมนี้ได้ เนื่องจากมีข้อมูลใบเสนอราคาหรือประวัติการชำระเงินอ้างอิงอยู่ เพื่อป้องกันข้อมูลสูญหาย',
+      });
+    }
+
+    await pool.query(repairQueries.DELETE_REPAIR_DETAILS, [numId]);
+    const { rowCount } = await pool.query(repairQueries.DELETE_REPAIR_JOB, [numId]);
 
     if (rowCount === 0) {
       return res.status(404).json({ success: false, message: 'ไม่พบงานซ่อม' });

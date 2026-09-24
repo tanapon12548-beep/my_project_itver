@@ -1,13 +1,11 @@
 // 1. React & React Native
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   Text,
   View,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
-  Platform,
 } from 'react-native';
 
 // 2. Third-party / Expo
@@ -19,10 +17,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // 3. API helpers
 import { updateQuotationStatus, updateRepairStatus, getRepair } from '@/lib/api';
 
-// 4. Components
+// 4. Components & Theme
 import CustomerProgressBar from '@/components/Customer/CustomerProgressBar';
 import CustomerQuotationCard from '@/components/Customer/CustomerQuotationCard';
 import PickupCalendarCard from '@/components/Shared_Repairs/PickupCalendarCard';
+import CustomAlert from '@/components/ui/CustomAlert';
+import SuccessToast from '@/components/ui/SuccessToast';
+import { Colors } from '@/constants/theme';
+import { getStatusOnTintColor } from '@/components/Shared_Repairs/statusConfig';
 
 interface QuotationItem {
   name?: string;
@@ -59,6 +61,14 @@ interface RepairJob {
   payment_date?: string | null;
 }
 
+interface ToastState {
+  visible: boolean;
+  message: string;
+  subtitle?: string;
+  type: 'success' | 'info';
+  icon?: keyof typeof Ionicons.glyphMap;
+}
+
 export default function JobDetailScreen() {
   const router = useRouter();
   const { id, jobId } = useLocalSearchParams<{ id?: string, jobId?: string }>();
@@ -68,6 +78,13 @@ export default function JobDetailScreen() {
   const [job, setJob] = useState<RepairJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [toast, setToast] = useState<ToastState>({
+    visible: false,
+    message: '',
+    type: 'success',
+  });
 
   const fetchJob = useCallback(async (isSilent = false) => {
     if (!targetId) return;
@@ -126,16 +143,24 @@ export default function JobDetailScreen() {
     }, [fetchJob, targetId])
   );
 
-  const showAlert = (title: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}\n\n${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
+  const showToast = (title: string, message: string) => {
+    const isSuccess = title === 'สำเร็จ';
+    setToast({
+      visible: true,
+      message: title,
+      subtitle: message,
+      type: isSuccess ? 'success' : 'info',
+      icon: isSuccess ? 'checkmark-circle' : 'alert-circle',
+    });
   };
 
-  const handleApprove = async () => {
+  const hideToast = useCallback(() => {
+    setToast((current) => ({ ...current, visible: false }));
+  }, []);
+
+  const confirmApprove = async () => {
     if (actionLoading || !job?.quotation_id) return;
+    setShowApproveConfirm(false);
     setActionLoading(true);
     try {
       const numericJobId = parseInt(job.id, 10);
@@ -147,54 +172,46 @@ export default function JobDetailScreen() {
       }
 
       setJob((prev) => (prev ? { ...prev, status_id: 5, status: 'อนุมัติแล้ว/รอซ่อม', quotation_status_id: 2 } : null));
-      showAlert('สำเร็จ', 'อนุมัติการซ่อมเรียบร้อยแล้ว');
+      showToast('สำเร็จ', 'อนุมัติการซ่อมเรียบร้อยแล้ว');
       fetchJob(true);
     } catch (err: any) {
-      showAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถอนุมัติได้');
+      showToast('ข้อผิดพลาด', err.message || 'ไม่สามารถอนุมัติได้');
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleCancel = async () => {
+  const handleApprove = () => {
     if (actionLoading || !job?.quotation_id) return;
+    setShowApproveConfirm(true);
+  };
 
-    const confirmCancel = async () => {
-      if (actionLoading) return;
-      setActionLoading(true);
-      try {
-        const numericJobId = parseInt(job.id, 10);
-        const res = await updateQuotationStatus(job.quotation_id as number, { quote_status_id: 3 });
-        if (!res.success) throw new Error(res.message);
+  const confirmCancel = async () => {
+    if (actionLoading || !job?.quotation_id) return;
+    setShowCancelConfirm(false);
+    setActionLoading(true);
+    try {
+      const numericJobId = parseInt(job.id, 10);
+      const res = await updateQuotationStatus(job.quotation_id as number, { quote_status_id: 3 });
+      if (!res.success) throw new Error(res.message);
 
-        if (!isNaN(numericJobId)) {
-          await updateRepairStatus(numericJobId, { status_id: 9 });
-        }
-
-        setJob((prev) => (prev ? { ...prev, status_id: 9, status: 'ยกเลิกซ่อม', quotation_status_id: 3 } : null));
-        showAlert('สำเร็จ', 'ยกเลิกการซ่อมเรียบร้อยแล้ว (มีค่าบริการตรวจเช็คสภาพเครื่อง 300 บาท)');
-        fetchJob(true);
-      } catch (err: any) {
-        showAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถยกเลิกได้');
-      } finally {
-        setActionLoading(false);
+      if (!isNaN(numericJobId)) {
+        await updateRepairStatus(numericJobId, { status_id: 9 });
       }
-    };
 
-    if (Platform.OS === 'web') {
-      if (window.confirm('ยืนยันการยกเลิกการซ่อม?\n\nหากยกเลิก จะมีค่าบริการตรวจเช็คสภาพเครื่อง 300 บาท\nคุณต้องการยกเลิกใช่หรือไม่?')) {
-        confirmCancel();
-      }
-    } else {
-      Alert.alert(
-        'ยืนยันยกเลิกการซ่อม',
-        'หากยกเลิก จะมีค่าบริการตรวจเช็คสภาพเครื่อง 300 บาท\n\nคุณต้องการยกเลิกใช่หรือไม่?',
-        [
-          { text: 'ไม่ยกเลิก', style: 'cancel' },
-          { text: 'ใช่, ยกเลิกซ่อม', style: 'destructive', onPress: confirmCancel },
-        ]
-      );
+      setJob((prev) => (prev ? { ...prev, status_id: 9, status: 'ยกเลิกซ่อม', quotation_status_id: 3 } : null));
+      showToast('สำเร็จ', 'ยกเลิกการซ่อมเรียบร้อยแล้ว (มีค่าบริการตรวจเช็คสภาพเครื่อง 300 บาท)');
+      fetchJob(true);
+    } catch (err: any) {
+      showToast('ข้อผิดพลาด', err.message || 'ไม่สามารถยกเลิกได้');
+    } finally {
+      setActionLoading(false);
     }
+  };
+
+  const handleCancel = () => {
+    if (actionLoading || !job?.quotation_id) return;
+    setShowCancelConfirm(true);
   };
 
   const handleRequestModification = async (remark: string) => {
@@ -204,14 +221,14 @@ export default function JobDetailScreen() {
       // API call to update status to 5 (request modify) with remark
       const res = await updateQuotationStatus(job.quotation_id as number, { quote_status_id: 5, customer_remark: remark });
       if (res.success) {
-        showAlert('สำเร็จ', 'ส่งคำขอแก้ไขไปยังช่างเรียบร้อยแล้ว');
+        showToast('สำเร็จ', 'ส่งคำขอแก้ไขไปยังช่างเรียบร้อยแล้ว');
         setJob((prev) => (prev ? { ...prev, customer_remark: remark, quotation_status_id: 5, status_id: 3, status: 'ดำเนินการเสนอราคา' } : null));
         fetchJob(true);
       } else {
         throw new Error(res.message);
       }
     } catch (err: any) {
-      showAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถส่งคำขอได้');
+      showToast('ข้อผิดพลาด', err.message || 'ไม่สามารถส่งคำขอได้');
       throw err;
     } finally {
       setActionLoading(false);
@@ -221,9 +238,9 @@ export default function JobDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-slate-50">
-        <StatusBar style="light" backgroundColor="#D32F2F" />
+        <StatusBar style="light" backgroundColor="#DC2626" />
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#D32F2F" />
+          <ActivityIndicator size="large" color="#DC2626" />
           <Text className="mt-4 text-slate-500 font-body">กำลังโหลดข้อมูล...</Text>
         </View>
       </SafeAreaView>
@@ -233,7 +250,7 @@ export default function JobDetailScreen() {
   if (!job) {
     return (
       <SafeAreaView className="flex-1 bg-slate-50">
-        <StatusBar style="light" backgroundColor="#D32F2F" />
+        <StatusBar style="light" backgroundColor="#DC2626" />
         <View className="flex-1 justify-center items-center">
           <Ionicons name="alert-circle-outline" size={60} color="#cbd5e1" />
           <Text className="text-slate-500 font-body mt-4 mb-4">ไม่พบข้อมูลงานซ่อม</Text>
@@ -246,6 +263,7 @@ export default function JobDetailScreen() {
   }
 
   const isWaitingRepair = job.status_id === 5 || job.status === 'อนุมัติแล้ว/รอซ่อม';
+  const isRepairing = job.status_id === 6 || job.status === 'กำลังซ่อม';
   const isReadyForPayment = job.status_id === 7 || job.status === 'รอชำระ';
   const isCompleted = job.status_id === 8 || job.status === 'เสร็จสิ้น';
   const isCancelled = job.status_id === 9 || job.status === 'ยกเลิกซ่อม' || job.status === 'ยกเลิก';
@@ -267,24 +285,26 @@ export default function JobDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
-      <StatusBar style="light" backgroundColor="#D32F2F" />
+      <StatusBar style="light" backgroundColor="#DC2626" />
       
       {/* Header */}
-      <View className="bg-[#D32F2F] pt-4 pb-6 px-4 flex-row items-center">
+      <View className="bg-[#DC2626] pt-4 pb-6 px-4 flex-row items-center relative z-10">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
           <Ionicons name="chevron-back" size={24} color="#ffffff" />
         </TouchableOpacity>
         <View>
           <Text className="text-white text-lg font-bold font-heading">รายละเอียดการซ่อม</Text>
-          <Text className="text-red-200 text-xs font-body">{job.job_number}</Text>
+          <Text className="font-body text-xs text-red-200">{job.job_number}</Text>
         </View>
       </View>
 
-      <ScrollView className="flex-1 -mt-4" contentContainerClassName="p-4 pb-10">
+      <ScrollView className="flex-1 relative z-0" contentContainerClassName="p-4 pb-10">
         
         {/* Device Info Header Card */}
         <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-slate-100 flex-row">
-          <View className="w-14 h-14 bg-slate-100 rounded-xl mr-4" />
+          <View className="w-14 h-14 bg-sky-50 rounded-2xl mr-4 items-center justify-center border border-sky-100">
+            <Ionicons name="construct-outline" size={28} color="#0284C7" />
+          </View>
           <View className="flex-1">
             <Text className="text-base font-bold text-slate-800 font-heading">{job.brand} {job.model}</Text>
             <Text className="text-xs text-slate-500 font-body mt-0.5">อาการที่แจ้ง: {job.symptoms}</Text>
@@ -295,9 +315,23 @@ export default function JobDetailScreen() {
             )}
             
             <View className="flex-row items-center justify-between">
-              <View className="px-3 py-1 bg-lime-400 rounded-full flex-row items-center">
-                <View className="w-1.5 h-1.5 rounded-full bg-white mr-1.5" />
-                <Text className="text-[11px] text-white font-bold">{job.status}</Text>
+              <View
+                className="px-2.5 py-1 rounded-full flex-row items-center border"
+                style={{
+                  backgroundColor: `${(Colors.status as any)[`status${job.status_id}`] || '#DC2626'}18`,
+                  borderColor: `${(Colors.status as any)[`status${job.status_id}`] || '#DC2626'}35`,
+                }}
+              >
+                <View
+                  className="w-1.5 h-1.5 rounded-full mr-1.5"
+                  style={{ backgroundColor: (Colors.status as any)[`status${job.status_id}`] || '#DC2626' }}
+                />
+                <Text
+                  className="text-[11px] font-bold font-heading"
+                  style={{ color: getStatusOnTintColor(job.status_id) }}
+                >
+                  {job.status}
+                </Text>
               </View>
             </View>
           </View>
@@ -315,7 +349,22 @@ export default function JobDetailScreen() {
             <View className="flex-1">
               <Text className="text-emerald-900 font-bold font-heading text-sm">อนุมัติการซ่อมเรียบร้อยแล้ว</Text>
               <Text className="text-emerald-700 text-xs font-body mt-0.5">
-                ยอดรวม {total.toLocaleString()} บาท — ช่างกำลังดำเนินการซ่อมอุปกรณ์ของคุณ
+                ยอดรวม {total.toLocaleString()} บาท — ช่างกำลังจัดเตรียมอะไหล่และคิวการซ่อม
+                {job.appointment_date ? ` (กำหนดรับเครื่อง: ${formatPickupDate(job.appointment_date)})` : ''}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {isRepairing && (
+          <View className="bg-sky-50 rounded-2xl p-4 mb-4 flex-row items-center border border-sky-200">
+            <View className="w-8 h-8 rounded-full bg-white items-center justify-center mr-3 border border-sky-500">
+              <Ionicons name="hammer" size={18} color="#0284c7" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sky-900 font-bold font-heading text-sm">ช่างกำลังดำเนินการซ่อมเครื่อง</Text>
+              <Text className="text-sky-700 text-xs font-body mt-0.5">
+                กำลังลงมือซ่อมและทดสอบระบบตามรายการที่อนุมัติ เมื่อเสร็จแล้วจะส่งต่อรอชำระทันที
                 {job.appointment_date ? ` (กำหนดรับเครื่อง: ${formatPickupDate(job.appointment_date)})` : ''}
               </Text>
             </View>
@@ -366,19 +415,7 @@ export default function JobDetailScreen() {
 
         {/* ปฏิทินกำหนดวันรับเครื่องให้ลูกค้าดู */}
         {job.appointment_date ? (
-          <PickupCalendarCard
-            appointmentDate={job.appointment_date}
-            onOpenFullScreen={() => {
-              router.push({
-                pathname: '/schedule-pickup',
-                params: {
-                  jobId: String(job.id),
-                  appointmentDate: job.appointment_date,
-                  amount: String(total),
-                },
-              });
-            }}
-          />
+          <PickupCalendarCard defaultExpanded={false} />
         ) : (isWaitingRepair || isReadyForPayment || isCancelled) ? (
           <View className="bg-white rounded-2xl p-4 mb-4 border border-slate-100 shadow-sm flex-row items-center">
             <View className="w-10 h-10 rounded-xl bg-amber-50 items-center justify-center mr-3 border border-amber-100">
@@ -447,7 +484,7 @@ export default function JobDetailScreen() {
               </View>
             ) : (
               <TouchableOpacity 
-                className="w-full bg-[#D32F2F] py-3.5 rounded-2xl items-center justify-center shadow-md shadow-red-700/20 flex-row gap-2 active:opacity-90"
+                className="w-full bg-[#DC2626] h-[52px] rounded-xl items-center justify-center shadow-md shadow-red-700/20 flex-row gap-2 active:opacity-90"
                 activeOpacity={0.85}
                 onPress={() => router.push({ pathname: '/verify-payment', params: { jobId: job.id, amount: total } })}
               >
@@ -473,6 +510,38 @@ export default function JobDetailScreen() {
         )}
 
       </ScrollView>
+
+      <SuccessToast
+        visible={toast.visible}
+        message={toast.message}
+        subtitle={toast.subtitle}
+        type={toast.type}
+        icon={toast.icon}
+        duration={2800}
+        onHide={hideToast}
+      />
+
+      <CustomAlert
+        visible={showApproveConfirm}
+        title="ยืนยันอนุมัติการซ่อม"
+        message={`ยอดรวมค่าซ่อม ${total.toLocaleString()} บาท\n\nคุณต้องการอนุมัติการซ่อมใช่หรือไม่?`}
+        confirmText="ยืนยันอนุมัติ"
+        cancelText="ยกเลิก"
+        type="success"
+        onConfirm={confirmApprove}
+        onCancel={() => setShowApproveConfirm(false)}
+      />
+
+      <CustomAlert
+        visible={showCancelConfirm}
+        title="ยืนยันยกเลิกการซ่อม"
+        message={'หากยกเลิก จะมีค่าบริการตรวจเช็คสภาพเครื่อง 300 บาท\n\nคุณต้องการยกเลิกใช่หรือไม่?'}
+        confirmText="ใช่, ยกเลิกซ่อม"
+        cancelText="ไม่ยกเลิก"
+        type="danger"
+        onConfirm={confirmCancel}
+        onCancel={() => setShowCancelConfirm(false)}
+      />
     </SafeAreaView>
   );
 }

@@ -17,10 +17,12 @@ interface RepairStatusSectionProps {
   indicatorColor: string;
   items: RepairItem[];
   defaultExpanded?: boolean;
+  /** Controlled mode: parent เป็นเจ้าของ state (คงค่าข้าม refresh/remount) */
+  expanded?: boolean;
+  onToggle?: (next: boolean) => void;
   onPressDetails?: (item: RepairItem) => void;
   onPressMakeQuote?: (item: RepairItem) => void;
   onPressVerifyQuote?: (item: RepairItem) => void;
-  onPressSchedule?: (item: RepairItem) => void;
   onPressHandover?: (item: RepairItem) => void;
   onPressPaymentCheck?: (item: RepairItem) => void;
 }
@@ -32,69 +34,66 @@ export default function RepairStatusSection({
   indicatorColor,
   items,
   defaultExpanded = false,
+  expanded: controlledExpanded,
+  onToggle,
   onPressDetails,
   onPressMakeQuote,
   onPressVerifyQuote,
-  onPressSchedule,
   onPressHandover,
   onPressPaymentCheck,
 }: RepairStatusSectionProps) {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [internalExpanded, setInternalExpanded] = useState(defaultExpanded);
+
+  // controlled เมื่อ parent ส่ง expanded มา — ไม่งั้นใช้ state ภายในเหมือนเดิม (deliver.tsx)
+  const isControlled = controlledExpanded !== undefined;
+  const isExpanded = isControlled ? controlledExpanded : internalExpanded;
 
   const toggleExpand = () => {
-    if (count > 0) {
-      setIsExpanded(!isExpanded);
+    if (count <= 0) return;
+    const next = !isExpanded;
+    if (isControlled) {
+      onToggle?.(next);
+    } else {
+      setInternalExpanded(next);
     }
   };
 
   const isActive = count > 0 && isExpanded;
 
-  // 1. ช่าง: แสดงปุ่มสร้างใบเสนอราคา ในสถานะ 1 หรือ 2 (รอตรวจเช็ค / ดำเนินการตรวจเช็ค)
-  const isTechnicianQuoting = Boolean(onPressMakeQuote) && (
-    statusId === 2 ||
-    title.includes('ดำเนินการตรวจเช็ค')
-  );
+  // Button visibility driven by statusId only (labels may change, IDs are stable)
+  const isTechnicianQuoting = Boolean(onPressMakeQuote) && (statusId === 1 || statusId === 2);
 
-  // 2. พนักงาน: แสดงปุ่มตรวจสอบและส่งต่อใบเสนอราคา ในสถานะ 3 (ดำเนินการเสนอราคา)
-  const isStaffVerifying = Boolean(onPressVerifyQuote) && (
-    statusId === 3 ||
-    title.includes('ดำเนินการเสนอราคา')
-  );
+  // 2. พนักงาน: แสดงปุ่มตรวจสอบและส่งต่อใบเสนอราคา ในสถานะ 3
+  const isStaffVerifying = Boolean(onPressVerifyQuote) && statusId === 3;
 
   const showQuoteBtn = isTechnicianQuoting || isStaffVerifying;
   const quoteHandler = isTechnicianQuoting ? onPressMakeQuote : onPressVerifyQuote;
 
-  // 3. พนักงาน: แสดงปุ่มส่งมอบเครื่องให้ลูกค้าเซ็น ในสถานะ 7 (รอชำระ)
-  const showHandoverBtn = Boolean(onPressHandover) && (
-    statusId === 7 ||
-    title.includes('รอชำระ')
-  );
-
-  // 4. พนักงาน: แสดงปุ่มตรวจสอบชำระเงิน ในสถานะ 7 (รอชำระ)
-  const showPaymentCheckBtn = Boolean(onPressPaymentCheck) && (
-    statusId === 7 ||
-    title.includes('รอชำระ')
-  );
+  // 3-4. พนักงาน: ส่งมอบ + ตรวจชำระ ในสถานะ 7
+  const showHandoverBtn = Boolean(onPressHandover) && statusId === 7;
+  const showPaymentCheckBtn = Boolean(onPressPaymentCheck) && statusId === 7;
 
 
   return (
     <View className="mb-4">
-      {/* Header Bar */}
+      {/* Header Bar — 48px touch target, clearer count */}
       <TouchableOpacity
-        className={`flex-row items-center justify-between h-11 px-3.5 rounded-xl border ${count > 0
+        className={`flex-row items-center justify-between min-h-[48px] px-4 rounded-2xl border ${count > 0
             ? 'bg-white border-slate-200 shadow-sm shadow-black/5'
             : 'bg-slate-100/70 border-slate-200 opacity-60'
           } mb-2`}
         activeOpacity={count > 0 ? 0.7 : 1}
         onPress={toggleExpand}
+        accessibilityRole="button"
+        accessibilityLabel={`${title} ${count} รายการ`}
       >
         <View className="flex-row items-center gap-2.5">
           <View
-            className="w-2.5 h-2.5 rounded-full"
+            className="w-3 h-3 rounded-full"
             style={{ backgroundColor: indicatorColor }}
           />
           <Text
-            className={`text-sm ${count > 0 ? 'font-bold text-slate-800' : 'font-medium text-slate-500'
+            className={`text-[15px] ${count > 0 ? 'font-bold text-slate-900' : 'font-medium text-slate-500'
               }`}
           >
             {title}
@@ -103,11 +102,11 @@ export default function RepairStatusSection({
 
         <View className="flex-row items-center gap-2">
           <View
-            className={`px-2 py-0.5 rounded-full ${count > 0 ? 'bg-slate-100' : 'bg-slate-200'
+            className={`px-2.5 py-1 rounded-full ${count > 0 ? 'bg-slate-900' : 'bg-slate-200'
               }`}
           >
             <Text
-              className={`text-xs font-bold ${count > 0 ? 'text-slate-800' : 'text-slate-400'
+              className={`text-xs font-bold ${count > 0 ? 'text-white' : 'text-slate-400'
                 }`}
             >
               {count}
@@ -116,8 +115,8 @@ export default function RepairStatusSection({
           {count > 0 && (
             <Ionicons
               name={isActive ? 'chevron-up' : 'chevron-down'}
-              size={16}
-              color="#64748B"
+              size={18}
+              color="#475569"
             />
           )}
         </View>
@@ -131,6 +130,7 @@ export default function RepairStatusSection({
               key={item.id}
               item={item}
               statusColor={indicatorColor}
+              statusId={statusId}
               showQuoteBtn={showQuoteBtn}
               showHandoverBtn={showHandoverBtn}
               showPaymentCheckBtn={showPaymentCheckBtn}

@@ -97,7 +97,7 @@ export default function QuotationDetailModal({
         bg: 'bg-amber-50',
         border: 'border-amber-300',
         text: 'text-amber-800',
-        label: 'ขอแก้ไข/เพิ่มเติมรายการ ⚠️',
+          label: 'ขอแก้ไข/เพิ่มเติมรายการ',
         icon: 'alert-circle-outline' as const,
       };
     }
@@ -162,7 +162,7 @@ export default function QuotationDetailModal({
                     </Text>
                   </View>
                   <Text className="text-amber-950 text-sm font-body pl-5 font-medium leading-5">
-                    "{data.customer_remark}"
+                    &ldquo;{data.customer_remark}&rdquo;
                   </Text>
                 </View>
               ) : null}

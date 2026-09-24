@@ -10,6 +10,8 @@ export interface RepairItem {
   brand?: string;
   model?: string;
   symptom?: string;
+  symptoms?: string;
+  symptom_details?: string;
   actual_symptom?: string;
   total_amount?: number;
   created_at?: string;
@@ -18,6 +20,7 @@ export interface RepairItem {
   price?: number;
   date?: string;
   technician?: string;
+  payment_verified?: boolean;
 }
 
 export interface StatusGroup {

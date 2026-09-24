@@ -9,7 +9,16 @@ const pool = require('../config/db');
 exports.getAll = async (req, res, next) => {
   try {
     const { type, search, item_type_id } = req.query;
-    let query = 'SELECT i.*, it.item_type_name FROM item i LEFT JOIN item_type it ON i.item_type_id = it.item_type_id WHERE 1=1';
+    let query = `
+      SELECT 
+        i.*, 
+        it.item_type_name, 
+        COUNT(qd.details_id)::int AS used_count 
+      FROM item i 
+      LEFT JOIN item_type it ON i.item_type_id = it.item_type_id 
+      LEFT JOIN quotation_details qd ON i.item_id = qd.item_id 
+      WHERE 1=1
+    `;
     const params = [];
     let paramIdx = 1;
 
@@ -27,7 +36,7 @@ exports.getAll = async (req, res, next) => {
       params.push(`%${search.trim()}%`);
     }
 
-    query += ' ORDER BY i.item_id DESC';
+    query += ' GROUP BY i.item_id, it.item_type_name ORDER BY i.item_id DESC';
 
     const { rows } = await pool.query(query, params);
     res.json({ success: true, data: rows });

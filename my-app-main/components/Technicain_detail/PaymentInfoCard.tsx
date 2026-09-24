@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 interface PaymentInfoCardProps {
   paymentMethodId?: number | null;
-  paymentMethodName?: string | null;
   paymentDate?: string | null; // วันที่ชำระ (วันที่พนักงานยืนยันการชำระ)
   statusId?: number | null;
   statusName?: string | null;
@@ -17,7 +16,6 @@ interface PaymentInfoCardProps {
 
 export default function PaymentInfoCard({
   paymentMethodId,
-  paymentMethodName,
   paymentDate,
   statusId,
   statusName,

@@ -1,9 +1,7 @@
 // 1. React & React Native
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Alert,
   Modal,
-  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -20,7 +18,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { getRepair, updateRepairSignature, updateRepairStatus, logRepairJobDetail } from '@/lib/api';
 
 // 4. Components
-import PageHeader from '@/components/ui/PageHeader';
 import RepairSummaryCard from '@/components/Staff_handover/RepairSummaryCard';
 import CustomAlert from '@/components/ui/CustomAlert';
 import SignaturePad from '@/components/ui/SignaturePad';
@@ -67,7 +64,6 @@ export default function DeliverHandoverScreen() {
 
   // Signature state
   const [signatureImage, setSignatureImage] = useState<string | null>(null);
-  const [isSigning, setIsSigning] = useState(false);
   const [signatureError, setSignatureError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -85,27 +81,6 @@ export default function DeliverHandoverScreen() {
     message: '',
     type: 'info',
   });
-
-  // ── Signature handlers ──
-
-  const handleSignature = (signature: string) => {
-    setSignatureImage(signature);
-    setIsSigning(false);
-    setSignatureError(null);
-    if (isModalOpen) {
-      setIsModalOpen(false);
-    }
-  };
-
-  const handleEmpty = () => {
-    setIsSigning(false);
-    Alert.alert('ยังไม่มีลายเซ็น', 'กรุณาเซ็นในกรอบก่อนกดบันทึก');
-  };
-
-  const handleSignatureError = (error: Error) => {
-    setIsSigning(false);
-    setSignatureError(error.message || 'ไม่สามารถเปิดพื้นที่สำหรับเซ็นได้');
-  };
 
 
 
@@ -165,8 +140,21 @@ export default function DeliverHandoverScreen() {
   };
 
   const handleAlertConfirm = () => {
+    const isSuccess = alertConfig.type === 'success';
     setAlertConfig((prev) => ({ ...prev, visible: false }));
-    router.back();
+    if (isSuccess) {
+      const targetIdStr = jobIdParam || jobNo.replace(/[^0-9]/g, '');
+      router.replace({
+        pathname: '/receipt' as any,
+        params: {
+          jobId: targetIdStr,
+          job_id: targetIdStr,
+          job_no: jobNo,
+        },
+      });
+    } else {
+      router.back();
+    }
   };
 
   return (
@@ -195,7 +183,6 @@ export default function DeliverHandoverScreen() {
       <ScrollView
         className="flex-1 px-4 pt-4"
         contentContainerStyle={{ paddingBottom: 30 }}
-        scrollEnabled={!isSigning}
       >
         {/* Repair Summary Card */}
         <RepairSummaryCard
@@ -209,7 +196,7 @@ export default function DeliverHandoverScreen() {
         <View className="bg-white rounded-2xl p-5 mt-4 border border-slate-200 shadow-sm shadow-black/5 elevation-2">
           <View className="flex-row justify-between items-center mb-1">
             <Text className="text-base font-bold text-slate-800">
-              ✍️ ลายเซ็นลูกค้ารับเครื่อง
+              ลายเซ็นลูกค้ารับเครื่อง
             </Text>
             <TouchableOpacity
               onPress={() => setIsModalOpen(true)}

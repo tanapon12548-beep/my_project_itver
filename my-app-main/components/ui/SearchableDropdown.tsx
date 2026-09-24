@@ -190,7 +190,7 @@ export default function SearchableDropdown({
                 >
                   <Ionicons name="add-circle" size={20} color="#0284C7" />
                   <Text className="ml-2 text-xs font-medium text-sky-800">
-                    ใช้ระบุเอง: "{searchQuery.trim()}"
+                    ใช้ระบุเอง: &ldquo;{searchQuery.trim()}&rdquo;
                   </Text>
                 </TouchableOpacity>
               )}
@@ -208,7 +208,7 @@ export default function SearchableDropdown({
                   </Text>
                   {allowCustom && searchQuery.trim().length > 0 && (
                     <Text className="text-xs text-sky-600 mt-1">
-                      สามารถแตะปุ่ม "ใช้ระบุเอง" ด้านบน เพื่อใช้ชื่อนี้ได้
+                      สามารถแตะปุ่ม &ldquo;ใช้ระบุเอง&rdquo; ด้านบน เพื่อใช้ชื่อนี้ได้
                     </Text>
                   )}
                 </View>

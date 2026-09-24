@@ -30,10 +30,11 @@ import CustomAlert from '@/components/ui/CustomAlert';
 // ── สถานะที่ช่างสามารถเปลี่ยนไปได้ (เฉพาะขอบเขตของช่าง) ──
 const TECH_STATUS_OPTIONS: Record<string, string[]> = {
   'รอตรวจเช็ค': ['ดำเนินการตรวจเช็ค'],
-  'ดำเนินการตรวจเช็ค': [],
+  'ดำเนินการตรวจเช็ค': ['ดำเนินการเสนอราคา'],
   'ดำเนินการเสนอราคา': [],
   'รอการอนุมัติ': [],
-  'อนุมัติแล้ว/รอซ่อม': ['รอชำระ'], // ช่างซ่อมเสร็จ เปลี่ยนเป็นรอชำระ
+  'อนุมัติแล้ว/รอซ่อม': ['กำลังซ่อม', 'รอชำระ'], // ช่างเริ่มซ่อม หรือ ซ่อมเสร็จ เปลี่ยนเป็นรอชำระ
+  'กำลังซ่อม': ['รอชำระ'], // เมื่อซ่อมเสร็จ เปลี่ยนเป็นรอชำระ
   'รอชำระ': [],
   'เสร็จสิ้น': [],
   'ยกเลิกซ่อม': [],
@@ -46,14 +47,10 @@ const STAFF_STATUS_OPTIONS: Record<string, string[]> = {
   'ดำเนินการเสนอราคา': [], // ช่างเป็นผู้ออกและส่งใบเสนอราคาให้ลูกค้าโดยตรง
   'รอการอนุมัติ': [], // ลูกค้าเป็นผู้กดอนุมัติหรือยกเลิก
   'อนุมัติแล้ว/รอซ่อม': [], // ช่างเป็นผู้ดำเนินการซ่อม
-  'ยกเลิกซ่อม': ['รอชำระ'], // จากยกเลิกซ่อม ➔ เปลี่ยนเป็นรอชำระ (ค่าตรวจเช็ค 300 บาท)
-  'รอชำระ': ['เสร็จสิ้น'], // จากรอชำระ ➔ ส่งมอบและรับเงินเสร็จสิ้น
+  'ยกเลิกซ่อม': ['รอชำระ'], // จากยกเลิกซ่อม -> เปลี่ยนเป็นรอชำระ (ค่าตรวจเช็ค 300 บาท)
+  'รอชำระ': ['เสร็จสิ้น'], // จากรอชำระ -> ส่งมอบและรับเงินเสร็จสิ้น
   'เสร็จสิ้น': [],
 };
-
-// ── สถานะที่ผู้จัดการสามารถเปลี่ยนไปได้ ──
-// ผู้จัดการมีบทบาทตรวจสอบและกำกับดูแลภาพรวม (View Only) ไม่มีการแก้ไขสถานะงานซ่อม
-const MANAGER_STATUS_OPTIONS: Record<string, string[]> = {};
 
 interface JobData {
   id: string;
@@ -78,7 +75,7 @@ interface JobData {
   status_id?: number;
   created_at: string;
   received_by?: string;
-  return_date?: string;
+  return_date?: string | null;
   appointment_date?: string | null;
   payment_date?: string | null;
   payment_method_id?: number | null;
@@ -196,7 +193,7 @@ export default function TechnicianDetailScreen() {
             3: 'ดำเนินการเสนอราคา',
             4: 'รอการอนุมัติ',
             5: 'อนุมัติแล้ว/รอซ่อม',
-            6: 'อนุมัติแล้ว/รอซ่อม', // Legacy status 6 (กำลังซ่อม) ปรับเป็น อนุมัติแล้ว/รอซ่อม
+            6: 'กำลังซ่อม',
             7: 'รอชำระ',
             8: 'เสร็จสิ้น',
             9: 'ยกเลิกซ่อม',
@@ -318,6 +315,92 @@ export default function TechnicianDetailScreen() {
     setAlertConfig((prev) => ({ ...prev, visible: false }));
   };
 
+  const applyStatusUpdate = async (targetStatus: string) => {
+    if (!job) return;
+    setSaving(true);
+    try {
+      const numericId = parseInt(job.id, 10);
+
+      if (!isNaN(numericId)) {
+        const STATUS_ID_MAP: Record<string, number> = {
+          'รอตรวจเช็ค': 1,
+          'ดำเนินการตรวจเช็ค': 2,
+          'ดำเนินการเสนอราคา': 3,
+          'รอการอนุมัติ': 4,
+          'อนุมัติแล้ว/รอซ่อม': 5,
+          'กำลังซ่อม': 6,
+          'รอชำระ': 7,
+          'เสร็จสิ้น': 8,
+          'ยกเลิกซ่อม': 9,
+        };
+        const statusId = STATUS_ID_MAP[targetStatus] || 2;
+
+        const res = await updateRepairStatus(numericId, {
+          status_id: statusId,
+          user_id: currentUser?.id,
+        });
+        if (!res.success) throw new Error(res.message);
+
+        const ACTION_TYPE_MAP: Record<number, number> = {
+          1: 1, // รับเครื่องซ่อม
+          2: 2, // เริ่มตรวจเช็คสภาพเครื่อง
+          3: 3, // ออกใบเสนอราคา
+          4: 3, // รอการอนุมัติ
+          5: 4, // อนุมัติแล้ว/รอซ่อม
+          6: 4, // เริ่มดำเนินการซ่อม
+          7: 5, // ซ่อมเสร็จสิ้น / ทดสอบเครื่อง
+          8: 7, // ส่งมอบเครื่องให้ลูกค้า
+          9: 8, // ยกเลิกการซ่อม
+        };
+        let actionTypeId = ACTION_TYPE_MAP[statusId] || 2;
+        let actionRemark: string | undefined = undefined;
+
+        if (statusId === 6) {
+          actionTypeId = 4;
+          actionRemark = 'ช่างเริ่มดำเนินการซ่อมเครื่อง';
+        } else if (statusId === 7) {
+          if (job.status === 'ยกเลิกซ่อม') {
+            actionTypeId = 6;
+            actionRemark = 'พนักงานปรับสถานะรอชำระค่าตรวจเช็ค (ยกเลิกซ่อม)';
+          } else {
+            actionTypeId = 5;
+            actionRemark = 'ช่างซ่อมเสร็จสิ้น / ทดสอบเครื่อง เปลี่ยนสถานะเป็นรอชำระ';
+          }
+        } else if (statusId === 2) {
+          actionTypeId = 2;
+          actionRemark = 'ช่างเริ่มดำเนินการตรวจเช็คสภาพเครื่อง';
+        }
+
+        await logRepairJobDetail(numericId, actionTypeId, currentUser?.id, actionRemark);
+      }
+
+      setIsEditing(false);
+      setStatus(targetStatus);
+      await fetchJob();
+
+      setTimeout(() => {
+        showAlert({
+          title: 'สำเร็จ',
+          message: `อัปเดตสถานะเป็น "${targetStatus}" เรียบร้อยแล้ว`,
+          type: 'success',
+          confirmText: 'ตกลง',
+          onConfirm: hideAlert,
+        });
+      }, 100);
+    } catch (err: any) {
+      console.error('Update status error:', err);
+      showAlert({
+        title: 'ผิดพลาด',
+        message: err.message || 'ไม่สามารถอัปเดตสถานะได้',
+        type: 'danger',
+        confirmText: 'ตกลง',
+        onConfirm: hideAlert,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleConfirm = () => {
     if (!status || !job) return;
     showAlert({
@@ -328,80 +411,8 @@ export default function TechnicianDetailScreen() {
       cancelText: 'ยกเลิก',
       onCancel: hideAlert,
       onConfirm: async () => {
-        setSaving(true);
-        try {
-          const numericId = parseInt(job.id, 10);
-
-          if (!isNaN(numericId)) {
-            const STATUS_ID_MAP: Record<string, number> = {
-              'รอตรวจเช็ค': 1,
-              'ดำเนินการตรวจเช็ค': 2,
-              'ดำเนินการเสนอราคา': 3,
-              'รอการอนุมัติ': 4,
-              'อนุมัติแล้ว/รอซ่อม': 5,
-              'รอชำระ': 7,
-              'เสร็จสิ้น': 8,
-              'ยกเลิกซ่อม': 9,
-            };
-            const statusId = STATUS_ID_MAP[status] || 2;
-
-            const res = await updateRepairStatus(numericId, {
-              status_id: statusId,
-              user_id: currentUser?.id,
-            });
-            if (!res.success) throw new Error(res.message);
-
-            const ACTION_TYPE_MAP: Record<number, number> = {
-              1: 1, // รับเครื่องซ่อม
-              2: 2, // เริ่มตรวจเช็คสภาพเครื่อง
-              3: 3, // ออกใบเสนอราคา
-              4: 3, // รอการอนุมัติ
-              5: 4, // อนุมัติแล้ว/รอซ่อม
-              6: 4, // เริ่มดำเนินการซ่อม
-              7: 5, // ซ่อมเสร็จสิ้น / ทดสอบเครื่อง
-              8: 7, // ส่งมอบเครื่องให้ลูกค้า
-              9: 8, // ยกเลิกการซ่อม
-            };
-            let actionTypeId = ACTION_TYPE_MAP[statusId] || 2;
-            let actionRemark: string | undefined = undefined;
-
-            if (statusId === 7) {
-              if (job.status === 'ยกเลิกซ่อม') {
-                actionTypeId = 6;
-                actionRemark = 'พนักงานปรับสถานะรอชำระค่าตรวจเช็ค (ยกเลิกซ่อม)';
-              } else {
-                actionTypeId = 5;
-                actionRemark = 'ช่างซ่อมเสร็จสิ้น / ทดสอบเครื่อง เปลี่ยนสถานะเป็นรอชำระ';
-              }
-            }
-
-            await logRepairJobDetail(numericId, actionTypeId, currentUser?.id, actionRemark);
-          }
-
-          setIsEditing(false);
-          await fetchJob();
-
-          setTimeout(() => {
-            showAlert({
-              title: 'สำเร็จ',
-              message: `อัปเดตสถานะเป็น "${status}" เรียบร้อยแล้ว`,
-              type: 'success',
-              confirmText: 'ตกลง',
-              onConfirm: hideAlert,
-            });
-          }, 100);
-        } catch (err: any) {
-          console.error('Update status error:', err);
-          showAlert({
-            title: 'ผิดพลาด',
-            message: err.message || 'ไม่สามารถอัปเดตสถานะได้',
-            type: 'danger',
-            confirmText: 'ตกลง',
-            onConfirm: hideAlert,
-          });
-        } finally {
-          setSaving(false);
-        }
+        hideAlert();
+        await applyStatusUpdate(status);
       },
     });
   };
@@ -415,7 +426,7 @@ export default function TechnicianDetailScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-slate-100">
-        <View className="bg-[#D32F2F] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
+        <View className="bg-[#DC2626] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
           <View className="flex-row items-center">
             <TouchableOpacity onPress={() => router.back()} className="mr-3">
               <Ionicons name="chevron-back" size={28} color="#ffffff" />
@@ -424,7 +435,7 @@ export default function TechnicianDetailScreen() {
           </View>
         </View>
         <View className="flex-1 justify-center items-center py-10">
-          <ActivityIndicator size="large" color="#D32F2F" />
+          <ActivityIndicator size="large" color="#DC2626" />
           <Text className="mt-3 text-sm text-slate-500">กำลังโหลดข้อมูล...</Text>
         </View>
       </View>
@@ -434,7 +445,7 @@ export default function TechnicianDetailScreen() {
   if (!job) {
     return (
       <View className="flex-1 bg-slate-100">
-        <View className="bg-[#D32F2F] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
+        <View className="bg-[#DC2626] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
           <View className="flex-row items-center">
             <TouchableOpacity onPress={() => router.back()} className="mr-3">
               <Ionicons name="chevron-back" size={28} color="#ffffff" />
@@ -453,7 +464,7 @@ export default function TechnicianDetailScreen() {
   return (
     <View className="flex-1 bg-slate-100">
       {/* Top Header */}
-      <View className="bg-[#D32F2F] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
+      <View className="bg-[#DC2626] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
         <View className="flex-row items-center">
           <TouchableOpacity
             onPress={() => {
@@ -509,9 +520,6 @@ export default function TechnicianDetailScreen() {
           serialNumber={job.serial_number}
           symptoms={job.symptoms}
           actualSymptom={job.actual_symptom}
-          technicianName={job.technician_name}
-          inspectorName={job.inspector_name}
-          repairerName={job.repairer_name}
           accessories={job.accessories}
           password={job.password}
           importantSoftware={job.important_software}
@@ -521,7 +529,6 @@ export default function TechnicianDetailScreen() {
         {/* ข้อมูลการชำระเงิน */}
         <PaymentInfoCard
           paymentMethodId={job.payment_method_id}
-          paymentMethodName={job.payment_method_name}
           paymentDate={job.payment_date}
           statusId={job.status_id}
           statusName={job.status}
@@ -591,7 +598,7 @@ export default function TechnicianDetailScreen() {
       <FloatingActionButton
         onPress={() => setIsEditing(true)}
         icon="create-outline"
-        bgColor="#D32F2F"
+        bgColor="#DC2626"
         visible={
           !isEditing &&
           currentRole !== 'manager' &&

@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 3. API helpers
-import { createDevice, createRepairJob, logRepairJobDetail } from '@/lib/api';
+import { createDevice, createRepairJob, logRepairJobDetail, lookupProfiles, api } from '@/lib/api';
 
 // 4. Components
 import CustomerFormCard from '@/components/Staff_receive/CustomerFormCard';
@@ -63,25 +63,47 @@ export default function StaffReceiveScreen() {
     return `REP-${dateStr}-${randomNum}`;
   };
 
-  const handleGeneratePdf = () => {
-    if (!selectedCustomerId) {
+  const handleGeneratePdf = async () => {
+    if (!customerName.trim() || !phone.trim()) {
       setAlertConfig({
         visible: true,
-        title: 'ต้องเลือกลูกค้าจากระบบ',
-        message: 'กรุณาพิมพ์ค้นหาและแตะเลือกลูกค้าจากรายชื่อสมาชิกในระบบก่อนออกใบรับเครื่อง (หากยังไม่มีข้อมูล ให้ลงทะเบียนลูกค้าก่อน)',
+        title: 'ข้อมูลลูกค้าไม่ครบถ้วน',
+        message: 'กรุณากรอกชื่อลูกค้าและเบอร์โทรศัพท์ติดต่อ',
         type: 'warning',
       });
       return;
     }
 
-    if (!customerName.trim() || !phone.trim()) {
-      setAlertConfig({
-        visible: true,
-        title: 'ข้อมูลไม่ครบถ้วน',
-        message: 'กรุณากรอกชื่อลูกค้าและเบอร์โทรศัพท์',
-        type: 'warning',
-      });
-      return;
+    // Auto-resolve or register customer if not selected from suggestions
+    let finalCustId = selectedCustomerId;
+    if (!finalCustId && phone.trim()) {
+      try {
+        const cleanDigits = phone.replace(/[^0-9]/g, '').slice(0, 10);
+        const lk = await lookupProfiles(cleanDigits, 'phone');
+        if (lk.success && lk.data && lk.data.length > 0) {
+          finalCustId = lk.data[0].id;
+          setSelectedCustomerId(finalCustId);
+        } else {
+          // Auto-create customer profile on the fly so Staff is never blocked
+          const parts = customerName.trim().split(' ');
+          const fName = parts[0] || 'ลูกค้า';
+          const lName = parts.slice(1).join(' ') || '-';
+          const autoEmail = email.trim() || `cus_${cleanDigits || Date.now()}@itvertex.local`;
+          const reg = await api.post('/auth/register', {
+            first_name: fName,
+            last_name: lName,
+            phone: cleanDigits,
+            email: autoEmail,
+            password: 'Customer1234Z',
+          });
+          if (reg?.data?.user?.id) {
+            finalCustId = reg.data.user.id;
+            setSelectedCustomerId(finalCustId);
+          }
+        }
+      } catch (e) {
+        console.log('Auto resolve customer notice:', e);
+      }
     }
 
     if (!selectedDeviceTypeId) {
@@ -159,8 +181,10 @@ export default function StaffReceiveScreen() {
 
       const jobRes = await createRepairJob(repairPayload);
 
+      let finalJobNo = jobNoToSave;
       if (jobRes.success && jobRes.data) {
         const createdJobId = jobRes.data.job_id;
+        finalJobNo = `REP-${String(createdJobId).padStart(6, '0')}`;
         // Log action: รับเครื่อง (action_type_id = 1) ใน repair_job_detail
         await logRepairJobDetail(createdJobId, 1);
       }
@@ -168,7 +192,7 @@ export default function StaffReceiveScreen() {
       setAlertConfig({
         visible: true,
         title: 'สร้างใบรับซ่อมสำเร็จ',
-        message: `สร้างใบรับซ่อมเลขที่ ${jobNoToSave} ลงในฐานข้อมูลเรียบร้อยแล้ว`,
+        message: `สร้างใบรับซ่อมเลขที่ ${finalJobNo} ลงในระบบเรียบร้อยแล้ว พร้อมส่งต่อให้ช่างตรวจเช็ค`,
         type: 'success',
         confirmText: 'ตกลง',
       });
@@ -209,7 +233,7 @@ export default function StaffReceiveScreen() {
     <View className="flex-1 bg-slate-50">
       {/* Top Bar */}
       <View 
-        className="bg-[#D32F2F] px-5 pb-4" 
+        className="bg-[#DC2626] px-5 pb-4" 
         style={{ paddingTop: insets.top + 10 }}
       >
         <Text className="text-white text-xl font-bold font-heading">รับเครื่องซ่อมใหม่</Text>
@@ -278,7 +302,7 @@ export default function StaffReceiveScreen() {
 
         {/* Submit & Generate PDF Button */}
         <TouchableOpacity
-          className={`bg-[#D32F2F] h-12 rounded-full flex-row items-center justify-center gap-2 mt-2 shadow-md shadow-red-500/30 elevation-4 ${
+          className={`bg-[#DC2626] h-12 rounded-full flex-row items-center justify-center gap-2 mt-2 shadow-md shadow-red-500/30 elevation-4 ${
             isSubmitting ? 'opacity-60' : ''
           }`}
           activeOpacity={0.8}

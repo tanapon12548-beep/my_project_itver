@@ -47,7 +47,7 @@ export default function MakeQuoteScreen() {
   const insets = useSafeAreaInsets();
 
   // Params
-  const jobNo = (params.job_no as string) || '';
+  const jobNo = (params.job_no as string) || (params.job_id as string) || (params.id as string) || '';
   const customerNameParam = (params.customer_name as string) || '';
 
   const [jobId, setJobId] = useState<string>('');
@@ -69,7 +69,6 @@ export default function MakeQuoteScreen() {
   const [partInputQty, setPartInputQty] = useState('1');
   const [serviceInputName, setServiceInputName] = useState('');
   const [serviceInputPrice, setServiceInputPrice] = useState('');
-  const [serviceInputQty, setServiceInputQty] = useState('1');
 
   // Lists
   const [parts, setParts] = useState<PartItem[]>([]);
@@ -291,9 +290,8 @@ export default function MakeQuoteScreen() {
     );
   };
 
-  // Add Service
+  // Add Service (ค่าบริการไม่มีจำนวน — ล็อก qty = 1 เสมอ)
   const handleAddService = (itemFromDb?: any) => {
-    const qNum = Math.max(1, parseInt(serviceInputQty, 10) || 1);
     if (itemFromDb) {
       setServices((prev) => [
         ...prev,
@@ -301,11 +299,10 @@ export default function MakeQuoteScreen() {
           id: Date.now().toString(),
           name: itemFromDb.item_name,
           price: Math.max(0, parseFloat(itemFromDb.selling_price || itemFromDb.unit_price || 0)),
-          qty: qNum,
+          qty: 1,
           item_id: itemFromDb.item_id,
         },
       ]);
-      setServiceInputQty('1');
       return;
     }
 
@@ -327,25 +324,16 @@ export default function MakeQuoteScreen() {
         id: Date.now().toString(),
         name: serviceInputName.trim(),
         price: priceNum,
-        qty: qNum,
+        qty: 1,
       },
     ]);
     setServiceInputName('');
     setServiceInputPrice('');
-    setServiceInputQty('1');
   };
 
   // Remove Service (prompt confirmation)
   const handleRemoveService = (id: string) => {
     handlePromptDeleteService(id);
-  };
-
-  // Update Service Qty
-  const handleUpdateServiceQty = (id: string, newQty: number) => {
-    if (newQty <= 0) return;
-    setServices((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, qty: Math.max(1, newQty) } : s))
-    );
   };
 
   // Totals
@@ -460,7 +448,7 @@ export default function MakeQuoteScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Red Header */}
-      <View className="bg-[#D32F2F] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
+      <View className="bg-[#DC2626] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
             <Ionicons name="chevron-back" size={28} color="#ffffff" />
@@ -481,7 +469,7 @@ export default function MakeQuoteScreen() {
         <View className="w-full max-w-[600px]">
           {loading ? (
             <View className="flex-1 justify-center items-center py-20">
-              <ActivityIndicator size="large" color="#D32F2F" />
+              <ActivityIndicator size="large" color="#DC2626" />
               <Text className="mt-3 text-sm text-slate-500">กำลังโหลดข้อมูล...</Text>
             </View>
           ) : (
@@ -496,7 +484,7 @@ export default function MakeQuoteScreen() {
                     </Text>
                   </View>
                   <Text className="text-amber-950 text-sm pl-7 leading-5 font-body">
-                    "{customerRemark}"
+                    &ldquo;{customerRemark}&rdquo;
                   </Text>
                 </View>
               ) : null}
@@ -530,11 +518,8 @@ export default function MakeQuoteScreen() {
                 setServiceInputName={setServiceInputName}
                 serviceInputPrice={serviceInputPrice}
                 setServiceInputPrice={setServiceInputPrice}
-                serviceInputQty={serviceInputQty}
-                setServiceInputQty={setServiceInputQty}
                 onAddService={handleAddService}
                 onRemoveService={handleRemoveService}
-                onUpdateServiceQty={handleUpdateServiceQty}
                 totalServicesCost={totalServicesCost}
               />
 
@@ -548,14 +533,17 @@ export default function MakeQuoteScreen() {
 
               {/* Submit Button */}
               <TouchableOpacity
-                className={`bg-[#D32F2F] h-12 rounded-lg justify-center items-center shadow-sm ${saving ? 'opacity-70' : ''}`}
+                className={`bg-[#DC2626] h-[52px] rounded-xl flex-row justify-center items-center gap-2 shadow-lg shadow-[#DC2626]/20 elevation-3 active:opacity-90 ${saving ? 'opacity-70' : ''}`}
                 onPress={handleSubmitQuote}
                 disabled={saving}
               >
                 {saving ? (
                   <ActivityIndicator size="small" color="#ffffff" />
                 ) : (
-                  <Text className="text-white text-[15px] font-bold">บันทึกและส่งใบเสนอราคา</Text>
+                  <>
+                    <Ionicons name="paper-plane" size={18} color="#FFFFFF" />
+                    <Text className="text-white text-base font-bold font-heading">บันทึกและส่งใบเสนอราคา</Text>
+                  </>
                 )}
               </TouchableOpacity>
             </>

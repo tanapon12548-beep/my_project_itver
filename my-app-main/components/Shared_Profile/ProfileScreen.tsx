@@ -2,8 +2,6 @@
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Platform,
   ScrollView,
   StatusBar,
   Text,
@@ -16,8 +14,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// 3. Auth helpers
+// 3. Auth helpers & Components
 import { getCurrentUser, logout } from '@/lib/auth';
+import ConfirmLogoutModal from '@/components/ui/ConfirmLogoutModal';
+import SuccessToast from '@/components/ui/SuccessToast';
 
 // ── Role configuration type ──
 export interface RoleConfig {
@@ -47,6 +47,10 @@ export default function SharedProfileScreen({ roleConfig }: SharedProfileScreenP
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<any>(null);
+  const [logoutModalVisible, setLogoutModalVisible] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [showLogoutToast, setShowLogoutToast] = useState(false);
+  const [toastUserSubtitle, setToastUserSubtitle] = useState('');
 
   useEffect(() => {
     fetchProfile();
@@ -76,22 +80,34 @@ export default function SharedProfileScreen({ roleConfig }: SharedProfileScreenP
     }
   };
 
-  const handleLogout = async () => {
-    const confirmLogout = async () => {
-      await logout();
-      router.replace('/(auth)/login');
-    };
+  const handleLogout = () => {
+    setLogoutModalVisible(true);
+  };
 
-    if (Platform.OS === 'web') {
-      if (window.confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
-        confirmLogout();
-      }
-    } else {
-      Alert.alert('ออกจากระบบ', 'คุณต้องการออกจากระบบใช่หรือไม่?', [
-        { text: 'ยกเลิก', style: 'cancel' },
-        { text: 'ออกจากระบบ', style: 'destructive', onPress: confirmLogout },
-      ]);
+  const confirmLogout = async () => {
+    setLoggingOut(true);
+    try {
+      const displayName = user
+        ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email
+        : 'ผู้ใช้งาน';
+      const roleText = roleConfig.roleLabel || user?.role_name || '';
+      const sub = roleText ? `${displayName} • ${roleText}` : displayName;
+
+      setToastUserSubtitle(sub);
+      await logout();
+      setLogoutModalVisible(false);
+      setShowLogoutToast(true);
+    } catch (err) {
+      console.error('Logout error:', err);
+      setLogoutModalVisible(false);
+    } finally {
+      setLoggingOut(false);
     }
+  };
+
+  const handleLogoutToastHide = () => {
+    setShowLogoutToast(false);
+    router.replace('/(auth)/login');
   };
 
   const getInitials = () => {
@@ -207,15 +223,41 @@ export default function SharedProfileScreen({ roleConfig }: SharedProfileScreenP
 
           {/* Logout Button */}
           <TouchableOpacity
-            className="w-full bg-red-50 border border-red-200 py-3.5 rounded-2xl flex-row justify-center items-center shadow-sm"
+            className="w-full bg-red-50 border border-red-200 h-[52px] rounded-2xl flex-row justify-center items-center shadow-sm active:bg-red-100"
             onPress={handleLogout}
             activeOpacity={0.8}
           >
-            <Ionicons name="log-out-outline" size={20} color="#dc2626" style={{ marginRight: 8 }} />
-            <Text className="text-red-600 font-bold text-base">ออกจากระบบ</Text>
+            <Ionicons name="log-out-outline" size={20} color="#DC2626" style={{ marginRight: 8 }} />
+            <Text className="text-[#DC2626] font-bold text-base font-heading">ออกจากระบบ</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {/* Enhanced Success Toast on Logout */}
+      <SuccessToast
+        visible={showLogoutToast}
+        message="ออกจากระบบเสร็จสิ้น"
+        subtitle={toastUserSubtitle}
+        type="logout"
+        icon="log-out-outline"
+        duration={1500}
+        showProgress={true}
+        onHide={handleLogoutToastHide}
+      />
+
+      {/* Confirm Logout Modal Component */}
+      <ConfirmLogoutModal
+        visible={logoutModalVisible}
+        userName={
+          user
+            ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email
+            : undefined
+        }
+        userRole={roleConfig.roleLabel || user?.role_name}
+        loading={loggingOut}
+        onConfirm={confirmLogout}
+        onCancel={() => !loggingOut && setLogoutModalVisible(false)}
+      />
     </View>
   );
 }

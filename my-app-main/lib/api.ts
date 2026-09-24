@@ -1,4 +1,7 @@
 import { Platform } from 'react-native';
+import type { ApiResponse, RepairJob } from '@/types/repair';
+import type { QuotationItem } from '@/types/quotation';
+import type { InventoryItem } from '@/types/item';
 
 // ============================================================
 // API Base URL
@@ -131,11 +134,11 @@ export const api = {
 // PUT  /api/repairs/:id/signature → อัปเดตลายเซ็น
 // DELETE /api/repairs/:id    → ลบงาน
 
-export function getRepairs() {
+export function getRepairs(): Promise<ApiResponse<RepairJob[]>> {
   return api.get('/repairs');
 }
 
-export function getRepair(jobId: string | number) {
+export function getRepair(jobId: string | number): Promise<ApiResponse<RepairJob>> {
   return api.get(`/repairs/${jobId}`);
 }
 
@@ -205,7 +208,7 @@ export function updateDevice(id: number | string, data: any) {
 // DELETE /api/quotations/:id          → ลบใบเสนอราคา
 // PATCH  /api/quotations/:id/status   → เปลี่ยนสถานะใบเสนอราคา
 
-export function getQuotations(params?: { status_id?: number | string; search?: string }) {
+export function getQuotations(params?: { status_id?: number | string; search?: string }): Promise<ApiResponse<QuotationItem[]>> {
   const query = new URLSearchParams();
   if (params?.status_id) query.append('status_id', String(params.status_id));
   if (params?.search) query.append('search', params.search);
@@ -213,7 +216,7 @@ export function getQuotations(params?: { status_id?: number | string; search?: s
   return api.get(`/quotations${qStr ? `?${qStr}` : ''}`);
 }
 
-export function getQuotation(quotationId: string | number) {
+export function getQuotation(quotationId: string | number): Promise<ApiResponse<QuotationItem>> {
   return api.get(`/quotations/${quotationId}`);
 }
 
@@ -256,7 +259,7 @@ export function rejectPayment(jobId: number | string, reason?: string) {
 // PUT    /api/items/:id        → แก้ไขรายการ
 // DELETE /api/items/:id        → ลบรายการ
 
-export function getItems(typeId?: number | string) {
+export function getItems(typeId?: number | string): Promise<ApiResponse<InventoryItem[]>> {
   if (!typeId) return api.get('/items');
   const numId = Number(typeId);
   const typeStr = numId === 1 ? 'parts' : 'services';
@@ -367,9 +370,18 @@ export function deleteSlip(id: number | string) {
 }
 
 // --- Lookup ---
-// GET /api/lookup/profiles?q=...&type=...
-export function lookupProfiles(query: string, type: string) {
+// GET /api/lookup/profiles?q=...&type=all|name|phone|email
+export function lookupProfiles(query: string, type: string = 'all') {
   return api.get(`/lookup/profiles?q=${encodeURIComponent(query)}&type=${type}`);
+}
+
+// GET /api/lookup/profiles?name=...&phone=...&email=... (AND กัน — กรองละเอียด)
+export function lookupProfilesAdvanced(filters: { name?: string; phone?: string; email?: string }) {
+  const params = new URLSearchParams();
+  if (filters.name?.trim()) params.append('name', filters.name.trim());
+  if (filters.phone?.trim()) params.append('phone', filters.phone.trim());
+  if (filters.email?.trim()) params.append('email', filters.email.trim());
+  return api.get(`/lookup/profiles?${params.toString()}`);
 }
 
 export function getLookupDeviceTypes() {

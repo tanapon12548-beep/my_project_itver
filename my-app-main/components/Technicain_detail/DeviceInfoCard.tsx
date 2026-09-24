@@ -8,9 +8,6 @@ interface DeviceInfoCardProps {
   serialNumber?: string;
   symptoms?: string;
   actualSymptom?: string;
-  technicianName?: string;
-  inspectorName?: string;
-  repairerName?: string;
   accessories?: string;
   password?: string;
   importantSoftware?: string;
@@ -24,9 +21,6 @@ export default function DeviceInfoCard({
   serialNumber,
   symptoms,
   actualSymptom,
-  technicianName,
-  inspectorName,
-  repairerName,
   accessories,
   password,
   importantSoftware,
@@ -34,7 +28,6 @@ export default function DeviceInfoCard({
 }: DeviceInfoCardProps) {
   const brandModel = [brand, model].filter(Boolean).join(' / ') || '-';
   const deviceLabel = deviceType || '-';
-  const activeInspector = inspectorName || technicianName || '-';
 
   return (
     <View className="mb-4">
