@@ -2,6 +2,48 @@ const pool = require('../config/db');
 const fs = require('fs');
 const path = require('path');
 const repairQueries = require('../queries/repair.queries');
+const {
+  ROLES,
+  REPAIR_STATUS,
+  QUOTE_STATUS,
+  ACTION_TYPES,
+  ITEM_TYPES,
+  DEFAULTS,
+} = require('../constants');
+
+// Helper function จัดรูปแบบข้อมูลงานซ่อมใน JavaScript (แทนการเขียน SQL ซับซ้อน)
+function formatRepairRow(row) {
+  if (!row) return row;
+  const customerName = (row.first_name || row.last_name)
+    ? `${row.first_name || ''} ${row.last_name || ''}`.trim()
+    : 'ไม่ระบุ';
+  const directRepName = (row.rep_first_name || row.rep_last_name)
+    ? `${row.rep_first_name || ''} ${row.rep_last_name || ''}`.trim()
+    : '-';
+  const isRepairCompleted = (row.status_id === REPAIR_STATUS.WAITING_PAYMENT || row.status_id === REPAIR_STATUS.COMPLETED) && (row.quote_status_id !== QUOTE_STATUS.CANCELLED);
+
+  return {
+    ...row,
+    id: row.job_id,
+    job_number: `REP-${String(row.job_id).padStart(6, '0')}`,
+    job_no: `REP-${String(row.job_id).padStart(6, '0')}`,
+    device_type: row.device_type || '-',
+    brand: row.brand || '-',
+    accessories: row.included_accessories,
+    important_programs: row.important_software,
+    password: row.device_password,
+    warranty_years: row.warranty_year,
+    symptom: row.symptom_details || '-',
+    symptoms: row.symptom_details || '-',
+    status_name: row.status_name || '-',
+    status: row.status_name || '-',
+    payment_method_name: row.payment_method_name || '-',
+    customer_name: customerName,
+    received_by: '-',
+    inspector_name: '-',
+    repairer_name: isRepairCompleted ? directRepName : '-',
+  };
+}
 
 /**
  * GET /api/repairs
@@ -9,7 +51,7 @@ const repairQueries = require('../queries/repair.queries');
  */
 exports.getAll = async (req, res, next) => {
   try {
-    const isCustomer = req.user && (req.user.role_id === 4 || req.user.role_name?.toLowerCase() === 'customer');
+    const isCustomer = req.user && (req.user.role_id === ROLES.CUSTOMER || req.user.role_name?.toLowerCase() === 'customer');
     const params = [];
     let whereClause = '';
 
@@ -23,7 +65,7 @@ exports.getAll = async (req, res, next) => {
 
     const query = repairQueries.BUILD_GET_ALL_REPAIRS(whereClause);
     const { rows } = await pool.query(query, params);
-    res.json({ success: true, data: rows });
+    res.json({ success: true, data: rows.map(formatRepairRow) });
   } catch (err) {
     next(err);
   }
@@ -65,8 +107,8 @@ exports.getById = async (req, res, next) => {
         const qdRes = await pool.query(repairQueries.GET_QUOTATION_ITEMS, [quotation.quotation_id]);
         const items = qdRes.rows;
         quotation.items = items;
-        quotation.parts = items.filter(it => it.item_type_id === 1);
-        quotation.services = items.filter(it => it.item_type_id === 2);
+        quotation.parts = items.filter(it => it.item_type_id === ITEM_TYPES.PART);
+        quotation.services = items.filter(it => it.item_type_id === ITEM_TYPES.SERVICE);
         quotation.total_parts = quotation.parts.reduce((sum, it) => sum + (parseFloat(it.total_price) || 0), 0);
         quotation.total_services = quotation.services.reduce((sum, it) => sum + (parseFloat(it.total_price) || 0), 0);
       }
@@ -75,30 +117,38 @@ exports.getById = async (req, res, next) => {
     // ดึง repair_job_detail (action log)
     const detailRes = await pool.query(repairQueries.GET_ACTION_LOGS, [numId]);
 
-    let received_by = rows[0].received_by && rows[0].received_by !== '-' ? rows[0].received_by : null;
-    let inspector_name = rows[0].inspector_name && rows[0].inspector_name !== '-' ? rows[0].inspector_name : null;
-    let repairer_name = rows[0].repairer_name && rows[0].repairer_name !== '-' ? rows[0].repairer_name : null;
+    const formattedRow = formatRepairRow(rows[0]);
+    const actionLogs = detailRes.rows.map((r) => ({
+      ...r,
+      user_name: (r.first_name || r.last_name)
+        ? `${r.first_name || ''} ${r.last_name || ''}`.trim()
+        : (r.user_name || 'ไม่ระบุ'),
+    }));
+
+    let received_by = formattedRow.received_by && formattedRow.received_by !== '-' ? formattedRow.received_by : null;
+    let inspector_name = formattedRow.inspector_name && formattedRow.inspector_name !== '-' ? formattedRow.inspector_name : null;
+    let repairer_name = formattedRow.repairer_name && formattedRow.repairer_name !== '-' ? formattedRow.repairer_name : null;
 
     if (!received_by) {
-      const rec = detailRes.rows.find(r => r.action_type_id === 1);
+      const rec = actionLogs.find(r => r.action_type_id === ACTION_TYPES.RECEIVE_DEVICE);
       if (rec) received_by = rec.user_name;
     }
     if (!inspector_name) {
-      const ins = detailRes.rows.find(r => r.action_type_id === 2);
+      const ins = actionLogs.find(r => r.action_type_id === ACTION_TYPES.START_INSPECT);
       if (ins) inspector_name = ins.user_name;
     }
     if (!repairer_name || repairer_name === '-') {
-      const isRepairCompleted = (rows[0].status_id === 7 || rows[0].status_id === 8) &&
-        (!quotation || quotation.quote_status_id !== 3);
+      const isRepairCompleted = (rows[0].status_id === REPAIR_STATUS.WAITING_PAYMENT || rows[0].status_id === REPAIR_STATUS.COMPLETED) &&
+        (!quotation || quotation.quote_status_id !== QUOTE_STATUS.CANCELLED);
       if (isRepairCompleted) {
-        const repTech = detailRes.rows
+        const repTech = actionLogs
           .slice()
           .reverse()
-          .find(r => r.action_type_id === 5 && (r.role_name === 'Technician' || r.role_id === 2));
-        const repAny = detailRes.rows
+          .find(r => r.action_type_id === ACTION_TYPES.FINISH_REPAIR && (r.role_name === 'Technician' || r.role_id === ROLES.TECHNICIAN));
+        const repAny = actionLogs
           .slice()
           .reverse()
-          .find(r => r.action_type_id === 5);
+          .find(r => r.action_type_id === ACTION_TYPES.FINISH_REPAIR);
         if (repTech) repairer_name = repTech.user_name;
         else if (repAny) repairer_name = repAny.user_name;
         else repairer_name = '-';
@@ -109,7 +159,7 @@ exports.getById = async (req, res, next) => {
 
     let return_date = rows[0].return_date || null;
     if (!return_date && rows[0].customer_receive_signature) {
-      const handoverAct = detailRes.rows.find(r => r.action_type_id === 7);
+      const handoverAct = actionLogs.find(r => r.action_type_id === ACTION_TYPES.HANDOVER);
       if (handoverAct) {
         return_date = handoverAct.created_at || handoverAct.action_date;
       }
@@ -120,7 +170,7 @@ exports.getById = async (req, res, next) => {
     res.json({
       success: true,
       data: {
-        ...rows[0],
+        ...formattedRow,
         received_by: received_by || '-',
         inspector_name: inspector_name || '-',
         repairer_name: repairer_name || '-',
@@ -128,7 +178,7 @@ exports.getById = async (req, res, next) => {
         return_date: return_date || null,
         payment_date: verifiedPaymentDate,
         quotation,
-        action_logs: detailRes.rows.reverse(),
+        action_logs: actionLogs.reverse(),
       },
     });
   } catch (err) {
@@ -147,11 +197,11 @@ exports.create = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'กรุณาระบุอุปกรณ์ที่ถูกต้อง' });
     }
     const symptomText = (symptom_details || symptom || '-').trim();
-    const numStatusId = status_id ? parseInt(status_id, 10) : 1;
+    const numStatusId = status_id ? parseInt(status_id, 10) : REPAIR_STATUS.PENDING_CHECK;
 
     const { rows } = await pool.query(
       repairQueries.INSERT_REPAIR_JOB,
-      [numDeviceId, symptomText, appointment_date || null, isNaN(numStatusId) ? 1 : numStatusId]
+      [numDeviceId, symptomText, appointment_date || null, isNaN(numStatusId) ? REPAIR_STATUS.PENDING_CHECK : numStatusId]
     );
 
     res.status(201).json({ success: true, data: rows[0] });
@@ -223,27 +273,25 @@ exports.updateStatus = async (req, res, next) => {
     let updateSql = 'UPDATE repair_job SET status_id = $1';
     const updateParams = [numStatus, numId];
 
-    if (numStatus === 9) {
+    if (numStatus === REPAIR_STATUS.CANCELLED) {
       const qRes = await pool.query(
         'SELECT total_cancel_price FROM quotation WHERE job_id = $1 ORDER BY created_at DESC LIMIT 1',
         [numId]
       );
-      const cancelPrice = Number(qRes.rows[0]?.total_cancel_price) || 300;
+      const cancelPrice = Number(qRes.rows[0]?.total_cancel_price) || DEFAULTS.CANCEL_INSPECTION_FEE;
       updateSql += `, total_amount = $${updateParams.length + 1}`;
       updateParams.push(cancelPrice);
     }
 
-    if ((numStatus === 7 && (prevStatusId === 5 || prevStatusId === 6)) || (numStatus === 6 && prevStatusId === 5)) {
+    if (numStatus === REPAIR_STATUS.WAITING_PAYMENT && prevStatusId === REPAIR_STATUS.APPROVED_WAIT_REPAIR) {
       if (currentUserId) {
-        updateSql += ', repairer_id = $3';
-        if (numStatus === 7) {
-          updateSql += ', repaired_at = CURRENT_TIMESTAMP';
-        }
-        updateSql += ' WHERE job_id = $2 RETURNING *';
+        updateSql += ', repairer_id = $3, repaired_at = CURRENT_TIMESTAMP WHERE job_id = $2 RETURNING *';
         updateParams.push(currentUserId);
       } else {
         updateSql += ' WHERE job_id = $2 RETURNING *';
       }
+    } else if (numStatus === REPAIR_STATUS.COMPLETED) {
+      updateSql += ', return_date = COALESCE(return_date, CURRENT_TIMESTAMP) WHERE job_id = $2 RETURNING *';
     } else {
       updateSql += ' WHERE job_id = $2 RETURNING *';
     }
@@ -254,25 +302,25 @@ exports.updateStatus = async (req, res, next) => {
     let actionTypeId = null;
     let actionRemark = null;
 
-    if (Number(status_id) === 7) {
-      if (prevStatusId === 5 || prevStatusId === 6) {
-        actionTypeId = 5;
+    if (Number(status_id) === REPAIR_STATUS.WAITING_PAYMENT) {
+      if (prevStatusId === REPAIR_STATUS.APPROVED_WAIT_REPAIR) {
+        actionTypeId = ACTION_TYPES.FINISH_REPAIR;
         actionRemark = 'ช่างซ่อมเสร็จสิ้น / ทดสอบเครื่อง เปลี่ยนสถานะเป็นรอชำระ';
-      } else if (prevStatusId === 9) {
-        actionTypeId = 6;
+      } else if (prevStatusId === REPAIR_STATUS.CANCELLED) {
+        actionTypeId = ACTION_TYPES.PAYMENT_PROCESS;
         actionRemark = 'พนักงานปรับสถานะรอชำระค่าตรวจเช็ค (ยกเลิกซ่อม)';
       }
-    } else if (Number(status_id) === 6) {
-      actionTypeId = 4;
-      actionRemark = 'ช่างเริ่มดำเนินการซ่อมเครื่อง';
-    } else if (Number(status_id) === 2) {
-      actionTypeId = 2;
+    } else if (Number(status_id) === REPAIR_STATUS.READY_FOR_PICKUP) {
+      actionTypeId = ACTION_TYPES.PAYMENT_PROCESS;
+      actionRemark = 'ตรวจสอบการชำระเงินเรียบร้อยแล้ว เปลี่ยนสถานะเป็นรอลูกค้ามารับเครื่อง';
+    } else if (Number(status_id) === REPAIR_STATUS.CHECKING) {
+      actionTypeId = ACTION_TYPES.START_INSPECT;
       actionRemark = 'ช่างเริ่มดำเนินการตรวจเช็คสภาพเครื่อง';
-    } else if (Number(status_id) === 8) {
-      actionTypeId = 7;
-      actionRemark = 'ส่งมอบเครื่องให้ลูกค้าเสร็จสิ้น';
-    } else if (Number(status_id) === 9) {
-      actionTypeId = 8;
+    } else if (Number(status_id) === REPAIR_STATUS.COMPLETED) {
+      actionTypeId = ACTION_TYPES.HANDOVER;
+      actionRemark = 'ลูกค้าลงชื่อรับเครื่องและส่งมอบเครื่องเสร็จสิ้น';
+    } else if (Number(status_id) === REPAIR_STATUS.CANCELLED) {
+      actionTypeId = ACTION_TYPES.CUSTOMER_CANCEL;
       actionRemark = 'ลูกค้ายกเลิกการซ่อม';
     }
 

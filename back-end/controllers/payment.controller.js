@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const paymentQueries = require('../queries/payment.queries');
+const { ROLES, REPAIR_STATUS, PAYMENT_METHODS } = require('../constants');
 
 // Ensure pubilc/slips directory exists
 const slipsDir = path.join(__dirname, '..', 'pubilc', 'slips');
@@ -64,11 +65,13 @@ exports.create = async (req, res, next) => {
 
     let slipFilename = null;
 
-    // 1. จัดการรูปภาพสลิป (บันทึกเป็นชื่อไฟล์ที่สื่อความหมาย slip_REP-XXXXXX_date.ext)
-    if (req.file && req.file.buffer) {
-      const ext = (path.extname(req.file.originalname) || '.jpg').toLowerCase();
+    // 1. จัดการรูปภาพสลิป (รองรับทั้ง req.file และ req.files)
+    const uploadedFile = req.file || req.files?.slip_image?.[0] || req.files?.slip?.[0];
+
+    if (uploadedFile && uploadedFile.buffer) {
+      const ext = (path.extname(uploadedFile.originalname) || '.jpg').toLowerCase();
       slipFilename = `slips/slip_${cleanJobCode}_${dateStr}${ext}`;
-      fs.writeFileSync(path.join(__dirname, '..', 'pubilc', slipFilename), req.file.buffer);
+      fs.writeFileSync(path.join(__dirname, '..', 'pubilc', slipFilename), uploadedFile.buffer);
     } else if (req.body.slip_image && typeof req.body.slip_image === 'string' && req.body.slip_image.includes('base64,')) {
       const parts = req.body.slip_image.split(';base64,');
       let ext = '.jpg';
@@ -78,11 +81,13 @@ exports.create = async (req, res, next) => {
       fs.writeFileSync(path.join(__dirname, '..', 'pubilc', slipFilename), Buffer.from(parts[1], 'base64'));
     } else if (req.body.slip_image && typeof req.body.slip_image === 'string' && !req.body.slip_image.includes('/') && !req.body.slip_image.includes('\\')) {
       slipFilename = req.body.slip_image;
+    } else if (req.body.slip && typeof req.body.slip === 'string' && !req.body.slip.includes('/') && !req.body.slip.includes('\\')) {
+      slipFilename = req.body.slip;
     }
 
-    const paymentMethodId = payment_method === 'transfer' ? 2 : 1; // 1: Cash, 2: Transfer
+    const paymentMethodId = payment_method === 'transfer' ? PAYMENT_METHODS.TRANSFER : PAYMENT_METHODS.CASH;
 
-    if (paymentMethodId === 2 && !slipFilename) {
+    if (paymentMethodId === PAYMENT_METHODS.TRANSFER && !slipFilename) {
       return res.status(400).json({ success: false, message: 'กรุณาแนบรูปภาพสลิปหลักฐานการโอนเงิน' });
     }
 
@@ -93,18 +98,19 @@ exports.create = async (req, res, next) => {
     );
     if (currentRows.length > 0) {
       const curr = currentRows[0];
-      if (curr.status_id === 8) {
+      if (curr.status_id === REPAIR_STATUS.COMPLETED) {
         return res.status(400).json({ success: false, message: 'งานซ่อมนี้ส่งมอบเสร็จสิ้นแล้ว ไม่สามารถแก้ไขข้อมูลการชำระเงินได้' });
       }
-      if (curr.payment_method_id && req.user && req.user.role_id === 4) {
+      if (curr.payment_method_id && req.user && req.user.role_id === ROLES.CUSTOMER) {
         return res.status(400).json({ success: false, message: 'คุณได้ยืนยันการชำระเงินไปแล้ว ข้อมูลถูกล็อกและไม่สามารถแก้ไขได้' });
       }
     }
 
     // 2. อัปเดตตาราง repair_job: ดันสถานะเป็น 7 (รอชำระ)
+    const cleanPickupDate = (pickup_date && pickup_date !== 'null' && pickup_date !== 'undefined' && String(pickup_date).trim() !== '') ? pickup_date : null;
     await pool.query(
       paymentQueries.UPDATE_PAYMENT_INFO,
-      [paymentMethodId, slipFilename, pickup_date || null, numJobId]
+      [paymentMethodId, slipFilename, cleanPickupDate, numJobId]
     );
 
     // 3. บันทึก action log ประวัติการชำระเงิน

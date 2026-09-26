@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, Image,
   ActivityIndicator, ScrollView,
-  FlatList, Modal, Dimensions
+  FlatList, Modal, Dimensions, Platform
 } from 'react-native';
 
 // 2. Third-party / Expo
@@ -18,13 +18,7 @@ import { getCurrentUser } from '@/lib/auth';
 
 const { width } = Dimensions.get('window');
 
-type SlipRecord = {
-  id: string;
-  user_id: string;
-  image_url: string;
-  uploaded_at: string;
-  user_email?: string;
-};
+import type { SlipRecord } from '@/types/payment';
 
 export default function SlipsPage() {
   const [imageUri, setImageUri] = useState<string | null>(null);
@@ -119,7 +113,20 @@ export default function SlipsPage() {
 
     try {
       setUploading(true);
-      const res = await createSlip({ image_url: imageUri });
+      const formData = new FormData();
+      if (Platform.OS === 'web') {
+        const fetchRes = await fetch(imageUri);
+        const blob = await fetchRes.blob();
+        formData.append('slip', blob, 'slip.jpg');
+      } else {
+        const filename = imageUri.split('/').pop() || 'slip.jpg';
+        const match = /\.(\w+)$/.exec(filename);
+        const ext = match ? match[1] : 'jpg';
+        const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        formData.append('slip', { uri: imageUri, name: filename, type } as any);
+      }
+
+      const res = await createSlip(formData);
 
       if (!res.success) throw new Error(res.message || 'อัปโหลดไม่สำเร็จ');
 

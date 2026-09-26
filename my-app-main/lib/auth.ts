@@ -4,16 +4,8 @@ import { api, getToken, saveToken, removeToken } from './api';
 // Auth Helpers
 // ============================================================
 
-export interface User {
-  id: string;
-  email: string;
-  first_name: string | null;
-  last_name: string | null;
-  phone: string | null;
-  role_id: number;
-  role_name: string;
-  created_at?: string;
-}
+import type { User } from '@/types/user';
+export type { User };
 
 /**
  * เข้าสู่ระบบ

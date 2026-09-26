@@ -18,27 +18,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // 3. API helpers
-import { getRepair } from '@/lib/api';
+import { getRepair, verifyPayment } from '@/lib/api';
 
-interface RepairJob {
-  id: string;
-  job_number: string;
-  customer_name: string;
-  phone: string;
-  device_type: string;
-  brand: string;
-  model: string;
-  serial_number: string;
-  symptoms: string;
-  items: any[];
-  status: string;
-  created_at: string;
-}
+import type { RepairJob } from '@/types/repair';
 
 export default function ReceiptScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ jobId?: string; job_id?: string; job_no?: string; id?: string }>();
-  const targetId = params.jobId || params.job_id || params.id || (params.job_no ? params.job_no.replace(/[^0-9]/g, '') : '');
+  const rawTarget = params.jobId || params.job_id || params.id || '';
+  const fromJobNo = params.job_no ? (params.job_no.split('-').pop() || params.job_no.replace(/[^0-9]/g, '')) : '';
+  const targetId = rawTarget || fromJobNo;
   const [job, setJob] = useState<RepairJob | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -65,6 +54,7 @@ export default function ReceiptScreen() {
           symptoms: data.symptom || data.symptoms || '-',
           items: data.quotation?.items || [],
           status: data.status_name || (data.status_id === 8 ? 'เสร็จสิ้น' : 'กำลังดำเนินการ'),
+          total_amount: Number(data.total_amount) || 0,
           created_at: data.created_at || new Date().toISOString(),
         });
       } else {
@@ -78,9 +68,16 @@ export default function ReceiptScreen() {
   }
 
   const items = job?.items && Array.isArray(job.items) ? job.items : [];
-  const subtotal = items.reduce((sum: number, item: any) => sum + (Number(item.price || item.unit_price) || 0), 0);
-  const vat = Math.round(subtotal * 0.07 * 100) / 100;
-  const grandTotal = subtotal + vat;
+  const itemsTotal = items.reduce(
+    (sum: number, item: any) =>
+      sum + (Number(item.price || item.unit_price) * Number(item.quantity || item.qty || 1) || 0),
+    0
+  );
+  // ยอดชำระสุทธิ (ตรงกับยอดในใบเสนอราคาและที่ชำระจริง)
+  const grandTotal = itemsTotal > 0 ? itemsTotal : (Number(job?.total_amount) || 0);
+  // แยกแสดง VAT 7% (คิดแบบรวมในยอดสุทธิแล้ว — VAT Included)
+  const vat = Math.round((grandTotal * 7 / 107) * 100) / 100;
+  const subtotal = Math.round((grandTotal - vat) * 100) / 100;
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '-';
@@ -94,10 +91,11 @@ export default function ReceiptScreen() {
   const handleConfirmPayment = async () => {
     if (!job) return;
     try {
-      setJob({ ...job, status: 'ชำระแล้ว' });
+      await verifyPayment(job.id || job.job_id || targetId);
+      setJob({ ...job, status: 'เสร็จสิ้น' });
       Alert.alert('สำเร็จ', 'ยืนยันการชำระเงินเรียบร้อยแล้ว');
     } catch (err: any) {
-      Alert.alert('ล้มเหลว', err.message);
+      Alert.alert('ล้มเหลว', err.message || 'ไม่สามารถยืนยันการชำระเงินได้');
     }
   };
 

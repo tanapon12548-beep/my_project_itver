@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 // 3. API helpers
 import { updateQuotationStatus, updateRepairStatus, getRepair } from '@/lib/api';
+import { REPAIR_STATUS, QUOTE_STATUS, CANCEL_INSPECTION_FEE } from '@/constants/status';
 
 // 4. Components & Theme
 import CustomerProgressBar from '@/components/Customer/CustomerProgressBar';
@@ -23,43 +24,7 @@ import CustomerQuotationCard from '@/components/Customer/CustomerQuotationCard';
 import PickupCalendarCard from '@/components/Shared_Repairs/PickupCalendarCard';
 import CustomAlert from '@/components/ui/CustomAlert';
 import SuccessToast from '@/components/ui/SuccessToast';
-import { Colors } from '@/constants/theme';
-import { getStatusOnTintColor } from '@/components/Shared_Repairs/statusConfig';
-
-interface QuotationItem {
-  name?: string;
-  item_name?: string;
-  description?: string;
-  price?: number;
-  unit_price?: number;
-  quantity?: number;
-  amount?: number;
-}
-
-interface RepairJob {
-  id: string;
-  job_number: string;
-  device_type: string;
-  brand: string;
-  model: string;
-  symptoms: string;
-  actual_symptom?: string;
-  total_amount: number;
-  status: string;
-  status_id: number;
-  items: QuotationItem[];
-  quotation_id: number | null;
-  total_repair_price: number;
-  total_cancel_price: number;
-  quotation_status_id: number;
-  customer_remark?: string | null;
-  created_at: string;
-  appointment_date?: string | null;
-  payment_method_id?: number | null;
-  payment_method_name?: string | null;
-  slip_image?: string | null;
-  payment_date?: string | null;
-}
+import type { RepairJob } from '@/types/repair';
 
 interface ToastState {
   visible: boolean;
@@ -74,7 +39,7 @@ export default function JobDetailScreen() {
   const { id, jobId } = useLocalSearchParams<{ id?: string, jobId?: string }>();
   // Use id or jobId depending on how it was passed
   const targetId = id || jobId;
-  
+
   const [job, setJob] = useState<RepairJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -95,7 +60,7 @@ export default function JobDetailScreen() {
         const data = res.data;
         const q = data.quotation;
         const repPrice = Number(q?.total_repair_price) || (Number(data.total_amount) > 0 ? Number(data.total_amount) : 0);
-        const canPrice = Number(q?.total_cancel_price) || 300;
+        const canPrice = Number(q?.total_cancel_price) || CANCEL_INSPECTION_FEE;
 
         setJob({
           id: String(data.job_id || targetId),
@@ -137,7 +102,7 @@ export default function JobDetailScreen() {
         fetchJob();
         const interval = setInterval(() => {
           fetchJob(true);
-        }, 5000);
+        }, 2500);
         return () => clearInterval(interval);
       }
     }, [fetchJob, targetId])
@@ -163,7 +128,7 @@ export default function JobDetailScreen() {
     setShowApproveConfirm(false);
     setActionLoading(true);
     try {
-      const numericJobId = parseInt(job.id, 10);
+      const numericJobId = parseInt(String(job.id || job.job_id || ''), 10);
       const res = await updateQuotationStatus(job.quotation_id as number, { quote_status_id: 2 });
       if (!res.success) throw new Error(res.message);
 
@@ -191,16 +156,16 @@ export default function JobDetailScreen() {
     setShowCancelConfirm(false);
     setActionLoading(true);
     try {
-      const numericJobId = parseInt(job.id, 10);
+      const numericJobId = parseInt(String(job.id || job.job_id || ''), 10);
       const res = await updateQuotationStatus(job.quotation_id as number, { quote_status_id: 3 });
       if (!res.success) throw new Error(res.message);
 
       if (!isNaN(numericJobId)) {
-        await updateRepairStatus(numericJobId, { status_id: 9 });
+        await updateRepairStatus(numericJobId, { status_id: REPAIR_STATUS.CANCELLED });
       }
 
-      setJob((prev) => (prev ? { ...prev, status_id: 9, status: 'ยกเลิกซ่อม', quotation_status_id: 3 } : null));
-      showToast('สำเร็จ', 'ยกเลิกการซ่อมเรียบร้อยแล้ว (มีค่าบริการตรวจเช็คสภาพเครื่อง 300 บาท)');
+      setJob((prev) => (prev ? { ...prev, status_id: REPAIR_STATUS.CANCELLED, status: 'ยกเลิกซ่อม', quotation_status_id: QUOTE_STATUS.CANCELLED } : null));
+      showToast('สำเร็จ', `ยกเลิกการซ่อมเรียบร้อยแล้ว (มีค่าบริการตรวจเช็คสภาพเครื่อง ${CANCEL_INSPECTION_FEE} บาท)`);
       fetchJob(true);
     } catch (err: any) {
       showToast('ข้อผิดพลาด', err.message || 'ไม่สามารถยกเลิกได้');
@@ -263,7 +228,7 @@ export default function JobDetailScreen() {
   }
 
   const isWaitingRepair = job.status_id === 5 || job.status === 'อนุมัติแล้ว/รอซ่อม';
-  const isRepairing = job.status_id === 6 || job.status === 'กำลังซ่อม';
+  const isReadyForPickup = job.status_id === 6 || job.status === 'รอลูกค้ามารับเครื่อง';
   const isReadyForPayment = job.status_id === 7 || job.status === 'รอชำระ';
   const isCompleted = job.status_id === 8 || job.status === 'เสร็จสิ้น';
   const isCancelled = job.status_id === 9 || job.status === 'ยกเลิกซ่อม' || job.status === 'ยกเลิก';
@@ -279,92 +244,181 @@ export default function JobDetailScreen() {
     }
   };
 
+  const getStatusConfig = (status: string, statusId?: number) => {
+    const s = status || '';
+    const id = Number(statusId);
+
+    if (id === 8 || s.includes('เสร็จ') || s.includes('ชำระแล้ว')) {
+      return { color: '#22C55E', bg: '#DCFCE7', text: '#15803D', icon: 'checkmark-circle' };
+    }
+    if (id === 9 || s.includes('ยกเลิก')) {
+      return { color: '#EF4444', bg: '#FEE2E2', text: '#B91C1C', icon: 'close-circle' };
+    }
+    if (id === 6 || s.includes('มารับเครื่อง') || s.includes('พร้อมรับ')) {
+      return { color: '#0EA5E9', bg: '#E0F2FE', text: '#0369A1', icon: 'cube' };
+    }
+    if (id === 7 || s.includes('รอชำระ')) {
+      return { color: '#EAB308', bg: '#FEF9C3', text: '#A16207', icon: 'cash' };
+    }
+    if (id === 5 || s.includes('อนุมัติ') || s.includes('ซ่อม')) {
+      return { color: '#6366F1', bg: '#EEF2FF', text: '#4338CA', icon: 'hammer' };
+    }
+    if (id === 4 || s.includes('รออนุมัติ') || s.includes('รอการอนุมัติ')) {
+      return { color: '#A855F7', bg: '#F3E8FF', text: '#7E22CE', icon: 'alert-circle' };
+    }
+    if (id === 3 || s.includes('เสนอราคา')) {
+      return { color: '#F59E0B', bg: '#FEF3C7', text: '#B45309', icon: 'receipt' };
+    }
+    if (id === 2 || s.includes('ดำเนินการตรวจเช็ค')) {
+      return { color: '#D97706', bg: '#FFEDD5', text: '#C2410C', icon: 'search' };
+    }
+    return { color: '#84CC16', bg: '#ECFCCB', text: '#4D7C0F', icon: 'clipboard' };
+  };
+
+  const getDeviceIcon = (type?: string, brand?: string) => {
+    const t = `${type || ''} ${brand || ''}`.toLowerCase();
+    if (t.includes('print') || t.includes('ปริ้น') || t.includes('canon') || t.includes('epson') || t.includes('brother') || t.includes('hp')) {
+      return 'print-outline';
+    }
+    if (t.includes('phone') || t.includes('มือถือ') || t.includes('โทรศัพท์') || t.includes('iphone') || t.includes('samsung') || t.includes('oppo') || t.includes('vivo')) {
+      return 'phone-portrait-outline';
+    }
+    if (t.includes('macbook') || t.includes('laptop') || t.includes('โน้ตบุ๊ก') || t.includes('notebook') || t.includes('asus') || t.includes('acer') || t.includes('tuf') || t.includes('rog') || t.includes('lenovo') || t.includes('dell')) {
+      return 'laptop-outline';
+    }
+    if (t.includes('ipad') || t.includes('แท็บเล็ต') || t.includes('tablet')) {
+      return 'tablet-portrait-outline';
+    }
+    if (t.includes('pc') || t.includes('คอมพิวเตอร์') || t.includes('computer') || t.includes('desktop')) {
+      return 'desktop-outline';
+    }
+    return 'hardware-chip-outline';
+  };
+
+  const statusCfg = getStatusConfig(job.status || '', job.status_id);
+
   const total = isCancelled
-    ? (job.total_cancel_price || 300)
-    : (job.total_repair_price || job.total_amount || job.items.reduce((sum, item) => sum + Number(item.price || item.unit_price || 0), 0));
+    ? (job.total_cancel_price || CANCEL_INSPECTION_FEE)
+    : (job.total_repair_price || job.total_amount || (job.items || []).reduce((sum, item) => sum + Number(item.price || item.unit_price || 0), 0));
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
       <StatusBar style="light" backgroundColor="#DC2626" />
-      
-      {/* Header */}
-      <View className="bg-[#DC2626] pt-4 pb-6 px-4 flex-row items-center relative z-10">
-        <TouchableOpacity onPress={() => router.back()} className="mr-3">
-          <Ionicons name="chevron-back" size={24} color="#ffffff" />
-        </TouchableOpacity>
-        <View>
-          <Text className="text-white text-lg font-bold font-heading">รายละเอียดการซ่อม</Text>
-          <Text className="font-body text-xs text-red-200">{job.job_number}</Text>
+
+      {/* Header Bar */}
+      <View className="bg-[#DC2626] pt-4 pb-6 px-4 flex-row items-center justify-between relative z-10 shadow-sm">
+        <View className="flex-row items-center gap-3">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            activeOpacity={0.8}
+            className="w-10 h-10 rounded-full bg-white/15 items-center justify-center border border-white/20 active:bg-white/25"
+          >
+            <Ionicons name="chevron-back" size={22} color="#ffffff" />
+          </TouchableOpacity>
+          <View>
+            <Text className="text-white text-lg font-bold font-heading">รายละเอียดงานซ่อม</Text>
+            <Text className="font-body text-xs text-red-100">{job.job_number}</Text>
+          </View>
+        </View>
+
+        <View className="bg-white/15 px-3 py-1 rounded-full border border-white/20">
+          <Text className="text-white text-xs font-bold font-heading">
+            {job.status}
+          </Text>
         </View>
       </View>
 
-      <ScrollView className="flex-1 relative z-0" contentContainerClassName="p-4 pb-10">
-        
-        {/* Device Info Header Card */}
-        <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm border border-slate-100 flex-row">
-          <View className="w-14 h-14 bg-sky-50 rounded-2xl mr-4 items-center justify-center border border-sky-100">
-            <Ionicons name="construct-outline" size={28} color="#0284C7" />
-          </View>
-          <View className="flex-1">
-            <Text className="text-base font-bold text-slate-800 font-heading">{job.brand} {job.model}</Text>
-            <Text className="text-xs text-slate-500 font-body mt-0.5">อาการที่แจ้ง: {job.symptoms}</Text>
-            {job.actual_symptom ? (
-              <Text className="text-xs font-bold text-red-600 mb-2 font-body mt-0.5">อาการจริง: {job.actual_symptom}</Text>
-            ) : (
-              <View className="mb-2" />
-            )}
-            
-            <View className="flex-row items-center justify-between">
+      <ScrollView className="flex-1 relative z-0" contentContainerClassName="p-4 pb-12">
+
+        {/* Device & Status Overview Card */}
+        <View className="bg-white rounded-3xl p-4 mb-4 shadow-sm border border-slate-100">
+          <View className="flex-row items-center justify-between mb-3.5">
+            <View className="flex-row items-center gap-3">
               <View
-                className="px-2.5 py-1 rounded-full flex-row items-center border"
+                className="w-12 h-12 rounded-2xl items-center justify-center border"
                 style={{
-                  backgroundColor: `${(Colors.status as any)[`status${job.status_id}`] || '#DC2626'}18`,
-                  borderColor: `${(Colors.status as any)[`status${job.status_id}`] || '#DC2626'}35`,
+                  backgroundColor: statusCfg.bg,
+                  borderColor: `${statusCfg.color}35`,
                 }}
               >
-                <View
-                  className="w-1.5 h-1.5 rounded-full mr-1.5"
-                  style={{ backgroundColor: (Colors.status as any)[`status${job.status_id}`] || '#DC2626' }}
+                <Ionicons
+                  name={getDeviceIcon(job.device_type, job.brand) as any}
+                  size={24}
+                  color={statusCfg.color}
                 />
-                <Text
-                  className="text-[11px] font-bold font-heading"
-                  style={{ color: getStatusOnTintColor(job.status_id) }}
-                >
-                  {job.status}
+              </View>
+              <View>
+                <Text className="text-base font-bold text-slate-900 font-heading">
+                  {job.brand} {job.model}
                 </Text>
+                <View className="flex-row items-center gap-2 mt-0.5">
+                  <Text className="text-xs text-slate-400 font-body">
+                    {job.device_type || 'อุปกรณ์ไอที'}
+                  </Text>
+                  <Text className="text-xs text-slate-300">•</Text>
+                  <Text className="text-xs font-bold text-slate-500 font-heading">
+                    {job.job_number}
+                  </Text>
+                </View>
               </View>
             </View>
+
+            {/* Status Badge */}
+            <View
+              className="px-3 py-1.5 rounded-full flex-row items-center gap-1.5 border"
+              style={{
+                backgroundColor: statusCfg.bg,
+                borderColor: `${statusCfg.color}40`,
+              }}
+            >
+              <View
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: statusCfg.color }}
+              />
+              <Text
+                className="text-xs font-bold font-heading"
+                style={{ color: statusCfg.text }}
+              >
+                {job.status}
+              </Text>
+            </View>
+          </View>
+
+          {/* Symptoms Display */}
+          <View className="bg-slate-50/80 rounded-2xl p-3 border border-slate-100/90 gap-2">
+            <View className="flex-row items-start gap-2">
+              <Ionicons name="chatbox-ellipses-outline" size={15} color="#64748B" style={{ marginTop: 2 }} />
+              <View className="flex-1">
+                <Text className="text-xs font-bold text-slate-700 font-body">อาการที่แจ้งซ่อม:</Text>
+                <Text className="text-xs text-slate-600 font-body mt-0.5 leading-4">{job.symptoms || '-'}</Text>
+              </View>
+            </View>
+
+            {job.actual_symptom ? (
+              <View className="flex-row items-start gap-2 pt-2 border-t border-slate-200/60">
+                <Ionicons name="search-outline" size={15} color="#0284C7" style={{ marginTop: 2 }} />
+                <View className="flex-1">
+                  <Text className="text-xs font-bold text-sky-800 font-body">ผลการตรวจเช็คจริงโดยช่าง:</Text>
+                  <Text className="text-xs text-slate-700 font-body mt-0.5 leading-4">{job.actual_symptom}</Text>
+                </View>
+              </View>
+            ) : null}
           </View>
         </View>
 
         {/* Progress Timeline */}
-        <CustomerProgressBar status={job.status} statusId={job.status_id} isCancelled={isCancelled} />
+        <CustomerProgressBar status={job.status || 'รอตรวจเช็ค'} statusId={job.status_id || 1} isCancelled={isCancelled} />
 
         {/* Status Alert Banners */}
         {isWaitingRepair && (
           <View className="bg-emerald-50 rounded-2xl p-4 mb-4 flex-row items-center border border-emerald-200">
             <View className="w-8 h-8 rounded-full bg-white items-center justify-center mr-3 border border-emerald-500">
-              <Ionicons name="checkmark" size={18} color="#059669" />
+              <Ionicons name="hammer" size={18} color="#059669" />
             </View>
             <View className="flex-1">
-              <Text className="text-emerald-900 font-bold font-heading text-sm">อนุมัติการซ่อมเรียบร้อยแล้ว</Text>
+              <Text className="text-emerald-900 font-bold font-heading text-sm">อนุมัติแล้ว / กำลังดำเนินการซ่อม</Text>
               <Text className="text-emerald-700 text-xs font-body mt-0.5">
-                ยอดรวม {total.toLocaleString()} บาท — ช่างกำลังจัดเตรียมอะไหล่และคิวการซ่อม
-                {job.appointment_date ? ` (กำหนดรับเครื่อง: ${formatPickupDate(job.appointment_date)})` : ''}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {isRepairing && (
-          <View className="bg-sky-50 rounded-2xl p-4 mb-4 flex-row items-center border border-sky-200">
-            <View className="w-8 h-8 rounded-full bg-white items-center justify-center mr-3 border border-sky-500">
-              <Ionicons name="hammer" size={18} color="#0284c7" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-sky-900 font-bold font-heading text-sm">ช่างกำลังดำเนินการซ่อมเครื่อง</Text>
-              <Text className="text-sky-700 text-xs font-body mt-0.5">
-                กำลังลงมือซ่อมและทดสอบระบบตามรายการที่อนุมัติ เมื่อเสร็จแล้วจะส่งต่อรอชำระทันที
+                ยอดรวม {total.toLocaleString()} บาท — ช่างกำลังดำเนินการซ่อมและทดสอบระบบตามรายการที่อนุมัติ
                 {job.appointment_date ? ` (กำหนดรับเครื่อง: ${formatPickupDate(job.appointment_date)})` : ''}
               </Text>
             </View>
@@ -372,15 +426,29 @@ export default function JobDetailScreen() {
         )}
 
         {isReadyForPayment && (
-          <View className="bg-green-100 rounded-2xl p-4 mb-4 flex-row items-center border border-green-200">
-            <View className="w-8 h-8 rounded-full bg-white items-center justify-center mr-3 border border-green-500">
-              <Ionicons name="checkmark-done" size={18} color="#16a34a" />
+          <View className="bg-amber-50 rounded-2xl p-4 mb-4 flex-row items-center border border-amber-200">
+            <View className="w-8 h-8 rounded-full bg-white items-center justify-center mr-3 border border-amber-500">
+              <Ionicons name="card-outline" size={18} color="#d97706" />
             </View>
             <View className="flex-1">
-              <Text className="text-green-900 font-bold font-heading text-sm">ซ่อมแซมเสร็จสิ้นแล้ว (รอชำระ)</Text>
-              <Text className="text-green-700 text-xs font-body mt-0.5">
-                ยอดรวม {total.toLocaleString()} บาท
-                {job.appointment_date ? ` — สามารถมารับเครื่องได้ในวันที่ ${formatPickupDate(job.appointment_date)}` : ''}
+              <Text className="text-amber-900 font-bold font-heading text-sm">รอชำระเงินค่าซ่อม</Text>
+              <Text className="text-amber-700 text-xs font-body mt-0.5">
+                ยอดรวม {total.toLocaleString()} บาท — ช่างซ่อมเสร็จสิ้นแล้ว กรุณาชำระเงินเพื่อเตรียมรับเครื่อง
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {isReadyForPickup && (
+          <View className="bg-sky-50 rounded-2xl p-4 mb-4 flex-row items-center border border-sky-200">
+            <View className="w-8 h-8 rounded-full bg-white items-center justify-center mr-3 border border-sky-500">
+              <Ionicons name="cube" size={18} color="#0284C7" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sky-900 font-bold font-heading text-sm">ชำระเงินเรียบร้อยแล้ว (รอมารับเครื่อง)</Text>
+              <Text className="text-sky-700 text-xs font-body mt-0.5">
+                ยอดรวม {total.toLocaleString()} บาท — สามารถติดต่อรับเครื่องที่ร้านและเซ็นรับเครื่องกับเจ้าหน้าที่ได้เลย
+                {job.appointment_date ? ` (นัดรับ: ${formatPickupDate(job.appointment_date)})` : ''}
               </Text>
             </View>
           </View>
@@ -413,29 +481,55 @@ export default function JobDetailScreen() {
           </View>
         )}
 
-        {/* ปฏิทินกำหนดวันรับเครื่องให้ลูกค้าดู */}
-        {job.appointment_date ? (
+        {/* ปฏิทินกำหนดวันรับเครื่องให้ลูกค้าดู (แสดงเฉพาะเมื่อพร้อมรับ หรือมีนัดหมายระหว่างซ่อม) */}
+        {!isCompleted && isReadyForPickup ? (
           <PickupCalendarCard defaultExpanded={false} />
-        ) : (isWaitingRepair || isReadyForPayment || isCancelled) ? (
-          <View className="bg-white rounded-2xl p-4 mb-4 border border-slate-100 shadow-sm flex-row items-center">
-            <View className="w-10 h-10 rounded-xl bg-amber-50 items-center justify-center mr-3 border border-amber-100">
-              <Ionicons name="calendar-outline" size={20} color="#d97706" />
+        ) : (!isCompleted && job.appointment_date && (isWaitingRepair || isReadyForPayment || isCancelled)) ? (
+          <PickupCalendarCard defaultExpanded={false} />
+        ) : null}
+
+        {/* Repair Job Specifications & Record Card */}
+        <View className="bg-white rounded-3xl p-4 mb-4 shadow-sm border border-slate-100">
+          <View className="flex-row items-center gap-2 mb-3">
+            <View className="w-7 h-7 rounded-lg bg-slate-100 items-center justify-center">
+              <Ionicons name="information-circle-outline" size={16} color="#475569" />
             </View>
-            <View className="flex-1">
-              <Text className="text-xs text-slate-500 font-body">กำหนดวันรับเครื่อง</Text>
-              <Text className="text-sm font-bold text-slate-800 font-heading">
-                อยู่ระหว่างประเมินกำหนดวันรับเครื่อง
+            <Text className="text-sm font-bold text-slate-800 font-heading">
+              ข้อมูลงานซ่อม
+            </Text>
+          </View>
+
+          <View className="gap-2">
+            <View className="flex-row items-center justify-between py-1 border-b border-slate-50">
+              <Text className="text-xs text-slate-400 font-body">หมายเลขงาน</Text>
+              <Text className="text-xs font-bold text-slate-800 font-heading">{job.job_number}</Text>
+            </View>
+
+            <View className="flex-row items-center justify-between py-1 border-b border-slate-50">
+              <Text className="text-xs text-slate-400 font-body">ประเภทอุปกรณ์</Text>
+              <Text className="text-xs font-medium text-slate-700 font-body">{job.device_type || 'อุปกรณ์ไอที'}</Text>
+            </View>
+
+            <View className="flex-row items-center justify-between py-1 border-b border-slate-50">
+              <Text className="text-xs text-slate-400 font-body">ยี่ห้อ / รุ่น</Text>
+              <Text className="text-xs font-medium text-slate-700 font-body">{job.brand} {job.model}</Text>
+            </View>
+
+            <View className="flex-row items-center justify-between py-1">
+              <Text className="text-xs text-slate-400 font-body">วันที่ส่งเครื่อง</Text>
+              <Text className="text-xs font-medium text-slate-700 font-body">
+                {job.created_at ? formatPickupDate(job.created_at) : 'วันนี้'}
               </Text>
             </View>
           </View>
-        ) : null}
+        </View>
 
         {/* Quotation Card (Dual Option: อนุมัติการซ่อม & ยกเลิกซ่อม) */}
-        {(job.quotation_id || job.status_id === 3 || job.status_id === 4 || job.status.includes('เสนอราคา') || isWaitingRepair || isReadyForPayment || isCancelled) && (
-          <CustomerQuotationCard 
+        {(job.quotation_id || job.status_id === 3 || job.status_id === 4 || job.status?.includes('เสนอราคา') || isWaitingRepair || isReadyForPayment || isCancelled) && (
+          <CustomerQuotationCard
             items={job.items}
             actualSymptom={job.actual_symptom}
-            status={job.status}
+            status={job.status || 'รอตรวจเช็ค'}
             statusId={job.status_id}
             quotationId={job.quotation_id}
             quoteStatusId={job.quotation_status_id}
@@ -483,7 +577,7 @@ export default function JobDetailScreen() {
                 </TouchableOpacity>
               </View>
             ) : (
-              <TouchableOpacity 
+              <TouchableOpacity
                 className="w-full bg-[#DC2626] h-[52px] rounded-xl items-center justify-center shadow-md shadow-red-700/20 flex-row gap-2 active:opacity-90"
                 activeOpacity={0.85}
                 onPress={() => router.push({ pathname: '/verify-payment', params: { jobId: job.id, amount: total } })}
@@ -497,9 +591,44 @@ export default function JobDetailScreen() {
           </View>
         )}
 
+        {/* Action Button: รอลูกค้ามารับเครื่อง */}
+        {isReadyForPickup && (
+          <View className="mt-4">
+            <View className="bg-sky-50 rounded-2xl p-4 border border-sky-200 shadow-sm">
+              <View className="flex-row items-center justify-between mb-2">
+                <View className="flex-row items-center">
+                  <Ionicons name="cube" size={20} color="#0284C7" style={{ marginRight: 6 }} />
+                  <Text className="text-sky-900 font-bold font-heading text-sm">
+                    เครื่องพร้อมให้มารับแล้ว
+                  </Text>
+                </View>
+                <View className="bg-sky-100 px-2.5 py-0.5 rounded-full flex-row items-center">
+                  <Ionicons name="checkmark-circle" size={11} color="#0369a1" style={{ marginRight: 3 }} />
+                  <Text className="text-[11px] font-bold text-sky-800">
+                    ชำระเงินเรียบร้อย
+                  </Text>
+                </View>
+              </View>
+              <Text className="text-sky-700 text-xs font-body mb-3">
+                เจ้าหน้าที่ตรวจสอบการชำระเงินเรียบร้อยแล้ว ลูกค้าสามารถติดต่อรับเครื่องที่หน้าร้าน และเซ็นรับเครื่องกับพนักงานได้เลย
+              </Text>
+              <TouchableOpacity
+                className="w-full bg-white border border-sky-300 py-2.5 rounded-xl items-center justify-center flex-row gap-2 active:bg-sky-50"
+                activeOpacity={0.85}
+                onPress={() => router.push({ pathname: '/verify-payment', params: { jobId: job.id, amount: total } })}
+              >
+                <Ionicons name="eye-outline" size={16} color="#0284C7" />
+                <Text className="text-sky-800 font-bold font-heading text-xs">
+                  ดูรายละเอียดหลักฐานการชำระเงิน
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Action Button: เสร็จสิ้น (ดูใบเสร็จ) */}
         {isCompleted && (
-          <TouchableOpacity 
+          <TouchableOpacity
             className="w-full bg-slate-800 py-3.5 rounded-2xl items-center justify-center shadow-md mt-4 flex-row gap-2 active:opacity-90"
             activeOpacity={0.85}
             onPress={() => router.push({ pathname: '/receipt', params: { jobId: job.id } })}
@@ -535,7 +664,7 @@ export default function JobDetailScreen() {
       <CustomAlert
         visible={showCancelConfirm}
         title="ยืนยันยกเลิกการซ่อม"
-        message={'หากยกเลิก จะมีค่าบริการตรวจเช็คสภาพเครื่อง 300 บาท\n\nคุณต้องการยกเลิกใช่หรือไม่?'}
+        message={`หากยกเลิก จะมีค่าบริการตรวจเช็คสภาพเครื่อง ${CANCEL_INSPECTION_FEE} บาท\n\nคุณต้องการยกเลิกใช่หรือไม่?`}
         confirmText="ใช่, ยกเลิกซ่อม"
         cancelText="ไม่ยกเลิก"
         type="danger"

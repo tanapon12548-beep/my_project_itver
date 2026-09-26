@@ -6,40 +6,26 @@
 const SELECT_REPAIR_FIELDS = `
   SELECT 
     rj.*,
-    rj.job_id AS id,
-    'REP-' || LPAD(rj.job_id::text, 6, '0') AS job_number,
-    'REP-' || LPAD(rj.job_id::text, 6, '0') AS job_no,
-    COALESCE(dt.device_type_name, '-') AS device_type,
-    COALESCE(b.brand_name, '-') AS brand,
     d.model,
     d.serial_number,
     d.included_accessories,
-    d.included_accessories AS accessories,
     d.important_software,
-    d.important_software AS important_programs,
     d.device_password,
-    d.device_password AS password,
     d.warranty_year,
-    d.warranty_year AS warranty_years,
     d.warranty_end_date,
     d.customer_id,
-    COALESCE(rj.symptom_details, '-') AS symptom,
-    COALESCE(rj.symptom_details, '-') AS symptoms,
-    COALESCE(s.status_name, '-') AS status_name,
-    COALESCE(s.status_name, '-') AS status,
-    COALESCE(pm.payment_method_name, '-') AS payment_method_name,
-    COALESCE(p.first_name || ' ' || p.last_name, 'ไม่ระบุ') AS customer_name,
-    p.first_name, p.last_name, p.phone, p.email,
-    q.customer_remark,
-    '-' AS received_by,
-    '-' AS inspector_name,
-    CASE 
-      WHEN rj.status_id IN (7, 8) AND COALESCE(q.quote_status_id, 0) != 3 THEN 
-        COALESCE(p_rep_direct.first_name || ' ' || p_rep_direct.last_name, '-')
-      ELSE '-'
-    END AS repairer_name,
-    rj.repairer_id,
-    rj.repaired_at
+    dt.device_type_name AS device_type,
+    b.brand_name AS brand,
+    s.status_name,
+    pm.payment_method_name,
+    p.first_name,
+    p.last_name,
+    p.phone,
+    p.email,
+    p_rep.first_name AS rep_first_name,
+    p_rep.last_name AS rep_last_name,
+    q.quote_status_id,
+    q.customer_remark
   FROM repair_job rj
   LEFT JOIN device d ON rj.device_id = d.device_id
   LEFT JOIN device_types dt ON d.device_type_id = dt.device_type_id
@@ -47,7 +33,7 @@ const SELECT_REPAIR_FIELDS = `
   LEFT JOIN status s ON rj.status_id = s.status_id
   LEFT JOIN payment_method pm ON rj.payment_method_id = pm.payment_method_id
   LEFT JOIN profiles p ON d.customer_id = p.id
-  LEFT JOIN profiles p_rep_direct ON rj.repairer_id = p_rep_direct.id
+  LEFT JOIN profiles p_rep ON rj.repairer_id = p_rep.id
   LEFT JOIN quotation q ON rj.quotation_id = q.quotation_id
 `;
 
@@ -82,9 +68,13 @@ exports.GET_QUOTATION_ITEMS = `
 `;
 
 exports.GET_ACTION_LOGS = `
-  SELECT rjd.*, at.action_type_name,
-         COALESCE(p.first_name || ' ' || p.last_name, 'ไม่ระบุ') AS user_name,
-         p.role_id, r.name AS role_name
+  SELECT 
+    rjd.*, 
+    at.action_type_name,
+    p.first_name,
+    p.last_name,
+    p.role_id, 
+    r.name AS role_name
   FROM repair_job_detail rjd
   LEFT JOIN action_type at ON rjd.action_type_id = at.action_type_id
   LEFT JOIN profiles p ON rjd.user_id = p.id

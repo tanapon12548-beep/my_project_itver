@@ -2,8 +2,6 @@
 import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -15,25 +13,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from 'expo-router';
 
 // 3. API helpers
-import { updateStaff, getStaff } from '@/lib/api';
+import { updateStaff, getStaff, deleteStaff } from '@/lib/api';
 
 // 4. Components
 import Header from '@/components/Shared_Dashboard/Header';
 import SearchFilterBar from '@/components/ui/SearchFilterBar';
 import EditStaffModal from '@/components/Meneger_staff/EditStaffModal';
 import StaffTable from '@/components/Meneger_staff/Table';
+import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
+import CustomAlert from '@/components/ui/CustomAlert';
 
-type StaffRoleThai = 'พนักงาน' | 'ช่าง' | 'ลูกค้า';
-
-interface StaffMember {
-  id: string;
-  name: string;
-  role: StaffRoleThai;
-  phone: string;
-  email?: string;
-  first_name?: string;
-  last_name?: string;
-}
+import type { StaffMember, StaffRoleThai } from '@/types/user';
 
 const roleToThai = (role_id?: number | string | null): StaffRoleThai => {
   const r = Number(role_id);
@@ -66,9 +56,25 @@ export default function StaffScreen() {
   const [staffList, setStaffList] = useState<StaffMember[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [editingMember, setEditingMember] = useState<StaffMember | null>(null);
+  const [memberToDelete, setMemberToDelete] = useState<StaffMember | null>(null);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<'ALL' | StaffRoleThai>('ALL');
+
+  // Custom Alert State
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'warning' | 'danger' | 'info';
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
 
   useFocusEffect(
     useCallback(() => {
@@ -76,12 +82,13 @@ export default function StaffScreen() {
     }, [])
   );
 
-  const showAlert = (title: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}\n\n${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
+  const showAlert = (title: string, message: string, type: 'success' | 'warning' | 'danger' | 'info' = 'info') => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+    });
   };
 
   async function fetchStaff() {
@@ -108,7 +115,7 @@ export default function StaffScreen() {
       setStaffList(staff);
     } catch (e: any) {
       console.error('Staff fetch error:', e.message);
-      showAlert('ล้มเหลว', 'เกิดข้อผิดพลาดในการดึงข้อมูลพนักงาน');
+      showAlert('ล้มเหลว', 'เกิดข้อผิดพลาดในการดึงข้อมูลพนักงาน', 'danger');
     } finally {
       setIsLoading(false);
     }
@@ -129,6 +136,31 @@ export default function StaffScreen() {
     setIsEditModalVisible(true);
   };
 
+  const handlePromptDelete = (member: StaffMember) => {
+    setIsEditModalVisible(false);
+    setEditingMember(null);
+    setMemberToDelete(member);
+    setIsDeleteModalVisible(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!memberToDelete) return;
+    setIsDeleting(true);
+    try {
+      const res = await deleteStaff(memberToDelete.id);
+      if (!res.success) throw new Error(res.message);
+
+      setIsDeleteModalVisible(false);
+      showAlert('สำเร็จ', `ลบข้อมูล "${memberToDelete.name}" เรียบร้อยแล้ว`, 'success');
+      setMemberToDelete(null);
+      await fetchStaff();
+    } catch (e: any) {
+      showAlert('ล้มเหลว', e.message || 'ไม่สามารถลบข้อมูลได้', 'danger');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const handleSaveStaff = async (updatedMember: StaffMember) => {
     setIsSaving(true);
     try {
@@ -143,12 +175,12 @@ export default function StaffScreen() {
 
       if (!res.success) throw new Error(res.message);
 
-      showAlert('สำเร็จ', 'อัปเดตข้อมูลพนักงานเรียบร้อยแล้ว');
+      showAlert('สำเร็จ', 'อัปเดตข้อมูลพนักงานเรียบร้อยแล้ว', 'success');
       setIsEditModalVisible(false);
       setEditingMember(null);
       await fetchStaff();
     } catch (e: any) {
-      showAlert('ล้มเหลว', e.message || 'ไม่สามารถอัปเดตข้อมูลได้');
+      showAlert('ล้มเหลว', e.message || 'ไม่สามารถอัปเดตข้อมูลได้', 'danger');
     } finally {
       setIsSaving(false);
     }
@@ -197,15 +229,18 @@ export default function StaffScreen() {
           </View>
         ) : (
           <ScrollView contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
-            <StaffTable title="รายชื่อบุคลากรและลูกค้าในระบบ" 
+            <StaffTable
+              title="รายชื่อบุคลากรและลูกค้าในระบบ" 
               data={filteredStaff}
               headerColor="#0F172A"
               onPressDetails={handleEditStaff}
+              onPressDelete={handlePromptDelete}
             />
           </ScrollView>
         )}
       </View>
 
+      {/* Modal แก้ไขข้อมูลพนักงาน */}
       <EditStaffModal
         visible={isEditModalVisible}
         item={editingMember}
@@ -215,7 +250,36 @@ export default function StaffScreen() {
           setEditingMember(null);
         }}
         onSave={handleSaveStaff}
+        onDelete={handlePromptDelete}
+      />
+
+      {/* Modal ยืนยันการลบพนักงาน */}
+      <ConfirmDeleteModal
+        visible={isDeleteModalVisible}
+        title="ยืนยันการลบผู้ใช้งาน"
+        itemName={memberToDelete ? `${memberToDelete.name} (${memberToDelete.role})` : undefined}
+        message="การกระทำนี้จะลบผู้ใช้งานออกจากระบบ และปลดการเชื่อมโยงจากงานซ่อม คุณแน่ใจหรือไม่?"
+        confirmText="ลบข้อมูล"
+        cancelText="ยกเลิก"
+        loading={isDeleting}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => {
+          if (!isDeleting) {
+            setIsDeleteModalVisible(false);
+            setMemberToDelete(null);
+          }
+        }}
+      />
+
+      {/* แจ้งเตือนผลลัพธ์การทำงาน */}
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
       />
     </View>
   );
 }
+

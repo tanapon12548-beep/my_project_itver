@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 3. API helpers
-import { createDevice, createRepairJob, logRepairJobDetail, lookupProfiles, api } from '@/lib/api';
+import { createDevice, createRepairJob, logRepairJobDetail, lookupProfiles, registerCustomer } from '@/lib/api';
 
 // 4. Components
 import CustomerFormCard from '@/components/Staff_receive/CustomerFormCard';
@@ -89,7 +89,7 @@ export default function StaffReceiveScreen() {
           const fName = parts[0] || 'ลูกค้า';
           const lName = parts.slice(1).join(' ') || '-';
           const autoEmail = email.trim() || `cus_${cleanDigits || Date.now()}@itvertex.local`;
-          const reg = await api.post('/auth/register', {
+          const reg = await registerCustomer({
             first_name: fName,
             last_name: lName,
             phone: cleanDigits,

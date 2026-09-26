@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 
 // 3. API helpers
-import { lookupProfiles, lookupProfilesAdvanced, api } from '@/lib/api';
+import { lookupProfiles, lookupProfilesAdvanced, registerCustomer } from '@/lib/api';
 
 type AdvFilterId = 'name' | 'phone' | 'email';
 
@@ -272,7 +272,7 @@ export default function CustomerFormCard({
     try {
       const cleanPhone = regPhone.replace(/[^0-9]/g, '').slice(0, 10);
       const cleanEmail = regEmail.trim() || `cus_${cleanPhone || Date.now()}@itvertex.local`;
-      const res = await api.post('/auth/register', {
+      const res = await registerCustomer({
         first_name: regFirstName.trim(),
         last_name: regLastName.trim() || '-',
         phone: cleanPhone,
@@ -342,14 +342,8 @@ export default function CustomerFormCard({
               <Text className="text-[11px] font-bold text-emerald-800 ml-1 font-heading">เลือกลูกค้าแล้ว</Text>
             </View>
           ) : (
-            <TouchableOpacity
-              onPress={openQuickRegister}
-              activeOpacity={0.8}
-              className="flex-row items-center bg-blue-600 px-2.5 py-1 rounded-full shadow-sm"
-            >
-              <Ionicons name="person-add-outline" size={12} color="#FFFFFF" />
-              <Text className="text-[11px] font-bold text-white ml-1 font-heading">+ ลูกค้าใหม่</Text>
-            </TouchableOpacity>
+            <View className="flex-row items-center bg-emerald-100 px-2.5 py-1 rounded-full">
+            </View>
           )}
         </View>
       </View>
@@ -397,11 +391,10 @@ export default function CustomerFormCard({
                 onPress={() => setShowFilter((v) => !v)}
                 activeOpacity={0.7}
                 accessibilityLabel="กรองการค้นหา"
-                className={`w-[48px] min-h-[48px] rounded-xl justify-center items-center relative border ${
-                  activeFilterCount > 0 || showFilter
-                    ? 'bg-blue-50 border-blue-600'
-                    : 'bg-white border-slate-200'
-                }`}
+                className={`w-[48px] min-h-[48px] rounded-xl justify-center items-center relative border ${activeFilterCount > 0 || showFilter
+                  ? 'bg-blue-50 border-blue-600'
+                  : 'bg-white border-slate-200'
+                  }`}
               >
                 <Ionicons
                   name="filter"
@@ -434,9 +427,8 @@ export default function CustomerFormCard({
                         key={f.id}
                         onPress={() => handleFilterChange(f.id)}
                         activeOpacity={0.7}
-                        className={`px-3.5 py-1.5 rounded-full border ${
-                          isActive ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'
-                        }`}
+                        className={`px-3.5 py-1.5 rounded-full border ${isActive ? 'bg-blue-600 border-blue-600' : 'bg-white border-slate-200'
+                          }`}
                       >
                         <Text
                           className={`text-xs ${isActive ? 'text-white font-bold font-heading' : 'text-slate-600 font-body'}`}

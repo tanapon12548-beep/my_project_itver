@@ -42,4 +42,22 @@ router.get('/', auth, role('Manager'), ctrl.getAll);
  */
 router.put('/:id', auth, role('Manager'), ctrl.update);
 
+/**
+ * @swagger
+ * /api/staff/{id}:
+ *   delete:
+ *     tags: [Staff]
+ *     summary: ลบข้อมูลพนักงาน (Manager only)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200: { description: ลบสำเร็จ }
+ */
+router.delete('/:id', auth, role('Manager'), ctrl.remove);
+
 module.exports = router;
+

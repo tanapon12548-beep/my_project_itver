@@ -14,8 +14,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 3. API & Auth helpers
-import { getRepair, updateRepairStatus, logRepairJobDetail } from '@/lib/api';
+import { getRepair, updateRepairStatus, logRepairJobDetail, getImageUrl } from '@/lib/api';
 import { getUser } from '@/lib/auth';
+import type { JobData } from '@/types/repair';
 
 // 4. Components
 import CustomerInfoCard from '@/components/Technicain_detail/CustomerInfoCard';
@@ -33,8 +34,7 @@ const TECH_STATUS_OPTIONS: Record<string, string[]> = {
   'ดำเนินการตรวจเช็ค': ['ดำเนินการเสนอราคา'],
   'ดำเนินการเสนอราคา': [],
   'รอการอนุมัติ': [],
-  'อนุมัติแล้ว/รอซ่อม': ['กำลังซ่อม', 'รอชำระ'], // ช่างเริ่มซ่อม หรือ ซ่อมเสร็จ เปลี่ยนเป็นรอชำระ
-  'กำลังซ่อม': ['รอชำระ'], // เมื่อซ่อมเสร็จ เปลี่ยนเป็นรอชำระ
+  'อนุมัติแล้ว/รอซ่อม': ['รอชำระ'], // เมื่อซ่อมเสร็จ เปลี่ยนเป็นรอชำระ
   'รอชำระ': [],
   'เสร็จสิ้น': [],
   'ยกเลิกซ่อม': [],
@@ -48,79 +48,18 @@ const STAFF_STATUS_OPTIONS: Record<string, string[]> = {
   'รอการอนุมัติ': [], // ลูกค้าเป็นผู้กดอนุมัติหรือยกเลิก
   'อนุมัติแล้ว/รอซ่อม': [], // ช่างเป็นผู้ดำเนินการซ่อม
   'ยกเลิกซ่อม': ['รอชำระ'], // จากยกเลิกซ่อม -> เปลี่ยนเป็นรอชำระ (ค่าตรวจเช็ค 300 บาท)
-  'รอชำระ': ['เสร็จสิ้น'], // จากรอชำระ -> ส่งมอบและรับเงินเสร็จสิ้น
+  'รอชำระ': ['รอลูกค้ามารับเครื่อง'], // ตรวจสอบการชำระเงินแล้ว -> เปลี่ยนเป็นรอลูกค้ามารับเครื่อง
+  'รอลูกค้ามารับเครื่อง': ['เสร็จสิ้น'], // ลูกค้าเซ็นรับเครื่องแล้ว -> ส่งมอบเสร็จสิ้น
   'เสร็จสิ้น': [],
 };
-
-interface JobData {
-  id: string;
-  job_number: string;
-  customer_name: string;
-  phone: string;
-  email?: string;
-  device_type: string;
-  brand: string;
-  model: string;
-  serial_number: string;
-  symptoms: string;
-  actual_symptom?: string;
-  accessories: string;
-  password?: string;
-  important_software?: string;
-  warranty_info?: string;
-  technician_name: string;
-  inspector_name?: string;
-  repairer_name?: string;
-  status: string;
-  status_id?: number;
-  created_at: string;
-  received_by?: string;
-  return_date?: string | null;
-  appointment_date?: string | null;
-  payment_date?: string | null;
-  payment_method_id?: number | null;
-  payment_method_name?: string | null;
-  slip_image?: string | null;
-  slip_filename?: string | null;
-  total_amount?: number;
-  customer_signature?: string | null;
-  quotation?: {
-    quotation_id: number;
-    quote_status_name?: string;
-    total_repair_price?: string | number;
-    total_cancel_price?: string | number;
-    customer_remark?: string | null;
-    items?: Array<{
-      details_id: number;
-      item_name: string;
-      item_type_id: number;
-      item_type_name: string;
-      quantity: string | number;
-      unit_price: string | number;
-      total_price: string | number;
-    }>;
-    parts?: any[];
-    services?: any[];
-    total_parts?: number;
-    total_services?: number;
-  } | null;
-  action_logs?: Array<{
-    job_id_detail: number;
-    action_type_id: number;
-    action_type_name: string;
-    action_date: string;
-    created_at: string;
-    user_name: string;
-    role_name?: string;
-  }>;
-}
 
 export default function TechnicianDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
 
-  const jobNo = (params.job_number as string) || (params.job_no as string) || '';
+  const jobIdParam = (params.job_id as string) || (params.id as string) || '';
+  const jobNo = (params.job_number as string) || (params.job_no as string) || (jobIdParam ? `REP-${String(jobIdParam).padStart(6, '0')}` : '');
   const [currentRole, setCurrentRole] = useState<string>((params.role as string) || 'technician');
 
   useEffect(() => {
@@ -157,12 +96,12 @@ export default function TechnicianDetailScreen() {
 
   // ── Fetch job data ──
   useEffect(() => {
-    if (!jobNo) {
+    if (!jobNo && !jobIdParam) {
       setIsLoading(false);
       return;
     }
     fetchJob();
-  }, [jobNo]);
+  }, [jobNo, jobIdParam]);
 
   async function fetchJob() {
     try {
@@ -172,8 +111,8 @@ export default function TechnicianDetailScreen() {
       let initialCustomerName = (params.customer_name as string) || '';
       let initialPhone = (params.phone as string) || '';
 
-      const numericId = parseInt(jobNo.replace(/[^0-9]/g, ''), 10);
-      if (!isNaN(numericId)) {
+      const numericId = parseInt(jobIdParam, 10) || (jobNo ? parseInt(jobNo.split('-').pop() || '', 10) || parseInt(jobNo.replace(/[^0-9]/g, ''), 10) : NaN);
+      if (!isNaN(numericId) && numericId > 0) {
         const res = await getRepair(numericId);
 
         if (res.success && res.data) {
@@ -193,7 +132,7 @@ export default function TechnicianDetailScreen() {
             3: 'ดำเนินการเสนอราคา',
             4: 'รอการอนุมัติ',
             5: 'อนุมัติแล้ว/รอซ่อม',
-            6: 'กำลังซ่อม',
+            6: 'รอลูกค้ามารับเครื่อง',
             7: 'รอชำระ',
             8: 'เสร็จสิ้น',
             9: 'ยกเลิกซ่อม',
@@ -237,7 +176,7 @@ export default function TechnicianDetailScreen() {
             technician_name: dataJob.inspector_name || dataJob.technician_name || 'ช่างเทคนิค',
             inspector_name: dataJob.inspector_name || '-',
             repairer_name: dataJob.repairer_name || '-',
-            status: STATUS_MAP[dataJob.status_id] || dataJob.status_name || 'รอตรวจเช็ค',
+            status: STATUS_MAP[dataJob.status_id || 1] || dataJob.status_name || 'รอตรวจเช็ค',
             status_id: dataJob.status_id,
             created_at: dataJob.created_at || new Date().toISOString(),
             received_by: dataJob.received_by || '-',
@@ -248,24 +187,8 @@ export default function TechnicianDetailScreen() {
             payment_method_name: dataJob.payment_method_name || null,
             slip_filename: dataJob.slip_image || null,
             total_amount: Number(dataJob.total_amount) || (dataJob.quotation?.total_repair_price ? Number(dataJob.quotation.total_repair_price) : 0),
-            slip_image: (() => {
-              const slip = dataJob.slip_image;
-              if (!slip) return null;
-              if (slip.startsWith('data:') || slip.startsWith('http://') || slip.startsWith('https://')) return slip;
-              const apiOrigin = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3002/api').replace(/\/api\/?$/, '');
-              // รองรับทั้ง path แบบเก่า (slip_xxx.png) และแบบใหม่ (slips/slip_xxx.png)
-              const cleanPath = slip.startsWith('/') ? slip : `/pubilc/${slip}`;
-              return `${apiOrigin}${cleanPath}`;
-            })(),
-            customer_signature: (() => {
-              const sig = dataJob.customer_receive_signature;
-              if (!sig) return null;
-              if (sig.startsWith('data:') || sig.startsWith('http://') || sig.startsWith('https://')) return sig;
-              const apiOrigin = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3002/api').replace(/\/api\/?$/, '');
-              // รองรับทั้ง path แบบเก่า (signature_xxx.png) และแบบใหม่ (signatures/signature_xxx.png)
-              const cleanPath = sig.startsWith('/') ? sig : `/pubilc/${sig}`;
-              return `${apiOrigin}${cleanPath}`;
-            })(),
+            slip_image: getImageUrl(dataJob.slip_image),
+            customer_signature: getImageUrl(dataJob.customer_receive_signature),
             quotation: dataJob.quotation || null,
             action_logs: dataJob.action_logs || [],
           };
@@ -274,7 +197,7 @@ export default function TechnicianDetailScreen() {
 
       if (foundJob) {
         setJob(foundJob);
-        setStatus(foundJob.status);
+        setStatus(foundJob.status || 'รอตรวจเช็ค');
       } else {
         setJob(null);
       }
@@ -319,7 +242,7 @@ export default function TechnicianDetailScreen() {
     if (!job) return;
     setSaving(true);
     try {
-      const numericId = parseInt(job.id, 10);
+      const numericId = parseInt(String(job.id || job.job_id || ''), 10);
 
       if (!isNaN(numericId)) {
         const STATUS_ID_MAP: Record<string, number> = {
@@ -328,7 +251,7 @@ export default function TechnicianDetailScreen() {
           'ดำเนินการเสนอราคา': 3,
           'รอการอนุมัติ': 4,
           'อนุมัติแล้ว/รอซ่อม': 5,
-          'กำลังซ่อม': 6,
+          'รอลูกค้ามารับเครื่อง': 6,
           'รอชำระ': 7,
           'เสร็จสิ้น': 8,
           'ยกเลิกซ่อม': 9,
@@ -347,18 +270,15 @@ export default function TechnicianDetailScreen() {
           3: 3, // ออกใบเสนอราคา
           4: 3, // รอการอนุมัติ
           5: 4, // อนุมัติแล้ว/รอซ่อม
-          6: 4, // เริ่มดำเนินการซ่อม
-          7: 5, // ซ่อมเสร็จสิ้น / ทดสอบเครื่อง
-          8: 7, // ส่งมอบเครื่องให้ลูกค้า
+          7: 5, // ซ่อมเสร็จสิ้น / ทดสอบเครื่อง (รอชำระ)
+          6: 6, // ชำระเงินเรียบร้อยแล้ว / รอลูกค้ามารับเครื่อง
+          8: 7, // ส่งมอบเครื่องให้ลูกค้า / ลูกค้าเซ็นรับ
           9: 8, // ยกเลิกการซ่อม
         };
         let actionTypeId = ACTION_TYPE_MAP[statusId] || 2;
         let actionRemark: string | undefined = undefined;
 
-        if (statusId === 6) {
-          actionTypeId = 4;
-          actionRemark = 'ช่างเริ่มดำเนินการซ่อมเครื่อง';
-        } else if (statusId === 7) {
+        if (statusId === 7) {
           if (job.status === 'ยกเลิกซ่อม') {
             actionTypeId = 6;
             actionRemark = 'พนักงานปรับสถานะรอชำระค่าตรวจเช็ค (ยกเลิกซ่อม)';
@@ -366,6 +286,12 @@ export default function TechnicianDetailScreen() {
             actionTypeId = 5;
             actionRemark = 'ช่างซ่อมเสร็จสิ้น / ทดสอบเครื่อง เปลี่ยนสถานะเป็นรอชำระ';
           }
+        } else if (statusId === 6) {
+          actionTypeId = 6;
+          actionRemark = 'ตรวจสอบการชำระเงินเรียบร้อยแล้ว เครื่องพร้อมให้ลูกค้ามารับ';
+        } else if (statusId === 8) {
+          actionTypeId = 7;
+          actionRemark = 'พนักงานส่งมอบเครื่องและลูกค้าเซ็นรับเรียบร้อยแล้ว';
         } else if (statusId === 2) {
           actionTypeId = 2;
           actionRemark = 'ช่างเริ่มดำเนินการตรวจเช็คสภาพเครื่อง';

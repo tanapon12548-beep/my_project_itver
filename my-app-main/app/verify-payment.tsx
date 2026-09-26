@@ -17,7 +17,8 @@ import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // 3. API helpers
-import { createPayment, getRepair, verifyPayment, rejectPayment } from '@/lib/api';
+import { createPayment, getRepair, verifyPayment, rejectPayment, getImageUrl } from '@/lib/api';
+import { REPAIR_STATUS, PAYMENT_METHODS, CANCEL_INSPECTION_FEE } from '@/constants/status';
 
 // 4. Components
 import CustomAlert from '@/components/ui/CustomAlert';
@@ -130,17 +131,17 @@ export default function VerifyPaymentScreen() {
           const d = res.data;
           if (d.customer_name) setCustomerName(d.customer_name);
           const q = d.quotation;
-          const isCancelledJob = Number(d.status_id) === 9;
-          const cancelPrice = Number(q?.total_cancel_price) || 300;
+          const isCancelledJob = Number(d.status_id) === REPAIR_STATUS.CANCELLED;
+          const cancelPrice = Number(q?.total_cancel_price) || CANCEL_INSPECTION_FEE;
           const repairPrice = Number(q?.total_repair_price) || Number(d.total_amount) || 0;
-          setTotalAmount(isCancelledJob ? cancelPrice : (repairPrice || Number(params.amount) || 300));
+          setTotalAmount(isCancelledJob ? cancelPrice : (repairPrice || Number(params.amount) || CANCEL_INSPECTION_FEE));
           if (d.appointment_date && !params.pickupDate) {
             setAppointmentDate(d.appointment_date);
           }
           if (d.payment_method_id) {
             setExistingPaymentMethodId(d.payment_method_id);
-            if (d.payment_method_id === 2) setPaymentMethod('transfer');
-            else if (d.payment_method_id === 1) setPaymentMethod('cash');
+            if (d.payment_method_id === PAYMENT_METHODS.TRANSFER) setPaymentMethod('transfer');
+            else if (d.payment_method_id === PAYMENT_METHODS.CASH) setPaymentMethod('cash');
           }
           if (d.payment_verified) {
             setPaymentVerified(true);
@@ -149,13 +150,7 @@ export default function VerifyPaymentScreen() {
             setRejectReason(d.payment_reject_reason);
           }
           if (d.slip_image) {
-            let slipUrl = d.slip_image;
-            if (!slipUrl.startsWith('http') && !slipUrl.startsWith('data:')) {
-              const apiBase = (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3002/api').replace('/api', '');
-              const cleanPath = slipUrl.startsWith('/') ? slipUrl : `/${slipUrl}`;
-              slipUrl = `${apiBase}${cleanPath}`;
-            }
-            setExistingSlipUrl(slipUrl);
+            setExistingSlipUrl(getImageUrl(d.slip_image));
             setExistingSlipFilename(d.slip_filename || null);
           }
         }
@@ -220,13 +215,17 @@ export default function VerifyPaymentScreen() {
           const res = await fetch(slipImage);
           const blob = await res.blob();
           const ext = blob.type.split('/')[1] || 'jpg';
-          formData.append('slip', blob, `slip_${numericJobId || 'job'}.${ext}`);
+          const fileName = `slip_${numericJobId || 'job'}.${ext}`;
+          formData.append('slip_image', blob, fileName);
+          formData.append('slip', blob, fileName);
         } else {
           const filename = slipImage.split('/').pop() || 'slip.jpg';
           const match = /\.(\w+)$/.exec(filename);
           const ext = match ? match[1] : 'jpg';
           const type = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
-          formData.append('slip', { uri: slipImage, name: filename, type } as any);
+          const fileObj = { uri: slipImage, name: filename, type } as any;
+          formData.append('slip_image', fileObj);
+          formData.append('slip', fileObj);
         }
         payload = formData;
       } else {

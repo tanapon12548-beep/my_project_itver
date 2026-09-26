@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { ROLES } = require('../constants');
 
 /**
  * GET /api/lookup/statuses
@@ -129,7 +130,7 @@ exports.searchProfiles = async (req, res, next) => {
     const advPhone = (phone || '').trim();
     const advEmail = (email || '').trim();
     if (advName || advPhone || advEmail) {
-      const conditions = ['role_id = 4'];
+      const conditions = [`role_id = ${ROLES.CUSTOMER}`];
       const params = [];
       if (advName) {
         params.push(`%${advName}%`);
@@ -156,16 +157,16 @@ exports.searchProfiles = async (req, res, next) => {
     let query;
     const params = [`%${trimmed}%`];
     if (type === 'phone') {
-      query = `SELECT id, first_name, last_name, phone, email FROM profiles WHERE phone ILIKE $1 AND role_id = 4 LIMIT 10`;
+      query = `SELECT id, first_name, last_name, phone, email FROM profiles WHERE phone ILIKE $1 AND role_id = ${ROLES.CUSTOMER} LIMIT 10`;
     } else if (type === 'name') {
       query = `SELECT id, first_name, last_name, phone, email FROM profiles
-               WHERE CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) ILIKE $1 AND role_id = 4 LIMIT 10`;
+               WHERE CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) ILIKE $1 AND role_id = ${ROLES.CUSTOMER} LIMIT 10`;
     } else if (type === 'email') {
-      query = `SELECT id, first_name, last_name, phone, email FROM profiles WHERE email ILIKE $1 AND role_id = 4 LIMIT 10`;
+      query = `SELECT id, first_name, last_name, phone, email FROM profiles WHERE email ILIKE $1 AND role_id = ${ROLES.CUSTOMER} LIMIT 10`;
     } else {
       // default 'all': single search box (name / phone / email)
       query = `SELECT id, first_name, last_name, phone, email FROM profiles
-               WHERE role_id = 4 AND (
+               WHERE role_id = ${ROLES.CUSTOMER} AND (
                  CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) ILIKE $1
                  OR phone ILIKE $1
                  OR email ILIKE $1

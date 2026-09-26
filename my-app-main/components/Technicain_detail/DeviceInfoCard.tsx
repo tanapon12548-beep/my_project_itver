@@ -2,16 +2,16 @@
 import { Text, View } from 'react-native';
 
 interface DeviceInfoCardProps {
-  deviceType?: string;
-  brand?: string;
-  model?: string;
-  serialNumber?: string;
-  symptoms?: string;
-  actualSymptom?: string;
-  accessories?: string;
-  password?: string;
-  importantSoftware?: string;
-  warrantyInfo?: string;
+  deviceType?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  serialNumber?: string | null;
+  symptoms?: string | null;
+  actualSymptom?: string | null;
+  accessories?: string | null;
+  password?: string | null;
+  importantSoftware?: string | null;
+  warrantyInfo?: string | null;
 }
 
 export default function DeviceInfoCard({

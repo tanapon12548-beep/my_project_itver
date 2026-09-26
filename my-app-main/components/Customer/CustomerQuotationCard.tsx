@@ -11,17 +11,10 @@ import {
 
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
+import { CANCEL_INSPECTION_FEE } from '@/constants/status';
+import type { QuotationLineItem } from '@/types/quotation';
 
-export interface QuotationItem {
-  name?: string;
-  item_name?: string;
-  item_type_id?: number;
-  description?: string;
-  price?: number;
-  unit_price?: number;
-  quantity?: number;
-  amount?: number;
-}
+export type QuotationItem = QuotationLineItem;
 
 interface CustomerQuotationCardProps {
   items?: QuotationItem[];
@@ -55,7 +48,7 @@ export default function CustomerQuotationCard({
   quoteStatusId,
   customerRemark,
   totalRepairPrice,
-  totalCancelPrice = 300,
+  totalCancelPrice = CANCEL_INSPECTION_FEE,
   onApprove,
   onCancel,
   onRequestModification,
@@ -125,16 +118,16 @@ export default function CustomerQuotationCard({
   const partsSum = propTotalParts !== undefined
     ? propTotalParts
     : partsList.reduce(
-        (sum, item) => sum + Number(item.price || item.unit_price || 0) * Number(item.quantity || 1),
-        0
-      );
+      (sum, item) => sum + Number(item.price || item.unit_price || 0) * Number(item.quantity || 1),
+      0
+    );
 
   const laborsSum = propTotalServices !== undefined
     ? propTotalServices
     : laborsList.reduce(
-        (sum, item) => sum + Number(item.price || item.unit_price || 0) * Number(item.quantity || 1),
-        0
-      );
+      (sum, item) => sum + Number(item.price || item.unit_price || 0) * Number(item.quantity || 1),
+      0
+    );
 
   const calculatedItemsTotal = items.reduce(
     (sum, item) => sum + Number(item.price || item.unit_price || 0) * Number(item.quantity || 1),
@@ -160,9 +153,13 @@ export default function CustomerQuotationCard({
 
   return (
     <View className="mb-4">
-      <View className="bg-white rounded-2xl border border-red-500 overflow-hidden shadow-sm">
+      <View className={`bg-white rounded-2xl overflow-hidden shadow-sm border ${
+        isApproved ? 'border-emerald-300' : isCancelled ? 'border-slate-300' : isModificationRequested ? 'border-amber-300' : 'border-purple-300'
+      }`}>
         {/* Header Bar */}
-        <View className="bg-[#D32F2F] px-4 py-3 flex-row items-center justify-between">
+        <View className={`px-4 py-3 flex-row items-center justify-between ${
+          isApproved ? 'bg-emerald-600' : isCancelled ? 'bg-slate-700' : isModificationRequested ? 'bg-amber-600' : 'bg-purple-600'
+        }`}>
           <View className="flex-row items-center">
             <View className="w-2.5 h-2.5 rounded-full bg-white mr-2" />
             <Text className="text-white font-bold text-sm font-heading">
@@ -328,9 +325,8 @@ export default function CustomerQuotationCard({
                 </View>
               ) : (
                 <TouchableOpacity
-                  className={`w-full h-[52px] px-6 rounded-xl items-center justify-center shadow-md shadow-emerald-700/25 ${
-                    isProcessing ? 'bg-emerald-400 opacity-60' : 'bg-emerald-600 active:bg-emerald-700'
-                  }`}
+                  className={`w-full h-[52px] px-6 rounded-xl items-center justify-center shadow-md shadow-emerald-700/25 ${isProcessing ? 'bg-emerald-400 opacity-60' : 'bg-emerald-600 active:bg-emerald-700'
+                    }`}
                   activeOpacity={0.85}
                   onPress={onApprove}
                   disabled={isProcessing}
@@ -353,9 +349,8 @@ export default function CustomerQuotationCard({
                 {/* ปุ่มขอแก้ไข / เพิ่มเติมรายการ */}
                 {onRequestModification && (
                   <TouchableOpacity
-                    className={`flex-1 border min-h-[46px] py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 ${
-                      isProcessing ? 'bg-amber-50/50 border-amber-200 opacity-60' : 'bg-amber-50 border-amber-300 active:bg-amber-100'
-                    }`}
+                    className={`flex-1 border min-h-[46px] py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 ${isProcessing ? 'bg-amber-50/50 border-amber-200 opacity-60' : 'bg-amber-50 border-amber-300 active:bg-amber-100'
+                      }`}
                     activeOpacity={0.8}
                     onPress={() => setShowModal(true)}
                     disabled={isProcessing}
@@ -369,9 +364,8 @@ export default function CustomerQuotationCard({
 
                 {/* ปุ่มไม่ซ่อม / ขอยกเลิก */}
                 <TouchableOpacity
-                  className={`flex-1 border min-h-[46px] py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 ${
-                    isProcessing ? 'bg-slate-50/50 border-slate-200 opacity-60' : 'bg-slate-50 border-slate-200 active:bg-red-50'
-                  }`}
+                  className={`flex-1 border min-h-[46px] py-2.5 px-3 rounded-xl items-center justify-center flex-row gap-1.5 ${isProcessing ? 'bg-slate-50/50 border-slate-200 opacity-60' : 'bg-slate-50 border-slate-200 active:bg-red-50'
+                    }`}
                   activeOpacity={0.8}
                   onPress={onCancel}
                   disabled={isProcessing}
@@ -445,9 +439,8 @@ export default function CustomerQuotationCard({
                 <Text className="text-slate-600 font-bold font-heading">ปิด</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                className={`flex-1 py-3 rounded-xl items-center justify-center ${
-                  !remark.trim() ? 'bg-amber-300' : 'bg-amber-500'
-                }`}
+                className={`flex-1 py-3 rounded-xl items-center justify-center ${!remark.trim() ? 'bg-amber-300' : 'bg-amber-500'
+                  }`}
                 onPress={handleSendModification}
                 disabled={submittingRemark || !remark.trim()}
               >

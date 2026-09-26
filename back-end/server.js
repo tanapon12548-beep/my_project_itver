@@ -10,7 +10,6 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const errorHandler = require('./middleware/errorHandler');
 const authMiddleware = require('./middleware/auth');
-const role = require('./middleware/role');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -48,6 +47,8 @@ app.use('/api/', limiter);
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/pubilc', express.static(path.join(__dirname, 'pubilc')));
 app.use('/public', express.static(path.join(__dirname, 'pubilc')));
+app.use('/slips', express.static(path.join(__dirname, 'pubilc', 'slips'))); // ให้เข้าถึงรูปสลิปผ่าน /slips/... ได้โดยตรง
+app.use('/signatures', express.static(path.join(__dirname, 'pubilc', 'signatures'))); // ให้เข้าถึงรูปลายเซ็นผ่าน /signatures/... ได้โดยตรง
 
 // ============================================================
 // Swagger API Documentation

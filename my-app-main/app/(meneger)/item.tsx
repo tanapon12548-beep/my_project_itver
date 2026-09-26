@@ -2,8 +2,6 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Platform,
   ScrollView,
   Text,
   TouchableOpacity,
@@ -25,6 +23,7 @@ import PartDetailsModal from '@/components/Meneger_item/PartDetailsModal';
 import SearchFilterBar from '@/components/ui/SearchFilterBar';
 import PartTable from '@/components/Meneger_item/Table';
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
+import CustomAlert from '@/components/ui/CustomAlert';
 import ItemFilterSheet, {
   DEFAULT_FILTER_STATE,
   FilterState,
@@ -94,7 +93,7 @@ export default function PartsScreen() {
     // 1. Search text filter
     if (searchText.trim()) {
       const s = searchText.toLowerCase();
-      list = list.filter((item: any) => 
+      list = list.filter((item: any) =>
         (item.item_name || '').toLowerCase().includes(s) ||
         (item.item_code || '').toLowerCase().includes(s)
       );
@@ -164,12 +163,25 @@ export default function PartsScreen() {
     return c;
   }, [filters]);
 
-  const showAlert = (title: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}\n\n${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'warning' | 'danger' | 'info';
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'info',
+  });
+
+  const showAlert = (title: string, message: string, type: 'success' | 'warning' | 'danger' | 'info' = 'info') => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+    });
   };
 
   const handleOpenAddModal = () => {
@@ -183,11 +195,15 @@ export default function PartsScreen() {
 
   const handleOpenEditModal = (item: any) => {
     setDetailsVisible(false);
+    setSelectedItem(null);
     setItemToEdit(item);
     setModalVisible(true);
   };
 
   const handleDeleteItem = (item: any) => {
+    // ปิดหน้าต่างรายละเอียดก่อน เพื่อไม่ให้ Modal ซ้อนทับกัน
+    setDetailsVisible(false);
+    setSelectedItem(null);
     setItemToDelete(item);
     setDeleteModalVisible(true);
   };
@@ -199,15 +215,15 @@ export default function PartsScreen() {
       const res = await deleteItem(itemToDelete.item_id);
       if (!res.success) throw new Error(res.message || 'ล้มเหลวในการลบ');
 
-      showAlert('สำเร็จ', 'ลบรายการเรียบร้อยแล้ว');
-      setDetailsVisible(false);
-      setSelectedItem(null);
       setDeleteModalVisible(false);
       setItemToDelete(null);
-      fetchDevices();
+      setDetailsVisible(false);
+      setSelectedItem(null);
+      showAlert('สำเร็จ', 'ลบรายการเรียบร้อยแล้ว', 'success');
+      await fetchDevices();
     } catch (err: any) {
       console.error('Delete error:', err);
-      showAlert('ล้มเหลว', err.message || 'ไม่สามารถลบรายการได้');
+      showAlert('ล้มเหลว', err.message || 'ไม่สามารถลบรายการได้', 'danger');
     } finally {
       setIsDeleting(false);
     }
@@ -297,29 +313,25 @@ export default function PartsScreen() {
         {/* Tab Switcher: อะไหล่ vs ค่าบริการ */}
         <View className="flex-row bg-slate-200 rounded-xl p-1 mb-3">
           <TouchableOpacity
-            className={`flex-1 py-2.5 items-center justify-center rounded-lg ${
-              activeTab === 'parts' ? 'bg-white shadow-sm shadow-black/10 elevation-2' : ''
-            }`}
+            className={`flex-1 py-2.5 items-center justify-center rounded-lg ${activeTab === 'parts' ? 'bg-white shadow-sm shadow-black/10 elevation-2' : ''
+              }`}
             onPress={() => handleTabChange('parts')}
             activeOpacity={0.8}
           >
-            <Text className={`font-body text-sm ${
-              activeTab === 'parts' ? 'font-bold text-[#DC2626] font-heading' : 'text-slate-600'
-            }`}>
+            <Text className={`font-body text-sm ${activeTab === 'parts' ? 'font-bold text-[#DC2626] font-heading' : 'text-slate-600'
+              }`}>
               อะไหล่ ({activeTab === 'parts' ? filteredDevices.length : partsList.length})
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            className={`flex-1 py-2.5 items-center justify-center rounded-lg ${
-              activeTab === 'services' ? 'bg-white shadow-sm shadow-black/10 elevation-2' : ''
-            }`}
+            className={`flex-1 py-2.5 items-center justify-center rounded-lg ${activeTab === 'services' ? 'bg-white shadow-sm shadow-black/10 elevation-2' : ''
+              }`}
             onPress={() => handleTabChange('services')}
             activeOpacity={0.8}
           >
-            <Text className={`font-body text-sm ${
-              activeTab === 'services' ? 'font-bold text-[#DC2626] font-heading' : 'text-slate-600'
-            }`}>
+            <Text className={`font-body text-sm ${activeTab === 'services' ? 'font-bold text-[#DC2626] font-heading' : 'text-slate-600'
+              }`}>
               ค่าบริการ ({activeTab === 'services' ? filteredDevices.length : servicesList.length})
             </Text>
           </TouchableOpacity>
@@ -341,6 +353,7 @@ export default function PartsScreen() {
                 setSelectedItem(item);
                 setDetailsVisible(true);
               }}
+              onPressDelete={handleDeleteItem}
             />
           </ScrollView>
         )}
@@ -383,7 +396,6 @@ export default function PartsScreen() {
           setSelectedItem(null);
         }}
         onEdit={handleOpenEditModal}
-        onDelete={handleDeleteItem}
       />
 
       <ConfirmDeleteModal
@@ -399,6 +411,14 @@ export default function PartsScreen() {
           setDeleteModalVisible(false);
           setItemToDelete(null);
         }}
+      />
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
       />
     </View>
   );

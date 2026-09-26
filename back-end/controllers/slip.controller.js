@@ -2,6 +2,7 @@ const pool = require('../config/db');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { ROLES, PAYMENT_METHODS } = require('../constants');
 
 const slipsDir = path.join(__dirname, '..', 'pubilc', 'slips');
 if (!fs.existsSync(slipsDir)) {
@@ -61,7 +62,7 @@ exports.create = async (req, res, next) => {
       if (!isNaN(numJobId)) {
         await pool.query(
           `UPDATE repair_job 
-           SET slip_image = $1, payment_method_id = 2, payment_date = CURRENT_DATE 
+           SET slip_image = $1, payment_method_id = ${PAYMENT_METHODS.TRANSFER}, payment_date = CURRENT_DATE 
            WHERE job_id = $2`,
           [filename, numJobId]
         );
@@ -110,8 +111,20 @@ exports.remove = async (req, res, next) => {
     }
 
     const slip = rows[0];
-    if (roleId === 4 && slip.user_id !== userId) {
+    if (roleId === ROLES.CUSTOMER && slip.user_id !== userId) {
       return res.status(403).json({ success: false, message: 'คุณไม่มีสิทธิ์ลบสลิปของลูกค้ารายอื่น' });
+    }
+
+    // ลบไฟล์ภาพจริงออกจากดิสก์เพื่อไม่ให้ค้างเป็นขยะ
+    if (slip.image_url) {
+      try {
+        const filePath = path.join(__dirname, '..', 'pubilc', slip.image_url);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
+      } catch (fileErr) {
+        console.warn('Could not delete slip file from disk:', fileErr.message);
+      }
     }
 
     await pool.query('DELETE FROM slips_records WHERE id = $1', [slipId]);

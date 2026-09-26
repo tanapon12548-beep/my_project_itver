@@ -4,7 +4,6 @@
  */
 
 import { Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 const primaryRedLight = '#DC2626'; // Red-600 for Light Mode
 const primaryRedDark = '#F87171';  // Red-400 for Dark Mode
@@ -65,18 +64,6 @@ export const Colors: Record<string, any> = {
   } as const,
 };
 
-export const StatusIcons: Record<string, keyof typeof Ionicons.glyphMap> = {
-  status1: 'document-text-outline',
-  status2: 'search-outline',
-  status3: 'calculator-outline',
-  status4: 'time-outline',
-  status5: 'checkmark-circle-outline',
-  status6: 'hammer-outline',
-  status7: 'cash-outline',
-  status8: 'checkmark-done-circle-outline',
-  status9: 'close-circle-outline',
-};
-
 export const Fonts = Platform.select({
   ios: {
     sans: 'system-ui',
@@ -114,7 +101,3 @@ export const Spacing = {
   five: 32,
   six: 64,
 } as const;
-
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
-

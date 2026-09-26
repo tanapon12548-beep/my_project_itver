@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 // 3. API helpers
 import { getRepairs } from '@/lib/api';
+import { REPAIR_STATUS, CANCEL_INSPECTION_FEE } from '@/constants/status';
 
 // 4. Components
 import Header from '@/components/Shared_Dashboard/Header';
@@ -17,7 +18,7 @@ import RepairStatusSection from '@/components/Shared_Repairs/RepairStatusSection
 import type { RepairItem } from '@/components/Shared_Repairs/types';
 import type { RepairJob } from '@/types/repair';
 
-type DeliverFilter = 'all' | 'payment' | 'pickup' | 'repairing';
+type DeliverFilter = 'all' | 'payment' | 'pickup' | 'completed' | 'repairing';
 
 interface DeliverySegmentCardProps {
   label: string;
@@ -82,6 +83,7 @@ export default function StaffDeliverScreen() {
   const [isDetailsVisible, setDetailsVisible] = useState(false);
   const [waitingPickupItems, setWaitingPickupItems] = useState<RepairItem[]>([]);
   const [pendingPaymentItems, setPendingPaymentItems] = useState<RepairItem[]>([]);
+  const [completedItems, setCompletedItems] = useState<RepairItem[]>([]);
   const [repairedContactItems, setRepairedContactItems] = useState<RepairItem[]>([]);
 
   const fetchDeliverItems = useCallback(async () => {
@@ -95,20 +97,20 @@ export default function StaffDeliverScreen() {
 
       // กรองเฉพาะ status_id 5, 6, 7, 8, 9
       const items: RepairItem[] = (res.data || [])
-        .filter((row: RepairJob) => [5, 6, 7, 8, 9].includes(row.status_id))
+        .filter((row: RepairJob) => (row.status_id ? [5, 6, 7, 8, 9].includes(row.status_id) : false))
         .map((row: RepairJob) => {
           const jobNo = `REP-${String(row.job_id).padStart(6, '0')}`;
           const custName = `${row.first_name || ''} ${row.last_name || ''}`.trim() || 'ไม่ระบุชื่อ';
 
-          let computedStatus = 'รอชำระ';
+          let computedStatus = 'รอชำระเงิน';
           if (row.status_id === 8) {
             computedStatus = 'เสร็จสิ้น';
+          } else if (row.status_id === 6) {
+            computedStatus = 'รอลูกค้ามารับเครื่อง';
           } else if (row.status_id === 7) {
-            computedStatus = row.payment_verified ? 'พร้อมส่งมอบ (ชำระแล้ว)' : 'รอชำระ';
+            computedStatus = 'รอชำระเงิน';
           } else if (row.status_id === 9) {
             computedStatus = 'ยกเลิกซ่อม (รอชำระค่าตรวจ)';
-          } else if (row.status_id === 6) {
-            computedStatus = 'กำลังซ่อม';
           } else if (row.status_id === 5) {
             computedStatus = 'อนุมัติแล้ว/รอซ่อม';
           }
@@ -128,7 +130,7 @@ export default function StaffDeliverScreen() {
           }
 
           const rawAmount = Number(row.total_amount);
-          const finalPrice = !isNaN(rawAmount) && rawAmount > 0 ? rawAmount : (row.status_id === 9 ? 300 : 0);
+          const finalPrice = !isNaN(rawAmount) && rawAmount > 0 ? rawAmount : (row.status_id === REPAIR_STATUS.CANCELLED ? CANCEL_INSPECTION_FEE : 0);
 
           return {
             id: String(row.job_id),
@@ -154,9 +156,10 @@ export default function StaffDeliverScreen() {
           };
         });
 
-      setWaitingPickupItems(items.filter((i) => i.status_id === 8 || (i.status_id === 7 && i.payment_verified)));
-      setPendingPaymentItems(items.filter((i) => (i.status_id === 7 && !i.payment_verified) || i.status_id === 9));
-      setRepairedContactItems(items.filter((i) => i.status_id === 5 || i.status_id === 6));
+      setPendingPaymentItems(items.filter((i) => i.status_id === 7 || i.status_id === 9));
+      setWaitingPickupItems(items.filter((i) => i.status_id === 6));
+      setCompletedItems(items.filter((i) => i.status_id === 8));
+      setRepairedContactItems(items.filter((i) => i.status_id === 5));
     } catch (err) {
       console.error('Error fetching deliver items:', err);
     } finally {
@@ -224,8 +227,9 @@ export default function StaffDeliverScreen() {
     );
   };
 
-  const filteredWaitingPickup = waitingPickupItems.filter(filterFn);
   const filteredPendingPayment = pendingPaymentItems.filter(filterFn);
+  const filteredWaitingPickup = waitingPickupItems.filter(filterFn);
+  const filteredCompleted = completedItems.filter(filterFn);
   const filteredRepairedContact = repairedContactItems.filter(filterFn);
 
   return (
@@ -245,22 +249,22 @@ export default function StaffDeliverScreen() {
             onPress={() => setActiveSegment('payment')}
           />
           <DeliverySegmentCard
-            label="พร้อมส่งมอบ"
+            label="รอมารับเครื่อง"
             count={filteredWaitingPickup.length}
             icon="cube-outline"
-            accentColor="#047857"
-            softColor="#D1FAE5"
+            accentColor="#0284C7"
+            softColor="#E0F2FE"
             isActive={activeSegment === 'pickup'}
             onPress={() => setActiveSegment('pickup')}
           />
           <DeliverySegmentCard
-            label="กำลังซ่อม"
-            count={filteredRepairedContact.length}
-            icon="hammer-outline"
-            accentColor="#1D4ED8"
-            softColor="#DBEAFE"
-            isActive={activeSegment === 'repairing'}
-            onPress={() => setActiveSegment('repairing')}
+            label="ส่งมอบแล้ว"
+            count={filteredCompleted.length}
+            icon="checkmark-done-circle-outline"
+            accentColor="#047857"
+            softColor="#D1FAE5"
+            isActive={activeSegment === 'completed'}
+            onPress={() => setActiveSegment('completed')}
           />
         </View>
 
@@ -272,12 +276,13 @@ export default function StaffDeliverScreen() {
         />
 
         {/* Filter Segment Pills */}
-        <View className="flex-row items-center gap-1.5 mb-3">
+        <View className="flex-row items-center gap-1.5 mb-3 flex-wrap">
           {[
             { key: 'all', label: 'ทั้งหมด' },
             { key: 'payment', label: 'รอชำระ' },
-            { key: 'pickup', label: 'ส่งมอบแล้ว/พร้อมรับ' },
-            { key: 'repairing', label: 'กำลังซ่อม' },
+            { key: 'pickup', label: 'รอมารับเครื่อง' },
+            { key: 'completed', label: 'เสร็จสิ้น' },
+            { key: 'repairing', label: 'อนุมัติ/รอซ่อม' },
           ].map((tab) => {
             const isSelected = activeSegment === tab.key;
             return (
@@ -316,13 +321,13 @@ export default function StaffDeliverScreen() {
           >
             {(activeSegment === 'all' || activeSegment === 'payment') && (
               <RepairStatusSection
-                title="รอชำระเงิน (ตรวจสอบสลิป/รับเงินสด)"
+                statusId={7}
+                title="รอชำระเงิน (ตรวจสอบการชำระเงิน / สลิป)"
                 count={filteredPendingPayment.length}
                 indicatorColor="#EAB308"
                 items={filteredPendingPayment}
                 defaultExpanded={true}
                 onPressDetails={handlePressDetails}
-                onPressHandover={handlePressHandover}
                 onPressPaymentCheck={(item) =>
                   router.push({
                     pathname: '/verify-payment',
@@ -340,9 +345,10 @@ export default function StaffDeliverScreen() {
 
             {(activeSegment === 'all' || activeSegment === 'pickup') && (
               <RepairStatusSection
-                title="รอลูกค้ารับเครื่อง / ส่งมอบเสร็จสิ้น"
+                statusId={6}
+                title="รอลูกค้ามารับเครื่อง (พนักงานส่งมอบ & ลูกค้าเซ็น)"
                 count={filteredWaitingPickup.length}
-                indicatorColor="#22C55E"
+                indicatorColor="#0284C7"
                 items={filteredWaitingPickup}
                 defaultExpanded={true}
                 onPressDetails={handlePressDetails}
@@ -350,15 +356,27 @@ export default function StaffDeliverScreen() {
               />
             )}
 
+            {(activeSegment === 'all' || activeSegment === 'completed') && (
+              <RepairStatusSection
+                statusId={8}
+                title="ส่งมอบเสร็จสิ้น (คำนวณรายได้แล้ว)"
+                count={filteredCompleted.length}
+                indicatorColor="#22C55E"
+                items={filteredCompleted}
+                defaultExpanded={activeSegment === 'completed'}
+                onPressDetails={handlePressDetails}
+              />
+            )}
+
             {(activeSegment === 'all' || activeSegment === 'repairing') && (
               <RepairStatusSection
+                statusId={5}
                 title="อนุมัติแล้ว/รอซ่อม (อยู่ระหว่างซ่อม)"
                 count={filteredRepairedContact.length}
-                indicatorColor="#3B82F6"
+                indicatorColor="#6366F1"
                 items={filteredRepairedContact}
                 defaultExpanded={false}
                 onPressDetails={handlePressDetails}
-                onPressHandover={handlePressHandover}
               />
             )}
           </ScrollView>

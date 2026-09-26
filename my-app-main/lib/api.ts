@@ -4,9 +4,10 @@ import type { QuotationItem } from '@/types/quotation';
 import type { InventoryItem } from '@/types/item';
 
 // ============================================================
-// API Base URL
+// API Base URL & Server Origin
 // ============================================================
-const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3002/api';
+export const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3002/api';
+export const API_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
 
 // ============================================================
 // Token Storage (SecureStore for native, localStorage for web)
@@ -52,6 +53,28 @@ export async function removeToken(): Promise<void> {
   if (SecureStore) {
     await SecureStore.deleteItemAsync('jwt_token');
   }
+}
+
+/**
+ * แปลง path รูปภาพ (สลิป, ลายเซ็น) ให้เป็น Full URL ที่พร้อมแสดงผล
+ * รองรับทั้ง base64 data:, http://, https:// และ local static assets
+ */
+export function getImageUrl(filePath: string | null | undefined): string | null {
+  if (!filePath) return null;
+  if (filePath.startsWith('data:') || filePath.startsWith('http://') || filePath.startsWith('https://')) {
+    return filePath;
+  }
+  const base = API_ORIGIN;
+  const clean = filePath.startsWith('/') ? filePath : `/${filePath}`;
+  if (
+    !clean.startsWith('/pubilc') &&
+    !clean.startsWith('/public') &&
+    !clean.startsWith('/slips') &&
+    !clean.startsWith('/signatures')
+  ) {
+    return `${base}/pubilc${clean}`;
+  }
+  return `${base}${clean}`;
 }
 
 // ============================================================
@@ -158,10 +181,6 @@ export function updateRepairSignature(jobId: string | number, data: any) {
   return api.patch(`/repairs/${jobId}/signature`, data);
 }
 
-export function deleteRepair(jobId: string | number) {
-  return api.delete(`/repairs/${jobId}`);
-}
-
 // --- Repair Job Detail Log ---
 // POST /api/repairs/:id/detail → บันทึก action log
 export async function logRepairJobDetail(
@@ -194,10 +213,6 @@ export function getDevices(customerId?: string) {
 
 export function createDevice(data: any) {
   return api.post('/devices', data);
-}
-
-export function updateDevice(id: number | string, data: any) {
-  return api.put(`/devices/${id}`, data);
 }
 
 // --- Quotations ---
@@ -281,6 +296,7 @@ export function deleteItem(id: number) {
 // --- Staff ---
 // GET /api/staff          → รายชื่อพนักงาน (Manager only)
 // PUT /api/staff/:id      → อัปเดตข้อมูลพนักงาน
+// DELETE /api/staff/:id   → ลบข้อมูลพนักงาน
 
 export function getStaff() {
   return api.get('/staff');
@@ -288,6 +304,10 @@ export function getStaff() {
 
 export function updateStaff(id: number | string, data: any) {
   return api.put(`/staff/${id}`, data);
+}
+
+export function deleteStaff(id: number | string) {
+  return api.delete(`/staff/${id}`);
 }
 
 // --- Dashboard ---
@@ -401,22 +421,21 @@ export function getLookupModels(brandId?: number | string, deviceTypeId?: number
   return api.get(url);
 }
 
-export function getLookupStatuses() {
-  return api.get('/lookup/statuses');
-}
-
-export function getLookupPaymentMethods() {
-  return api.get('/lookup/payment-methods');
-}
-
-export function getLookupActionTypes() {
-  return api.get('/lookup/action-types');
-}
-
 export function getLookupItemTypes() {
   return api.get('/lookup/item-types');
 }
 
 export function getLookupQuotationStatuses() {
   return api.get('/lookup/quotation-statuses');
+}
+
+// --- Customer Register by Staff ---
+export function registerCustomer(data: {
+  first_name: string;
+  last_name?: string;
+  phone?: string;
+  email?: string;
+  password?: string;
+}) {
+  return api.post('/auth/register', data);
 }

@@ -104,7 +104,7 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
         className="flex-1 bg-black/50 justify-center items-center p-5"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View className="w-full bg-white rounded-2xl p-5 shadow-sm shadow-black/25 elevation-5">
+        <View className="w-full max-w-[400px] bg-white rounded-2xl p-5 shadow-lg shadow-black/25 elevation-5">
           <View className="flex-row justify-between items-center mb-5">
             <Text className="text-lg font-bold text-slate-800">
               {itemToEdit ? 'แก้ไขรายการ' : 'เพิ่มรายการใหม่'}

@@ -15,7 +15,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // 3. API helpers
-import { getRepair, updateRepairSignature, updateRepairStatus, logRepairJobDetail } from '@/lib/api';
+import { getRepair, updateRepairSignature, updateRepairStatus, logRepairJobDetail, verifyPayment } from '@/lib/api';
 
 // 4. Components
 import RepairSummaryCard from '@/components/Staff_handover/RepairSummaryCard';
@@ -26,8 +26,8 @@ export default function DeliverHandoverScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
 
-  const jobNo = (params.job_no as string) || 'REP-260527-007';
-  const jobIdParam = (params.job_id as string) || '';
+  const jobIdParam = (params.job_id as string) || (params.id as string) || '';
+  const jobNo = (params.job_no as string) || (jobIdParam ? `REP-${String(jobIdParam).padStart(6, '0')}` : '');
   const initialDeviceModel = (params.device as string) || 'อุปกรณ์ซ่อม';
   const initialCustomerName = (params.customer_name as string) || 'ไม่ระบุชื่อ';
   const initialTotalPrice = Number(params.price) || 0;
@@ -36,6 +36,18 @@ export default function DeliverHandoverScreen() {
   const [customerName, setCustomerName] = useState<string>(initialCustomerName);
   const [totalPrice, setTotalPrice] = useState<number>(initialTotalPrice);
 
+  const resolveJobId = (): number => {
+    const parsed = parseInt(jobIdParam, 10);
+    if (!isNaN(parsed) && parsed > 0) return parsed;
+    if (jobNo) {
+      const fromSplit = parseInt(jobNo.split('-').pop() || '', 10);
+      if (!isNaN(fromSplit) && fromSplit > 0) return fromSplit;
+      const fromRegex = parseInt(jobNo.replace(/[^0-9]/g, ''), 10);
+      if (!isNaN(fromRegex) && fromRegex > 0) return fromRegex;
+    }
+    return 0;
+  };
+
   // Fetch real job data if jobNo present
   useEffect(() => {
     fetchJobDetails();
@@ -43,9 +55,8 @@ export default function DeliverHandoverScreen() {
 
   const fetchJobDetails = async () => {
     try {
-      const targetIdStr = jobIdParam || jobNo.replace(/[^0-9]/g, '');
-      const numericId = parseInt(targetIdStr, 10);
-      if (isNaN(numericId)) return;
+      const numericId = resolveJobId();
+      if (!numericId || numericId <= 0) return;
 
       const res = await getRepair(numericId);
       if (res.success && res.data) {
@@ -101,10 +112,9 @@ export default function DeliverHandoverScreen() {
     try {
       setUploading(true);
 
-      const targetIdStr = jobIdParam || jobNo.replace(/[^0-9]/g, '');
-      const numericId = parseInt(targetIdStr, 10);
+      const numericId = resolveJobId();
 
-      if (!isNaN(numericId)) {
+      if (numericId > 0) {
         const sigRes = await updateRepairSignature(numericId, {
           customer_receive_signature: signatureImage,
         });
@@ -114,6 +124,13 @@ export default function DeliverHandoverScreen() {
 
         // Action 7 = ส่งมอบเครื่องให้ลูกค้า
         await logRepairJobDetail(numericId, 7);
+
+        // ยืนยันการชำระเงิน (กรณีจ่ายเงินสดหน้าร้านขณะรับเครื่อง)
+        try {
+          await verifyPayment(numericId);
+        } catch {
+          // ถ้าชำระเงินผ่านการโอนและยืนยันไปแล้ว จะไม่ติด error
+        }
 
         await updateRepairStatus(numericId, {
           status_id: 8, // เสร็จสิ้น
@@ -143,7 +160,8 @@ export default function DeliverHandoverScreen() {
     const isSuccess = alertConfig.type === 'success';
     setAlertConfig((prev) => ({ ...prev, visible: false }));
     if (isSuccess) {
-      const targetIdStr = jobIdParam || jobNo.replace(/[^0-9]/g, '');
+      const targetId = resolveJobId();
+      const targetIdStr = String(targetId || jobIdParam || '');
       router.replace({
         pathname: '/receipt' as any,
         params: {

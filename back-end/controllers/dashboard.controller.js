@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const dashboardQueries = require('../queries/dashboard.queries');
+const { REPAIR_STATUS } = require('../constants');
 
 /**
  * GET /api/dashboard/metrics
@@ -54,16 +55,24 @@ exports.getMetrics = async (req, res, next) => {
 
     // Calculate metrics
     filteredJobs.forEach(job => {
-      const isPaid = job.status_id === 8;
+      const isPaid = job.status_id === REPAIR_STATUS.COMPLETED;
       if (job.total_amount && isPaid) {
         totalRevenue += parseFloat(job.total_amount);
       }
 
-      if (job.status_id === 8) {
+      if (job.status_id === REPAIR_STATUS.COMPLETED) {
         completedJobs++;
       }
 
-      const pendingStatusIds = [1, 2, 3, 4, 5, 6, 7];
+      const pendingStatusIds = [
+        REPAIR_STATUS.PENDING_CHECK,
+        REPAIR_STATUS.CHECKING,
+        REPAIR_STATUS.MAKING_QUOTE,
+        REPAIR_STATUS.PENDING_APPROVAL,
+        REPAIR_STATUS.APPROVED_WAIT_REPAIR,
+        REPAIR_STATUS.WAITING_PAYMENT,
+        REPAIR_STATUS.READY_FOR_PICKUP,
+      ];
       if (pendingStatusIds.includes(job.status_id)) {
         pendingJobs++;
       }
@@ -102,7 +111,7 @@ exports.getTrend = async (req, res, next) => {
     }
 
     const selectExpr = safeMetric === 'revenue'
-      ? "COALESCE(SUM(CASE WHEN rj.status_id = 8 THEN rj.total_amount ELSE 0 END), 0) AS value"
+      ? `COALESCE(SUM(CASE WHEN rj.status_id = ${REPAIR_STATUS.COMPLETED} THEN rj.total_amount ELSE 0 END), 0) AS value`
       : "COUNT(*) AS value";
 
     let whereConditions = '';

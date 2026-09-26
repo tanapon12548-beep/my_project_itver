@@ -100,11 +100,10 @@ export default function RepairItemRow({
       <View className="flex-row items-center gap-3 mb-2.5 px-0.5">
         <View className="flex-row items-center gap-1.5 flex-1">
           <Text
-            className={`text-[13px] ${
-              item.customer_name && item.customer_name !== 'ไม่ระบุชื่อ'
+            className={`text-[13px] ${item.customer_name && item.customer_name !== 'ไม่ระบุชื่อ'
                 ? 'font-medium text-slate-700'
                 : 'text-slate-400 italic'
-            }`}
+              }`}
             numberOfLines={1}
           >
             {item.customer_name && item.customer_name !== 'ไม่ระบุชื่อ'

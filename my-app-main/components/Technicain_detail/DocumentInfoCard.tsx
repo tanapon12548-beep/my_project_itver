@@ -3,12 +3,12 @@ import { Text, View } from 'react-native';
 
 interface DocumentInfoCardProps {
   jobNo: string;
-  createdAt?: string;
+  createdAt?: string | null;
   paymentDate?: string | null;
   returnDate?: string | null;
-  receivedBy?: string;
-  inspectorName?: string;
-  repairerName?: string;
+  receivedBy?: string | null;
+  inspectorName?: string | null;
+  repairerName?: string | null;
 }
 
 export default function DocumentInfoCard({

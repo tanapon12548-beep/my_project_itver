@@ -160,7 +160,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* ═══ Red Header ═══ */}
-          <View 
+          <View
             className="bg-[#DC2626] pb-10 px-6 relative overflow-hidden"
             style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 40 : 60 }}
           >

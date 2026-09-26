@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const pool = require('../config/db');
+const { ROLES } = require('../constants');
 
 function validatePassword(password) {
   if (!password || password.length < 8) {
@@ -55,10 +56,10 @@ exports.register = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Insert new user (role_id = 4 = Customer by default)
+    // Insert new user (role_id = ROLES.CUSTOMER by default)
     const result = await pool.query(
       `INSERT INTO profiles (email, password, first_name, last_name, phone, role_id)
-       VALUES ($1, $2, $3, $4, $5, 4)
+       VALUES ($1, $2, $3, $4, $5, ${ROLES.CUSTOMER})
        RETURNING id, email, first_name, last_name, phone, role_id`,
       [cleanEmail, hashedPassword, cleanFirstName, cleanLastName, cleanPhone]
     );
@@ -95,12 +96,12 @@ exports.login = async (req, res, next) => {
 
     const cleanIdentifier = String(email).trim();
 
-    // ค้นหา user ด้วย email, phone หรือ first_name อย่างปลอดภัย
+    // ค้นหา user ด้วย email หรือ เบอร์โทรศัพท์อย่างปลอดภัย (ตัด first_name ออกเพื่อความปลอดภัย)
     const query = `
       SELECT p.*, r.name AS role_name 
       FROM profiles p 
       LEFT JOIN roles r ON p.role_id = r.id 
-      WHERE LOWER(p.email) = LOWER($1) OR p.phone = $1 OR p.first_name = $1
+      WHERE LOWER(p.email) = LOWER($1) OR p.phone = $1
     `;
     const result = await pool.query(query, [cleanIdentifier]);
 

@@ -15,16 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Dropdown } from 'react-native-element-dropdown';
 
-type StaffRoleThai = 'พนักงาน' | 'ช่าง' | 'ลูกค้า';
-
-interface StaffMember {
-  id: string;
-  name: string;
-  role: StaffRoleThai;
-  phone: string;
-  first_name?: string;
-  last_name?: string;
-}
+import type { StaffMember, StaffRoleThai } from '@/types/user';
 
 interface EditStaffModalProps {
   visible: boolean;
@@ -32,6 +23,7 @@ interface EditStaffModalProps {
   isSaving?: boolean;
   onClose: () => void;
   onSave: (updatedItem: StaffMember) => void;
+  onDelete?: (item: StaffMember) => void;
 }
 
 const roleData = [
@@ -41,7 +33,7 @@ const roleData = [
   { label: 'ลูกค้า (Customer)', value: 'ลูกค้า' },
 ];
 
-export default function EditStaffModal({ visible, item, isSaving, onClose, onSave }: EditStaffModalProps) {
+export default function EditStaffModal({ visible, item, isSaving, onClose, onSave, onDelete }: EditStaffModalProps) {
   const [role, setRole] = useState<StaffRoleThai>('พนักงาน');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -81,9 +73,20 @@ export default function EditStaffModal({ visible, item, isSaving, onClose, onSav
           {/* Header */}
           <View className="flex-row justify-between items-center mb-5">
             <Text className="text-lg font-bold text-slate-800">แก้ไขข้อมูลพนักงาน</Text>
-            <TouchableOpacity onPress={onClose} className="p-1">
-              <Ionicons name="close" size={24} color="#64748b" />
-            </TouchableOpacity>
+            <View className="flex-row items-center gap-2">
+              {onDelete && item && (
+                <TouchableOpacity
+                  onPress={() => onDelete(item)}
+                  className="w-8 h-8 rounded-lg bg-red-50 border border-red-200 items-center justify-center active:bg-red-100"
+                  disabled={isSaving}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={onClose} className="p-1">
+                <Ionicons name="close" size={24} color="#64748b" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Form */}

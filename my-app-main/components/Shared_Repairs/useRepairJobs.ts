@@ -42,10 +42,7 @@ export function useRepairJobs(options: UseRepairJobsOptions = {}) {
       });
 
       (res.data || []).forEach((row: any) => {
-        let stId = row.status_id;
-        // หากหน้าจอที่เรียกใช้ไม่ได้กรอง status 6 แยกไว้ ให้รวมอยู่กับ 5 (อนุมัติแล้ว/รอซ่อม)
-        if (stId === 6 && !groupsMap['6']) stId = 5;
-
+        const stId = row.status_id;
         // Skip if this status is not in our filter
         if (!groupsMap[String(stId)]) return;
 

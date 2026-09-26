@@ -8,27 +8,12 @@ import { Dropdown } from 'react-native-element-dropdown';
 
 // 3. API helpers
 import { getLookupBrands, getLookupDeviceTypes, getLookupModels } from '@/lib/api';
+import type { DeviceTypeItem, BrandItem, DeviceModelItem } from '@/types/device';
 
 // 4. Constants & UI
 import { FONTS } from '@/constants/theme';
 import SearchableDropdown from '@/components/ui/SearchableDropdown';
 import CalendarPicker from '@/components/ui/CalendarPicker';
-
-interface DeviceTypeItem {
-  device_type_id: number;
-  device_type_name: string;
-}
-
-interface BrandItem {
-  brand_id: number;
-  brand_name: string;
-}
-
-interface DeviceModelItem {
-  model_id: number;
-  model_name: string;
-  brand_id: number;
-}
 
 interface DeviceFormCardProps {
   deviceTypeId: number | null;
