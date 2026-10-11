@@ -13,7 +13,7 @@ export interface PaymentData {
   slip_image?: string | null;
   slip_filename?: string | null;
   payment_verified?: boolean;
-  payment_verified_by?: string | null;
+  payment_verified_by?: number | string | null;
   payment_verified_at?: string | null;
   payment_reject_reason?: string | null;
   total_amount?: number;
@@ -23,8 +23,8 @@ export interface PaymentData {
  * ประวัติบันทึกสลิป
  */
 export interface SlipRecord {
-  id: string;
-  user_id: string;
+  id: number | string;
+  user_id: number | string;
   image_url: string;
   uploaded_at: string;
   user_email?: string;

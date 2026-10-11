@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { QuotationItem } from '@/types/quotation';
-import QuotationStatusBadge, { isModificationQuote } from './QuotationStatusBadge';
+import QuotationStatusBadge, { isModificationQuote, canEditOrDeleteQuote } from './QuotationStatusBadge';
 
 interface QuotationTableProps {
   filteredQuotations: QuotationItem[];
@@ -135,27 +135,31 @@ export default function QuotationTable({
                     <Text className="text-xs font-bold text-sky-700 font-heading">รายละเอียด</Text>
                   </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={{ minHeight: 44, justifyContent: 'center' }}
-                    className={`px-3 rounded-xl flex-row items-center gap-1 active:opacity-80 ${
-                      isModification ? 'bg-amber-500' : 'bg-blue-600'
-                    }`}
-                    onPress={() => onEdit(item)}
-                  >
-                    <Ionicons name="create-outline" size={14} color="#ffffff" />
-                    <Text className="text-xs font-bold text-white font-heading">แก้ไข</Text>
-                  </TouchableOpacity>
+                  {canEditOrDeleteQuote(item) ? (
+                    <>
+                      <TouchableOpacity
+                        style={{ minHeight: 44, justifyContent: 'center' }}
+                        className={`px-3 rounded-xl flex-row items-center gap-1 active:opacity-80 ${
+                          isModification ? 'bg-amber-500' : 'bg-blue-600'
+                        }`}
+                        onPress={() => onEdit(item)}
+                      >
+                        <Ionicons name="create-outline" size={14} color="#ffffff" />
+                        <Text className="text-xs font-bold text-white font-heading">แก้ไข</Text>
+                      </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}
-                    className="bg-rose-50 border border-rose-200 rounded-xl flex-row items-center justify-center px-2.5 active:bg-rose-100"
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    accessibilityLabel={`ลบ ${item.quote_no}`}
-                    accessibilityRole="button"
-                    onPress={() => onPromptDelete(item)}
-                  >
-                    <Ionicons name="trash-outline" size={15} color="#e11d48" />
-                  </TouchableOpacity>
+                      <TouchableOpacity
+                        style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}
+                        className="bg-rose-50 border border-rose-200 rounded-xl flex-row items-center justify-center px-2.5 active:bg-rose-100"
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        accessibilityLabel={`ลบ ${item.quote_no}`}
+                        accessibilityRole="button"
+                        onPress={() => onPromptDelete(item)}
+                      >
+                        <Ionicons name="trash-outline" size={15} color="#e11d48" />
+                      </TouchableOpacity>
+                    </>
+                  ) : null}
                 </View>
               </View>
             );

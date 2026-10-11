@@ -78,7 +78,20 @@ exports.getDeviceTypes = async (req, res, next) => {
  */
 exports.getBrands = async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM brands ORDER BY brand_id');
+    const { device_type_id } = req.query;
+    if (device_type_id && !isNaN(parseInt(device_type_id, 10))) {
+      const dtId = parseInt(device_type_id, 10);
+      const { rows } = await pool.query(`
+        SELECT DISTINCT b.brand_id, b.brand_name
+        FROM brands b
+        LEFT JOIN brand_device_types bdt ON b.brand_id = bdt.brand_id
+        LEFT JOIN device_models dm ON b.brand_id = dm.brand_id AND dm.device_type_id = $1
+        WHERE bdt.device_type_id = $1 OR dm.device_type_id = $1
+        ORDER BY b.brand_name ASC
+      `, [dtId]);
+      return res.json({ success: true, data: rows });
+    }
+    const { rows } = await pool.query('SELECT * FROM brands ORDER BY brand_name ASC');
     res.json({ success: true, data: rows });
   } catch (err) {
     next(err);

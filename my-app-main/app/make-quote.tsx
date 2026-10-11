@@ -52,6 +52,7 @@ export default function MakeQuoteScreen() {
   const [initialSymptom, setInitialSymptom] = useState('');
   const [actualSymptom, setActualSymptom] = useState('');
   const [customerRemark, setCustomerRemark] = useState('');
+  const [quoteStatusId, setQuoteStatusId] = useState<number | null>(null);
 
   const [partInputName, setPartInputName] = useState('');
   const [partInputPrice, setPartInputPrice] = useState('');
@@ -122,6 +123,26 @@ export default function MakeQuoteScreen() {
           }
 
           if (quoteData) {
+            setQuoteStatusId(quoteData.quote_status_id || null);
+
+            // หากเป็นสถานะที่อนุมัติแล้ว (2) หรือยกเลิก (3) จะไม่อนุญาตให้แก้ไข
+            if (quoteData.quote_status_id === 2 || quoteData.quote_status_id === 3) {
+              const statusName =
+                quoteData.quote_status_name ||
+                (quoteData.quote_status_id === 2 ? 'อนุมัติแล้ว' : 'ลูกค้ายกเลิก');
+              showAlert({
+                title: 'ไม่สามารถแก้ไขใบเสนอราคานี้ได้',
+                message: `ใบเสนอราคานี้อยู่ในสถานะ "${statusName}" แล้ว จึงไม่สามารถทำการแก้ไขหรือเปลี่ยนแปลงรายการได้`,
+                type: 'warning',
+                confirmText: 'ย้อนกลับ',
+                onConfirm: () => {
+                  hideAlert();
+                  router.back();
+                },
+              });
+              return;
+            }
+
             if (quoteData.actual_symptom) {
               setActualSymptom(quoteData.actual_symptom);
             }
@@ -244,6 +265,18 @@ export default function MakeQuoteScreen() {
   const handleConfirmDelete = () => {
     if (!itemToDelete) return;
     if (itemToDelete.type === 'part') {
+      if (parts.length <= 1 && services.length > 0) {
+        setDeleteModalVisible(false);
+        setItemToDelete(null);
+        showAlert({
+          title: 'ไม่สามารถลบอะไหล่ทั้งหมดได้',
+          message: 'ค่าบริการมีได้ก็ต้องมีรายการอะไหล่ก่อน หากต้องการลบอะไหล่ทั้งหมด กรุณาลบรายการค่าบริการออกก่อน',
+          type: 'warning',
+          confirmText: 'เข้าใจแล้ว',
+          onConfirm: hideAlert,
+        });
+        return;
+      }
       setParts((prev) => prev.filter((p) => p.id !== itemToDelete.id));
     } else {
       setServices((prev) => prev.filter((s) => s.id !== itemToDelete.id));
@@ -311,6 +344,16 @@ export default function MakeQuoteScreen() {
 
   // Add Service (ค่าบริการไม่มีจำนวน — ล็อก qty = 1 เสมอ)
   const handleAddService = (itemFromDb?: any) => {
+    if (parts.length === 0) {
+      showAlert({
+        title: 'ยังไม่มีรายการอะไหล่',
+        message: 'ค่าบริการมีได้ก็ต้องมีรายการอะไหล่ก่อน กรุณาเพิ่มรายการอะไหล่อย่างน้อย 1 รายการก่อนเพิ่มค่าบริการ',
+        type: 'warning',
+        confirmText: 'เข้าใจแล้ว',
+        onConfirm: hideAlert,
+      });
+      return;
+    }
     if (itemFromDb) {
       setServices((prev) => [
         ...prev,
@@ -378,7 +421,29 @@ export default function MakeQuoteScreen() {
     if (parts.length === 0 && services.length === 0) {
       showAlert({
         title: 'ไม่มีรายการค่าใช้จ่าย',
-        message: 'กรุณาเพิ่มรายการอะไหล่หรือค่าบริการอย่างน้อย 1 รายการก่อนส่งข้อมูลเสนอราคา',
+        message: 'กรุณาเพิ่มรายการอะไหล่และค่าบริการอย่างน้อยประเภทละ 1 รายการก่อนส่งข้อมูลเสนอราคา',
+        type: 'warning',
+        confirmText: 'เข้าใจแล้ว',
+        onConfirm: hideAlert,
+      });
+      return;
+    }
+
+    if (services.length > 0 && parts.length === 0) {
+      showAlert({
+        title: 'เงื่อนไขไม่ถูกต้อง',
+        message: 'ค่าบริการมีได้ก็ต้องมีรายการอะไหล่อย่างน้อย 1 รายการก่อน กรุณาเพิ่มรายการอะไหล่',
+        type: 'warning',
+        confirmText: 'เข้าใจแล้ว',
+        onConfirm: hideAlert,
+      });
+      return;
+    }
+
+    if (parts.length > 0 && services.length === 0) {
+      showAlert({
+        title: 'ยังไม่มีรายการค่าบริการ',
+        message: 'ไม่สามารถสร้างหรือแก้ไขใบเสนอราคาที่มีเฉพาะอะไหล่ได้ กรุณาเพิ่มรายการค่าบริการหรือค่าแรงอย่างน้อย 1 รายการ',
         type: 'warning',
         confirmText: 'เข้าใจแล้ว',
         onConfirm: hideAlert,
@@ -394,6 +459,14 @@ export default function MakeQuoteScreen() {
       cancelText: 'ยกเลิก',
       onCancel: hideAlert,
       onConfirm: async () => {
+        if (quoteStatusId === 2 || quoteStatusId === 3) {
+          showAlert({
+            title: 'ไม่สามารถแก้ไขได้',
+            message: 'ใบเสนอราคานี้ได้รับการอนุมัติหรือลูกค้ายกเลิกแล้ว จึงไม่สามารถบันทึกการแก้ไขได้',
+            type: 'warning',
+          });
+          return;
+        }
         setSaving(true);
         try {
           const numericId = parseInt(jobId, 10) || parseInt(jobIdParam, 10) || (jobNo ? parseInt(jobNo.split('-').pop() || '', 10) : 0);

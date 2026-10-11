@@ -16,9 +16,10 @@ import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// 3. API helpers
+// 3. API helpers & Types
 import { createPayment, getRepair, verifyPayment, rejectPayment, getImageUrl } from '@/lib/api';
-import { REPAIR_STATUS, PAYMENT_METHODS, CANCEL_INSPECTION_FEE } from '@/constants/status';
+import { REPAIR_STATUS, QUOTE_STATUS, PAYMENT_METHODS, CANCEL_INSPECTION_FEE } from '@/constants/status';
+import type { RepairJob } from '@/types/repair';
 
 // 4. Components
 import CustomAlert from '@/components/ui/CustomAlert';
@@ -61,6 +62,7 @@ export default function VerifyPaymentScreen() {
 
   const [customerName, setCustomerName] = useState<string>(params.customer_name || '');
   const [totalAmount, setTotalAmount] = useState<number>(Number(params.amount || 0));
+  const [isCancelled, setIsCancelled] = useState<boolean>(false);
   const [appointmentDate, setAppointmentDate] = useState<string | null>(params.pickupDate || null);
   const [existingSlipUrl, setExistingSlipUrl] = useState<string | null>(null);
   const [existingSlipFilename, setExistingSlipFilename] = useState<string | null>(null);
@@ -131,10 +133,21 @@ export default function VerifyPaymentScreen() {
           const d = res.data;
           if (d.customer_name) setCustomerName(d.customer_name);
           const q = d.quotation;
-          const isCancelledJob = Number(d.status_id) === REPAIR_STATUS.CANCELLED;
-          const cancelPrice = Number(q?.total_cancel_price) || CANCEL_INSPECTION_FEE;
-          const repairPrice = Number(q?.total_repair_price) || Number(d.total_amount) || 0;
-          setTotalAmount(isCancelledJob ? cancelPrice : (repairPrice || Number(params.amount) || CANCEL_INSPECTION_FEE));
+          const isCancelledJob =
+            Number(d.status_id) === REPAIR_STATUS.CANCELLED ||
+            d.status === 'ยกเลิกซ่อม' ||
+            String(d.status || '').includes('ยกเลิก') ||
+            Number(d.quote_status_id) === QUOTE_STATUS.CANCELLED ||
+            Number(q?.quote_status_id) === QUOTE_STATUS.CANCELLED ||
+            Boolean(d.is_cancelled);
+
+          const cancelPrice = Number(d.total_cancel_price) || Number(q?.total_cancel_price) || CANCEL_INSPECTION_FEE;
+          const repairPrice = Number(d.total_repair_price) || Number(q?.total_repair_price) || Number(d.total_amount) || 0;
+          const computedTotal = isCancelledJob ? cancelPrice : (repairPrice > 0 ? repairPrice : (Number(params.amount) || CANCEL_INSPECTION_FEE));
+
+          setTotalAmount(computedTotal);
+          setIsCancelled(isCancelledJob);
+
           if (d.appointment_date && !params.pickupDate) {
             setAppointmentDate(d.appointment_date);
           }
@@ -392,6 +405,7 @@ export default function VerifyPaymentScreen() {
             appointmentDate={appointmentDate}
             formattedAmount={formattedAmount}
             formatDate={formatDate}
+            isCancelled={isCancelled}
           />
 
           {isStaff ? (

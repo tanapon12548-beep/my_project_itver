@@ -10,7 +10,7 @@ import {
 
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 // 3. API helpers
 import { deleteItem, getItems } from '@/lib/api';
@@ -34,6 +34,7 @@ import ItemFilterSheet, {
 import type { InventoryItem } from '@/types/item';
 
 export default function PartsScreen() {
+  const router = useRouter();
   const [allItems, setAllItems] = useState<InventoryItem[]>([]);
   const [isModalVisible, setModalVisible] = useState(false);
   const [itemToEdit, setItemToEdit] = useState<InventoryItem | null>(null);

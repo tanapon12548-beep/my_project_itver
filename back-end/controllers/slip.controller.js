@@ -4,12 +4,12 @@ const path = require('path');
 const fs = require('fs');
 const { ROLES, PAYMENT_METHODS } = require('../constants');
 
-const slipsDir = path.join(__dirname, '..', 'pubilc', 'slips');
+const slipsDir = path.join(__dirname, '..', 'public', 'slips');
 if (!fs.existsSync(slipsDir)) {
   fs.mkdirSync(slipsDir, { recursive: true });
 }
 
-// Configure multer storage to save into /pubilc with meaningful name
+// Configure multer storage to save into /public with meaningful name
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, slipsDir);
@@ -97,28 +97,28 @@ exports.getAll = async (req, res, next) => {
 exports.remove = async (req, res, next) => {
   try {
     const { id } = req.params;
-    if (!id || typeof id !== 'string' || !id.trim()) {
+    const numId = parseInt(id, 10);
+    if (isNaN(numId) || numId <= 0) {
       return res.status(400).json({ success: false, message: 'ID สลิปไม่ถูกต้อง' });
     }
-    const slipId = id.trim();
 
     const userId = req.user?.id;
     const roleId = req.user?.role_id;
 
-    const { rows } = await pool.query('SELECT * FROM slips_records WHERE id = $1', [slipId]);
+    const { rows } = await pool.query('SELECT * FROM slips_records WHERE id = $1', [numId]);
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'ไม่พบสลิป' });
     }
 
     const slip = rows[0];
-    if (roleId === ROLES.CUSTOMER && slip.user_id !== userId) {
+    if (roleId === ROLES.CUSTOMER && Number(slip.user_id) !== Number(userId)) {
       return res.status(403).json({ success: false, message: 'คุณไม่มีสิทธิ์ลบสลิปของลูกค้ารายอื่น' });
     }
 
     // ลบไฟล์ภาพจริงออกจากดิสก์เพื่อไม่ให้ค้างเป็นขยะ
     if (slip.image_url) {
       try {
-        const filePath = path.join(__dirname, '..', 'pubilc', slip.image_url);
+        const filePath = path.join(__dirname, '..', 'public', slip.image_url);
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }

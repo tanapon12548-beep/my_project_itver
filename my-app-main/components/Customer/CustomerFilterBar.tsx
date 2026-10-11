@@ -13,11 +13,11 @@ interface CustomerFilterBarProps {
   onSelectTab: (tab: CustomerFilterTab) => void;
 }
 
-const TABS: { key: CustomerFilterTab; label: string }[] = [
-  { key: 'all', label: 'ทั้งหมด' },
-  { key: 'in_progress', label: 'กำลังดำเนินการ' },
-  { key: 'pending_approval', label: 'รออนุมัติราคา' },
-  { key: 'completed', label: 'เสร็จสิ้น' },
+const TABS: { key: CustomerFilterTab; label: string; activeColor: string }[] = [
+  { key: 'all', label: 'ทั้งหมด', activeColor: '#0F172A' },
+  { key: 'in_progress', label: 'กำลังดำเนินการ', activeColor: '#2563EB' },
+  { key: 'pending_approval', label: 'รออนุมัติราคา', activeColor: '#EA580C' },
+  { key: 'completed', label: 'เสร็จสิ้น', activeColor: '#16A34A' },
 ];
 
 export default function CustomerFilterBar({
@@ -29,24 +29,24 @@ export default function CustomerFilterBar({
   return (
     <View className="mb-3">
       {/* Search Bar */}
-      <View className="flex-row items-center bg-white rounded-xl px-3 py-2 border border-slate-200 mb-3 shadow-sm">
-        <Ionicons name="search-outline" size={18} color="#94A3B8" />
+      <View className="flex-row items-center bg-white rounded-2xl px-4 py-2.5 border border-slate-200 mb-2.5 shadow-sm">
+        <Ionicons name="search-outline" size={19} color="#94A3B8" />
         <TextInput
           placeholder="ค้นหาตามเลขงาน, อุปกรณ์ หรืออาการเสีย..."
           placeholderTextColor="#94A3B8"
           value={searchQuery}
           onChangeText={onSearchChange}
-          className="flex-1 ml-2 text-sm text-slate-800 font-body py-0"
+          className="flex-1 ml-2 text-[14px] text-slate-800 font-body py-0"
         />
         {searchQuery ? (
-          <TouchableOpacity onPress={() => onSearchChange('')}>
-            <Ionicons name="close-circle" size={16} color="#94A3B8" />
+          <TouchableOpacity onPress={() => onSearchChange('')} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name="close-circle" size={18} color="#94A3B8" />
           </TouchableOpacity>
         ) : null}
       </View>
 
-      {/* Tab Pills */}
-      <View className="flex-row items-center gap-1.5">
+      {/* Tab Pills with 3 distinct color tones */}
+      <View className="flex-row items-center gap-1.5 flex-wrap">
         {TABS.map((tab) => {
           const isSelected = activeTab === tab.key;
           return (
@@ -54,15 +54,18 @@ export default function CustomerFilterBar({
               key={tab.key}
               activeOpacity={0.8}
               onPress={() => onSelectTab(tab.key)}
-              className={`min-h-[44px] justify-center px-4 py-2 rounded-full border ${
+              className={`min-h-[40px] justify-center px-3.5 py-1.5 rounded-full border shadow-sm ${
                 isSelected
-                  ? 'bg-[#DC2626] border-[#DC2626]'
+                  ? 'border-transparent'
                   : 'bg-white border-slate-200 active:bg-slate-50'
               }`}
+              style={{
+                backgroundColor: isSelected ? tab.activeColor : '#FFFFFF',
+              }}
             >
               <Text
                 className={`text-xs font-heading ${
-                  isSelected ? 'text-white font-bold' : 'text-slate-600'
+                  isSelected ? 'text-white font-bold' : 'text-slate-600 font-medium'
                 }`}
               >
                 {tab.label}

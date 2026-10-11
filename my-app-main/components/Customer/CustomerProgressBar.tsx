@@ -59,15 +59,32 @@ const getStatusColor = (statusId: number, statusText: string, isJobCancelled: bo
   if (isCompletedJob) return '#10B981';
   if (statusId === 6 || statusText.includes('มารับ') || statusText.includes('พร้อมรับ')) return '#0EA5E9';
   if (statusId === 7 || statusText.includes('รอชำระ')) return '#EAB308';
-  if (statusId === 5 || statusText.includes('อนุมัติ') || statusText.includes('ซ่อม')) return '#6366F1';
   if (statusId === 4 || statusText.includes('รออนุมัติ') || statusText.includes('รอการอนุมัติ')) return '#A855F7';
+  if (statusId === 5 || statusText.includes('อนุมัติแล้ว') || statusText.includes('กำลังซ่อม') || statusText.includes('รอซ่อม') || statusText.includes('ซ่อม')) return '#6366F1';
   if (statusId === 2 || statusId === 3 || statusText.includes('เช็ค') || statusText.includes('เสนอราคา')) return '#D97706';
   return '#10B981';
 };
 
-const getStatusExplanation = (statusId: number, statusText: string) => {
+const getStatusExplanation = (statusId: number, statusText: string, isJobCancelled: boolean = false) => {
   const id = Number(statusId);
   const s = statusText || '';
+
+  if (isJobCancelled || id === 9 || s.includes('ยกเลิก')) {
+    if (id === 8 || s.includes('เสร็จ') || s.includes('ส่งมอบ')) {
+      return {
+        title: 'ส่งมอบเครื่องคืนเรียบร้อย (ยกเลิกการซ่อม)',
+        desc: 'ชำระค่าบริการตรวจเช็คสภาพเครื่องและส่งมอบเครื่องคืนเรียบร้อยแล้ว ขอบคุณที่ไว้วางใจใช้บริการกับเรา',
+        icon: 'checkmark-done-circle',
+        next: 'ปิดงานยกเลิกสมบูรณ์',
+      };
+    }
+    return {
+      title: 'ยกเลิกการซ่อมเรียบร้อย',
+      desc: 'งานซ่อมนี้ถูกยกเลิกแล้ว ท่านสามารถติดต่อรับเครื่องคืนได้ที่ศูนย์บริการ พร้อมชำระค่าบริการตรวจเช็คสภาพเครื่อง (300 บาท)',
+      icon: 'close-circle',
+      next: 'ติดต่อรับเครื่องคืนที่ร้าน',
+    };
+  }
 
   if (id === 8 || s.includes('เสร็จ') || s.includes('ส่งมอบ')) {
     return {
@@ -75,14 +92,6 @@ const getStatusExplanation = (statusId: number, statusText: string) => {
       desc: 'อุปกรณ์ได้รับการซ่อมแซม ทดสอบระบบ และส่งมอบให้แก่ท่านเรียบร้อยแล้ว ขอบคุณที่ไว้วางใจใช้บริการกับเรา',
       icon: 'checkmark-done-circle',
       next: 'ปิดงานซ่อมเรียบร้อย',
-    };
-  }
-  if (id === 9 || s.includes('ยกเลิก')) {
-    return {
-      title: 'ยกเลิกการซ่อมเรียบร้อย',
-      desc: 'งานซ่อมนี้ถูกยกเลิกแล้ว ท่านสามารถติดต่อรับเครื่องคืนได้ที่ศูนย์บริการ พร้อมชำระค่าบริการตรวจเช็คสภาพเครื่อง',
-      icon: 'close-circle',
-      next: 'ติดต่อรับเครื่องคืนที่ร้าน',
     };
   }
   if (id === 6 || s.includes('มารับ') || s.includes('พร้อมรับ')) {
@@ -101,20 +110,20 @@ const getStatusExplanation = (statusId: number, statusText: string) => {
       next: 'ชำระเงินเพื่อรับเครื่อง',
     };
   }
-  if (id === 5 || s.includes('อนุมัติ') || s.includes('ซ่อม')) {
-    return {
-      title: 'กำลังดำเนินการซ่อมแซม',
-      desc: 'ใบเสนอราคาได้รับการอนุมัติเรียบร้อย ช่างเทคโนโลยีกำลังดำเนินการเปลี่ยนอะไหล่และทดสอบระบบตามมาตรฐาน',
-      icon: 'hammer',
-      next: 'ทดสอบระบบและสรุปยอดชำระ',
-    };
-  }
   if (id === 4 || s.includes('รออนุมัติ') || s.includes('รอการอนุมัติ')) {
     return {
       title: 'รอการอนุมัติใบเสนอราคาจากคุณ',
       desc: 'ช่างได้ประเมินราคาอะไหล่และค่าบริการเรียบร้อยแล้ว กรุณาตรวจสอบรายละเอียดใบเสนอราคาด้านล่างและกดยืนยันการซ่อม',
       icon: 'receipt',
       next: 'ลูกค้ายืนยันอนุมัติการซ่อม',
+    };
+  }
+  if (id === 5 || s.includes('อนุมัติแล้ว') || s.includes('กำลังซ่อม') || s.includes('รอซ่อม') || s.includes('ซ่อม')) {
+    return {
+      title: 'กำลังดำเนินการซ่อมแซม',
+      desc: 'ใบเสนอราคาได้รับการอนุมัติเรียบร้อย ช่างเทคโนโลยีกำลังดำเนินการเปลี่ยนอะไหล่และทดสอบระบบตามมาตรฐาน',
+      icon: 'hammer',
+      next: 'ทดสอบระบบและสรุปยอดชำระ',
     };
   }
   if (id === 3 || s.includes('เสนอราคา')) {
@@ -125,7 +134,7 @@ const getStatusExplanation = (statusId: number, statusText: string) => {
       next: 'ออกใบเสนอราคาให้ลูกค้าอนุมัติ',
     };
   }
-  if (id === 2 || s.includes('ดำเนินการตรวจเช็ค')) {
+  if (id === 2 || s.includes('ดำเนินการตรวจเช็ค') || s.includes('ตรวจเช็ค')) {
     return {
       title: 'ช่างกำลังดำเนินการตรวจเช็คเครื่อง',
       desc: 'ช่างเทคโนโลยีกำลังตรวจสอบอาการเสีย วิเคราะห์หาสาเหตุที่แท้จริง และทดสอบการทำงานของชิ้นส่วนต่างๆ อย่างละเอียด',
@@ -155,14 +164,7 @@ export default function CustomerProgressBar({ status, statusId, isCancelled }: C
   const count = steps.length;
   const currentIndex = isCompletedJob ? count - 1 : getStepIndex(status, statusId);
   const activeColor = getStatusColor(numStatusId, statusStr, isJobCancelled, isCompletedJob);
-  const explainer = getStatusExplanation(numStatusId, statusStr);
-
-  // Exact geometric positioning
-  const trackLeftPercent = (0.5 / count) * 100;
-  const totalTrackWidthPercent = ((count - 1) / count) * 100;
-  const activeLineWidthPercent = isCompletedJob
-    ? totalTrackWidthPercent
-    : (currentIndex / count) * 100;
+  const explainer = getStatusExplanation(numStatusId, statusStr, isJobCancelled);
 
   return (
     <View className="bg-white rounded-3xl p-4 mb-4 shadow-sm border border-slate-200/80">
@@ -181,77 +183,79 @@ export default function CustomerProgressBar({ status, statusId, isCancelled }: C
               : `ขั้นตอนที่ ${currentIndex + 1}/${count}: ${steps[currentIndex]}`}
           </Text>
         </View>
-        <View className="px-2.5 py-0.5 rounded-full bg-slate-50 border border-slate-200">
-          <Text className="text-[11px] font-bold text-slate-600 font-body">
-            {isCompletedJob
-              ? 'เสร็จสมบูรณ์'
-              : isJobCancelled
-              ? 'ยกเลิกแล้ว'
-              : `${Math.round(((currentIndex + 1) / count) * 100)}%`}
-          </Text>
-        </View>
       </View>
       
-      <View className="relative w-full py-1">
-        {/* Background Track Line */}
-        <View
-          style={{
-            position: 'absolute',
-            top: 11,
-            left: `${trackLeftPercent}%`,
-            width: `${totalTrackWidthPercent}%`,
-            height: 2.5,
-            backgroundColor: '#E2E8F0',
-            borderRadius: 2,
-          }}
-        />
-
-        {/* Active Line */}
-        <View
-          style={{
-            position: 'absolute',
-            top: 11,
-            left: `${trackLeftPercent}%`,
-            width: `${activeLineWidthPercent}%`,
-            height: 2.5,
-            backgroundColor: activeColor,
-            borderRadius: 2,
-          }}
-        />
-
-        <View className="flex-row justify-between items-start">
+      {/* 7-Stage Stepper Track - Vertically centered via flexbox */}
+      <View className="w-full py-1">
+        <View className="flex-row items-start justify-between">
           {steps.map((step, index) => {
             const isPassed = index < currentIndex;
             const isCurrent = !isCompletedJob && index === currentIndex;
             const isDone = isCompletedJob || isPassed;
             const isCancelStep = isJobCancelled && step === 'ยกเลิกซ่อม';
 
+            const hasLeftLine = index > 0;
+            const isLeftLineActive = isCompletedJob || index <= currentIndex;
+
+            const hasRightLine = index < count - 1;
+            const isRightLineActive = isCompletedJob || index < currentIndex;
+
             return (
-              <View key={step} className="items-center z-10 flex-1">
-                <View className="h-6 items-center justify-center">
-                  {isDone ? (
-                    <View className="w-5 h-5 rounded-full bg-emerald-500 items-center justify-center border-2 border-white shadow-xs">
-                      <Ionicons name="checkmark" size={11} color="#FFFFFF" />
-                    </View>
-                  ) : isCurrent ? (
-                    <View
-                      className="w-[22px] h-[22px] rounded-full items-center justify-center border-2 border-white shadow-xs"
-                      style={{
-                        backgroundColor: activeColor,
-                      }}
-                    >
-                      {isCancelStep ? (
-                        <Ionicons name="close" size={12} color="#FFFFFF" />
-                      ) : (
-                        <View className="w-1.5 h-1.5 rounded-full bg-white" />
-                      )}
-                    </View>
-                  ) : (
-                    <View className="w-3.5 h-3.5 rounded-full bg-slate-200 border-2 border-white" />
-                  )}
+              <View key={step} className="items-center flex-1">
+                {/* Circle and connecting segments: 100% vertically centered via flexbox */}
+                <View className="w-full h-6 flex-row items-center justify-center">
+                  {/* Left line segment */}
+                  <View
+                    className="flex-1 h-[2.5px]"
+                    style={{
+                      backgroundColor: !hasLeftLine
+                        ? 'transparent'
+                        : isLeftLineActive
+                        ? activeColor
+                        : '#E2E8F0',
+                    }}
+                  />
+
+                  {/* Circle Node */}
+                  <View className="items-center justify-center z-10">
+                    {isDone ? (
+                      <View className="w-5 h-5 rounded-full bg-emerald-500 items-center justify-center border-2 border-white shadow-xs">
+                        <Ionicons name="checkmark" size={11} color="#FFFFFF" />
+                      </View>
+                    ) : isCurrent ? (
+                      <View
+                        className="w-[22px] h-[22px] rounded-full items-center justify-center border-2 border-white shadow-xs"
+                        style={{
+                          backgroundColor: activeColor,
+                        }}
+                      >
+                        {isCancelStep ? (
+                          <Ionicons name="close" size={12} color="#FFFFFF" />
+                        ) : (
+                          <View className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </View>
+                    ) : (
+                      <View className="w-3.5 h-3.5 rounded-full bg-slate-200 border-2 border-white" />
+                    )}
+                  </View>
+
+                  {/* Right line segment */}
+                  <View
+                    className="flex-1 h-[2.5px]"
+                    style={{
+                      backgroundColor: !hasRightLine
+                        ? 'transparent'
+                        : isRightLineActive
+                        ? activeColor
+                        : '#E2E8F0',
+                    }}
+                  />
                 </View>
+
+                {/* Step label text */}
                 <Text
-                  className={`text-[8.5px] mt-1 font-body text-center ${
+                  className={`text-[8.5px] mt-1.5 font-body text-center leading-tight ${
                     isCurrent
                       ? 'font-bold'
                       : isDone

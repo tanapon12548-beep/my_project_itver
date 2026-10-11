@@ -2,7 +2,9 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   Text,
   TextInput,
   TouchableOpacity,
@@ -27,6 +29,7 @@ interface CustomerQuotationCardProps {
   statusId?: number;
   quotationId?: number | null;
   quoteStatusId?: number;
+  isCancelled?: boolean;
   customerRemark?: string | null;
   totalRepairPrice?: number;
   totalCancelPrice?: number;
@@ -45,7 +48,9 @@ export default function CustomerQuotationCard({
   actualSymptom,
   status,
   statusId,
+  quotationId,
   quoteStatusId,
+  isCancelled: propIsCancelled,
   customerRemark,
   totalRepairPrice,
   totalCancelPrice = CANCEL_INSPECTION_FEE,
@@ -59,25 +64,34 @@ export default function CustomerQuotationCard({
   const [submittingRemark, setSubmittingRemark] = useState(false);
 
   // Status flags
-  const isApproved =
-    status === 'อนุมัติแล้ว/รอซ่อม' ||
-    status === 'รอชำระ' ||
-    status === 'เสร็จสิ้น' ||
-    statusId === 5 ||
-    statusId === 6 ||
-    quoteStatusId === 2;
-
+  // 1. ตรวจสอบการยกเลิกก่อนเป็นอันดับแรก (Priority สูงสุด)
   const isCancelled =
+    Boolean(propIsCancelled) ||
+    quoteStatusId === 3 ||
+    statusId === 9 ||
     status === 'ยกเลิกซ่อม' ||
     status === 'ยกเลิก' ||
-    statusId === 9 ||
-    quoteStatusId === 3;
+    Boolean(status?.includes('ยกเลิก'));
+
+  // 2. ตรวจสอบการอนุมัติ (ต้องไม่ใช่รายการที่ยกเลิก)
+  const isApproved =
+    !isCancelled &&
+    (quoteStatusId === 2 ||
+      statusId === 5 ||
+      (statusId === 6 && quoteStatusId !== 3) ||
+      (statusId === 7 && quoteStatusId !== 3) ||
+      (statusId === 8 && quoteStatusId !== 3) ||
+      status === 'อนุมัติแล้ว/รอซ่อม' ||
+      (status === 'รอชำระ' && quoteStatusId !== 3) ||
+      (status === 'เสร็จสิ้น' && quoteStatusId !== 3));
 
   const isModificationRequested =
+    !isCancelled &&
+    !isApproved &&
     Boolean(customerRemark) &&
     (quoteStatusId === 5 || quoteStatusId === 4 || statusId === 3 || status?.includes('เสนอราคา'));
 
-  const isPending = !isApproved && !isCancelled;
+  const isPending = !isApproved && !isCancelled && !isModificationRequested;
 
   // Separate parts (item_type_id = 1) and services (item_type_id = 2)
   const isPartItem = (i: QuotationItem) => {
@@ -154,16 +168,16 @@ export default function CustomerQuotationCard({
   return (
     <View className="mb-4">
       <View className={`bg-white rounded-2xl overflow-hidden shadow-sm border ${
-        isApproved ? 'border-emerald-300' : isCancelled ? 'border-slate-300' : isModificationRequested ? 'border-amber-300' : 'border-purple-300'
+        isCancelled ? 'border-red-300' : isApproved ? 'border-emerald-300' : isModificationRequested ? 'border-amber-300' : 'border-purple-300'
       }`}>
         {/* Header Bar */}
         <View className={`px-4 py-3 flex-row items-center justify-between ${
-          isApproved ? 'bg-emerald-600' : isCancelled ? 'bg-slate-700' : isModificationRequested ? 'bg-amber-600' : 'bg-purple-600'
+          isCancelled ? 'bg-red-600' : isApproved ? 'bg-emerald-600' : isModificationRequested ? 'bg-amber-600' : 'bg-purple-600'
         }`}>
           <View className="flex-row items-center">
             <View className="w-2.5 h-2.5 rounded-full bg-white mr-2" />
             <Text className="text-white font-bold text-sm font-heading">
-              ใบเสนอราคา — {isApproved ? 'อนุมัติแล้ว' : isCancelled ? 'ยกเลิกแล้ว' : isModificationRequested ? 'อยู่ระหว่างปรับปรุงตามคำขอ' : 'รอการอนุมัติ'}
+              ใบเสนอราคา — {isCancelled ? 'ยกเลิกการซ่อม' : isApproved ? 'อนุมัติแล้ว' : isModificationRequested ? 'อยู่ระหว่างปรับปรุงตามคำขอ' : 'รอการอนุมัติ'}
             </Text>
           </View>
         </View>
@@ -292,14 +306,19 @@ export default function CustomerQuotationCard({
             </View>
           )}
 
-          {/* ยอดรวมค่าซ่อม */}
+          {/* ยอดรวมค่าซ่อม หรือ ค่าตรวจเช็คกรณีขอยกเลิก */}
           <View className="mt-2 mb-3">
             <Text className="text-slate-400 text-xs font-body mb-1">
-              ยอดรวมค่าซ่อม
+              {isCancelled ? 'ยอดที่ต้องชำระ (ค่าตรวจเช็คเครื่อง)' : 'ยอดรวมค่าซ่อม'}
             </Text>
-            <Text className="text-red-600 text-3xl font-extrabold font-heading">
-              {repairTotal.toLocaleString()} บาท
+            <Text className={`text-3xl font-extrabold font-heading ${isCancelled ? 'text-amber-700' : 'text-red-600'}`}>
+              {(isCancelled ? totalCancelPrice : repairTotal).toLocaleString()} บาท
             </Text>
+            {isCancelled && repairTotal > 0 && (
+              <Text className="text-slate-400 text-xs line-through mt-0.5 font-body">
+                (ยอดประเมินค่าซ่อมเดิม: {repairTotal.toLocaleString()} บาท)
+              </Text>
+            )}
           </View>
 
           {/* หมายเหตุค่าตรวจเช็คกรณียกเลิกซ่อม */}
@@ -408,7 +427,10 @@ export default function CustomerQuotationCard({
 
       {/* Modification Request Modal */}
       <Modal visible={showModal} transparent animationType="fade">
-        <View className="flex-1 bg-slate-900/60 justify-center items-center p-4">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          className="flex-1 bg-slate-900/60 justify-center items-center p-4"
+        >
           <View className="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl">
             <Text className="text-lg font-bold text-slate-800 mb-1 font-heading">
               ขอแก้ไข / เพิ่มเติมรายการ
@@ -452,7 +474,7 @@ export default function CustomerQuotationCard({
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );

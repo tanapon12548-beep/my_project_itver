@@ -5,8 +5,8 @@ const fs = require('fs');
 const paymentQueries = require('../queries/payment.queries');
 const { ROLES, REPAIR_STATUS, PAYMENT_METHODS } = require('../constants');
 
-// Ensure pubilc/slips directory exists
-const slipsDir = path.join(__dirname, '..', 'pubilc', 'slips');
+// Ensure public/slips directory exists
+const slipsDir = path.join(__dirname, '..', 'public', 'slips');
 if (!fs.existsSync(slipsDir)) {
   fs.mkdirSync(slipsDir, { recursive: true });
 }
@@ -71,14 +71,14 @@ exports.create = async (req, res, next) => {
     if (uploadedFile && uploadedFile.buffer) {
       const ext = (path.extname(uploadedFile.originalname) || '.jpg').toLowerCase();
       slipFilename = `slips/slip_${cleanJobCode}_${dateStr}${ext}`;
-      fs.writeFileSync(path.join(__dirname, '..', 'pubilc', slipFilename), uploadedFile.buffer);
+      await fs.promises.writeFile(path.join(__dirname, '..', 'public', slipFilename), uploadedFile.buffer);
     } else if (req.body.slip_image && typeof req.body.slip_image === 'string' && req.body.slip_image.includes('base64,')) {
       const parts = req.body.slip_image.split(';base64,');
       let ext = '.jpg';
       if (parts[0].includes('png')) ext = '.png';
       else if (parts[0].includes('webp')) ext = '.webp';
       slipFilename = `slips/slip_${cleanJobCode}_${dateStr}${ext}`;
-      fs.writeFileSync(path.join(__dirname, '..', 'pubilc', slipFilename), Buffer.from(parts[1], 'base64'));
+      await fs.promises.writeFile(path.join(__dirname, '..', 'public', slipFilename), Buffer.from(parts[1], 'base64'));
     } else if (req.body.slip_image && typeof req.body.slip_image === 'string' && !req.body.slip_image.includes('/') && !req.body.slip_image.includes('\\')) {
       slipFilename = req.body.slip_image;
     } else if (req.body.slip && typeof req.body.slip === 'string' && !req.body.slip.includes('/') && !req.body.slip.includes('\\')) {

@@ -3,7 +3,7 @@
 export type RoleName = 'Manager' | 'Staff' | 'Technician' | 'Customer' | string;
 
 export interface User {
-  id: string;
+  id: number | string;
   email: string;
   first_name: string | null;
   last_name: string | null;
@@ -16,7 +16,7 @@ export interface User {
 export type StaffRoleThai = 'พนักงาน' | 'ช่าง' | 'ผู้จัดการ' | 'ลูกค้า' | string;
 
 export interface StaffMember {
-  id: string;
+  id: number | string;
   name: string;
   role: StaffRoleThai;
   phone: string;

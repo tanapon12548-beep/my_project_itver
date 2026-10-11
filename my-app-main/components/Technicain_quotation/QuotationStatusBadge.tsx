@@ -8,6 +8,17 @@ export const isModificationQuote = (item: QuotationItem) =>
   item.quote_status_id === 4 ||
   (Boolean(item.customer_remark) && item.repair_status_id === 3);
 
+/**
+ * อนุญาตให้แก้ไขหรือลบได้เฉพาะสถานะที่รอดำเนินการ (รอการอนุมัติ หรือขอแก้ไขรายการ) เท่านั้น
+ * ไม่อนุญาตหากได้รับการอนุมัติแล้ว (2) หรือลูกค้ายกเลิกแล้ว (3)
+ */
+export const canEditOrDeleteQuote = (item: QuotationItem | null | undefined): boolean => {
+  if (!item) return false;
+  // อนุมัติแล้ว (2) หรือลูกค้ายกเลิก (3) ห้ามแก้ไขหรือลบ
+  if (item.quote_status_id === 2 || item.quote_status_id === 3) return false;
+  return item.quote_status_id === 1 || isModificationQuote(item);
+};
+
 interface QuotationStatusBadgeProps {
   item: QuotationItem;
 }

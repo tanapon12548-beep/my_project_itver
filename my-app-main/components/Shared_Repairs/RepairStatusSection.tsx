@@ -69,9 +69,9 @@ export default function RepairStatusSection({
   const showQuoteBtn = isTechnicianQuoting || isStaffVerifying;
   const quoteHandler = isTechnicianQuoting ? onPressMakeQuote : onPressVerifyQuote;
 
-  // 3-4. พนักงาน: ส่งมอบ (สถานะ 6: รอลูกค้ามารับเครื่อง), ตรวจชำระ (สถานะ 7: รอชำระ)
-  const showHandoverBtn = Boolean(onPressHandover) && (statusId === 6 || statusId === 7 || !statusId);
-  const showPaymentCheckBtn = Boolean(onPressPaymentCheck) && (statusId === 7 || !statusId);
+  // 3-4. พนักงาน: ส่งมอบ (สถานะ 6: รอลูกค้ามารับเครื่อง), ตรวจชำระ (สถานะ 7: รอชำระ), ยกเลิก (สถานะ 9: ตรวจชำระ/ส่งมอบ)
+  const showHandoverBtn = Boolean(onPressHandover) && (statusId === 6 || statusId === 9 || !statusId);
+  const showPaymentCheckBtn = Boolean(onPressPaymentCheck) && (statusId === 7 || statusId === 9 || !statusId);
 
 
   return (

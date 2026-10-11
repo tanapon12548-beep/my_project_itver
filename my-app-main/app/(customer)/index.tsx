@@ -6,50 +6,91 @@ import {
   FlatList,
   ActivityIndicator,
   RefreshControl,
+  TouchableOpacity,
 } from 'react-native';
 
 // 2. Third-party / Expo
 import { useRouter, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 // 3. API & Auth helpers
 import { getRepairs } from '@/lib/api';
 import { getUser } from '@/lib/auth';
 import type { RepairJob } from '@/types/repair';
 
-// 4. Modular Customer Components
-import CustomerHeader, { type CustomerFilterTab } from '@/components/Customer/CustomerHeader';
+// 4. Modular Components
+import Header from '@/components/Shared_Dashboard/Header';
+import { type CustomerFilterTab } from '@/components/Customer/CustomerHeader';
 import CustomerJobCard from '@/components/Customer/CustomerJobCard';
-import CustomerUrgentBanner from '@/components/Customer/CustomerUrgentBanner';
 import CustomerFilterBar from '@/components/Customer/CustomerFilterBar';
 import CustomerEmptyState from '@/components/Customer/CustomerEmptyState';
+
+interface CustomerSegmentCardProps {
+  label: string;
+  count: number;
+  icon: keyof typeof Ionicons.glyphMap;
+  accentColor: string;
+  softColor: string;
+  borderColor: string;
+  isActive: boolean;
+  onPress: () => void;
+}
+
+function CustomerSegmentCard({
+  label,
+  count,
+  icon,
+  accentColor,
+  softColor,
+  borderColor,
+  isActive,
+  onPress,
+}: CustomerSegmentCardProps) {
+  return (
+    <TouchableOpacity
+      activeOpacity={0.82}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: isActive }}
+      className="min-h-[82px] flex-1 rounded-2xl border px-3 py-2.5 shadow-sm"
+      style={{
+        backgroundColor: isActive ? softColor : '#FFFFFF',
+        borderColor: isActive ? accentColor : borderColor,
+      }}
+    >
+      <View className="flex-row items-center justify-between">
+        <View
+          className="h-8 w-8 items-center justify-center rounded-xl"
+          style={{ backgroundColor: isActive ? '#FFFFFF' : softColor }}
+        >
+          <Ionicons name={icon} size={17} color={accentColor} />
+        </View>
+        <Text
+          className="text-lg font-bold font-heading"
+          style={{ color: isActive ? accentColor : '#0F172A' }}
+        >
+          {count}
+        </Text>
+      </View>
+      <Text
+        className="mt-1.5 text-[11px] font-semibold font-heading"
+        style={{ color: isActive ? accentColor : '#64748B' }}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
 
 export default function CustomerDashboard() {
   const router = useRouter();
   const [jobs, setJobs] = useState<RepairJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [customerName, setCustomerName] = useState<string>('ลูกค้า');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<CustomerFilterTab>('all');
-
-  // Fetch current customer profile name
-  useEffect(() => {
-    async function loadProfile() {
-      try {
-        const u = await getUser();
-        if (u) {
-          const fullName = `${u.first_name || ''} ${u.last_name || ''}`.trim();
-          if (fullName) setCustomerName(fullName);
-          else if (u.email) setCustomerName(u.email.split('@')[0]);
-        }
-      } catch (err) {
-        console.error('Error loading customer user:', err);
-      }
-    }
-    loadProfile();
-  }, []);
 
   const fetchMyJobs = useCallback(async (isSilent = false) => {
     if (!isSilent) setLoading(true);
@@ -74,41 +115,11 @@ export default function CustomerDashboard() {
       fetchMyJobs();
       const interval = setInterval(() => {
         fetchMyJobs(true);
-      }, 2500);
+      }, 10000); // Polling ทุก 10 วินาทีเพื่อประหยัดแบตเตอรี่ และรองรับ Pull-to-Refresh
       return () => clearInterval(interval);
     }, [fetchMyJobs])
   );
 
-  // Status Counts
-  const counts = useMemo(() => {
-    let inProgress = 0;
-    let pendingApproval = 0;
-    let completed = 0;
-
-    jobs.forEach((j) => {
-      const st = (j.status || j.status_name || '').toLowerCase();
-      const stId = Number(j.status_id);
-
-      if (stId === 4 || st.includes('รอการอนุมัติ') || st.includes('รออนุมัติ') || st.includes('เสนอราคา')) {
-        pendingApproval++;
-      } else if (stId === 8 || st.includes('เสร็จสิ้น') || st.includes('ชำระแล้ว')) {
-        completed++;
-      } else if (stId !== 9 && !st.includes('ยกเลิก')) {
-        inProgress++;
-      }
-    });
-
-    return { inProgress, pendingApproval, completed, total: jobs.length };
-  }, [jobs]);
-
-  // Urgent pending approval job (if any)
-  const urgentApprovalJob = useMemo(() => {
-    return jobs.find((j) => {
-      const st = (j.status || j.status_name || '');
-      const stId = Number(j.status_id);
-      return stId === 4 || st.includes('รอการอนุมัติ') || st.includes('รออนุมัติ');
-    });
-  }, [jobs]);
 
   // Filtered jobs
   const filteredJobs = useMemo(() => {
@@ -157,27 +168,17 @@ export default function CustomerDashboard() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-slate-50" edges={['top', 'left', 'right']}>
+    <View className="flex-1 bg-slate-50">
       <StatusBar style="light" backgroundColor="#DC2626" />
 
-      {/* Customer Top Header with Counters */}
-      <CustomerHeader
-        customerName={customerName}
-        counts={counts}
-        activeTab={activeTab}
-        onSelectTab={setActiveTab}
+      {/* Header มาตรฐานแบบเดียวกับทุกบทบาท */}
+      <Header
+        title="IT VERTEX"
+        subtitle="ติดตามสถานะงานซ่อม"
       />
 
       <View className="flex-1 px-4 pt-3">
-        {/* Urgent Approval Banner (If quotation awaits approval) */}
-        {urgentApprovalJob && (
-          <CustomerUrgentBanner
-            job={urgentApprovalJob}
-            onPress={handlePressDetails}
-          />
-        )}
 
-        {/* Search Bar & Tab Filter Pills */}
         <CustomerFilterBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
@@ -202,7 +203,7 @@ export default function CustomerDashboard() {
               />
             )}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={{ paddingBottom: 90 }}
+            contentContainerStyle={{ paddingBottom: 120 }}
             refreshControl={
               <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#DC2626']} />
             }
@@ -214,6 +215,6 @@ export default function CustomerDashboard() {
           />
         )}
       </View>
-    </SafeAreaView>
+    </View>
   );
 }

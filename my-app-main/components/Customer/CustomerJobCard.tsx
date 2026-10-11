@@ -30,35 +30,42 @@ export const getProgressStage = (statusId: number, statusText?: string): number 
   return 1; // รับเครื่อง
 };
 
-export const getStatusConfig = (status: string, statusId?: number) => {
+export const getStatusConfig = (status: string, statusId?: number, isCancelledJob?: boolean) => {
   const s = status || '';
   const id = Number(statusId);
 
+  // ── ตรวจสอบการยกเลิกก่อนเป็นอันดับแรก ──
+  if (isCancelledJob || id === 9 || s.includes('ยกเลิก')) {
+    return { color: '#DC2626', bg: '#FEE2E2', text: '#B91C1C', icon: 'close-circle' };
+  }
+
+  // ── กลุ่มที่ 3: โทนสีเสร็จสิ้น & ปิดงาน ──
   if (id === 8 || s.includes('เสร็จ') || s.includes('ชำระแล้ว')) {
-    return { color: '#22C55E', bg: '#DCFCE7', text: '#15803D', icon: 'checkmark-circle' };
+    return { color: '#16A34A', bg: '#DCFCE7', text: '#15803D', icon: 'checkmark-circle' };
   }
-  if (id === 9 || s.includes('ยกเลิก')) {
-    return { color: '#EF4444', bg: '#FEE2E2', text: '#B91C1C', icon: 'close-circle' };
-  }
+
+  // ── กลุ่มที่ 2: โทนสีส้ม/อำพัน/เหลือง (ขั้นตอนการรอ & ลูกค้าดำเนินการ) ──
   if (id === 6 || s.includes('มารับเครื่อง') || s.includes('พร้อมรับ')) {
-    return { color: '#0EA5E9', bg: '#E0F2FE', text: '#0369A1', icon: 'cube' };
+    return { color: '#CA8A04', bg: '#FEF9C3', text: '#854D0E', icon: 'cube' };
   }
   if (id === 7 || s.includes('รอชำระ')) {
-    return { color: '#EAB308', bg: '#FEF9C3', text: '#A16207', icon: 'cash' };
-  }
-  if (id === 5 || s.includes('อนุมัติ') || s.includes('ซ่อม')) {
-    return { color: '#6366F1', bg: '#EEF2FF', text: '#4338CA', icon: 'hammer' };
+    return { color: '#D97706', bg: '#FEF3C7', text: '#B45309', icon: 'cash' };
   }
   if (id === 4 || s.includes('รออนุมัติ') || s.includes('รอการอนุมัติ')) {
-    return { color: '#A855F7', bg: '#F3E8FF', text: '#7E22CE', icon: 'alert-circle' };
+    return { color: '#EA580C', bg: '#FFEDD5', text: '#C2410C', icon: 'alert-circle' };
+  }
+
+  // ── กลุ่มที่ 1: โทนสีน้ำเงิน/ฟ้า (ขั้นตอนตรวจเช็ค & กำลังซ่อม) ──
+  if (id === 5 || s.includes('อนุมัติแล้ว') || s.includes('กำลังซ่อม') || s.includes('ซ่อม')) {
+    return { color: '#1D4ED8', bg: '#EFF6FF', text: '#1E40AF', icon: 'hammer' };
   }
   if (id === 3 || s.includes('เสนอราคา')) {
-    return { color: '#F59E0B', bg: '#FEF3C7', text: '#B45309', icon: 'receipt' };
+    return { color: '#4F46E5', bg: '#E0E7FF', text: '#3730A3', icon: 'receipt' };
   }
   if (id === 2 || s.includes('ดำเนินการตรวจเช็ค')) {
-    return { color: '#D97706', bg: '#FFEDD5', text: '#C2410C', icon: 'search' };
+    return { color: '#2563EB', bg: '#DBEAFE', text: '#1D4ED8', icon: 'search' };
   }
-  return { color: '#84CC16', bg: '#ECFCCB', text: '#4D7C0F', icon: 'clipboard' };
+  return { color: '#0284C7', bg: '#E0F2FE', text: '#0369A1', icon: 'clipboard' };
 };
 
 export const getDeviceIcon = (type?: string, brand?: string) => {
@@ -86,19 +93,37 @@ interface CustomerJobCardProps {
   onPressDetails: (jobId: string | number) => void;
 }
 
+const formatDeviceTitle = (brand?: string, model?: string, type?: string) => {
+  const b = (brand || '').trim();
+  const m = (model || '').trim();
+  if (b.includes('ประกอบเอง') || b.includes('Custom PC')) {
+    if (!m || m.includes('สเปกประกอบเอง') || m.includes('ไม่ระบุ')) {
+      return 'คอมพิวเตอร์ประกอบเอง (Custom PC)';
+    }
+    return `ประกอบเอง (Custom PC) ${m}`;
+  }
+  const combined = `${b} ${m}`.trim();
+  return combined || type || 'อุปกรณ์ไอที';
+};
+
 export default function CustomerJobCard({ item, onPressDetails }: CustomerJobCardProps) {
   const targetId = item.id || item.job_id || '';
-  const deviceTitle = `${item.brand || ''} ${item.model || ''}`.trim() || item.device_type || 'อุปกรณ์ไอที';
+  const deviceTitle = formatDeviceTitle(item.brand, item.model, item.device_type);
   const jobNo = item.job_number || item.job_no || (targetId ? `REP-${String(targetId).padStart(6, '0')}` : '-');
   const symptomText = item.symptoms || item.symptom_details || item.symptom || 'ไม่ระบุอาการเสีย';
   const statusText = item.status || item.status_name || 'รอตรวจเช็ค';
   const statusId = Number(item.status_id || 1);
-  const statusCfg = getStatusConfig(statusText, statusId);
-  const isCompleted = statusId === 8 || statusText.includes('เสร็จ') || statusText.includes('ส่งมอบ');
+  const isCancelled =
+    statusId === 9 ||
+    statusText.includes('ยกเลิก') ||
+    Number(item.quote_status_id ?? item.quotation?.quote_status_id) === 3 ||
+    Boolean(item.is_cancelled);
+  const statusCfg = getStatusConfig(statusText, statusId, isCancelled);
+  const isCompleted = (statusId === 8 || statusText.includes('เสร็จ') || statusText.includes('ส่งมอบ')) && !isCancelled;
   const progressStage = getProgressStage(statusId, statusText);
-  const isReadyForPickup = statusId === 6 || statusText.includes('มารับเครื่อง') || statusText.includes('พร้อมรับ');
-  const isNeedsApproval = statusId === 4 || statusText.includes('รอการอนุมัติ') || statusText.includes('รออนุมัติ');
-  const isPendingPayment = statusId === 7 || statusText.includes('รอชำระ');
+  const isReadyForPickup = (statusId === 6 || statusText.includes('มารับเครื่อง') || statusText.includes('พร้อมรับ')) && !isCancelled;
+  const isNeedsApproval = (statusId === 4 || statusText.includes('รอการอนุมัติ') || statusText.includes('รออนุมัติ')) && !isCancelled;
+  const isPendingPayment = (statusId === 7 || statusText.includes('รอชำระ')) && !isCancelled;
 
   return (
     <View className="bg-white rounded-3xl mb-4 border border-slate-200/90 shadow-sm overflow-hidden">
@@ -145,7 +170,7 @@ export default function CustomerJobCard({ item, onPressDetails }: CustomerJobCar
               className="text-xs font-bold font-heading"
               style={{ color: statusCfg.text }}
             >
-              {statusText}
+              {isCancelled ? 'ยกเลิกซ่อม' : statusText}
             </Text>
           </View>
         </View>
@@ -183,80 +208,95 @@ export default function CustomerJobCard({ item, onPressDetails }: CustomerJobCar
             <View className="flex-row items-center gap-1.5">
               <View
                 className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: isCompleted ? '#10B981' : statusCfg.color }}
+                style={{ backgroundColor: isCancelled ? '#DC2626' : isCompleted ? '#10B981' : statusCfg.color }}
               />
               <Text className="text-[12px] font-bold font-heading text-slate-800">
-                {isCompleted
+                {isCancelled
+                  ? 'ยกเลิกการซ่อม (รอรับเครื่องคืน)'
+                  : isCompleted
                   ? 'ส่งมอบเครื่องเสร็จสิ้น'
                   : `ขั้นตอนที่ ${progressStage}/7: ${CUSTOMER_STEPS[progressStage - 1]}`}
               </Text>
             </View>
           </View>
 
-          <View className="relative w-full py-1">
-            {/* Background Track Line */}
-            <View
-              style={{
-                position: 'absolute',
-                top: 11,
-                left: `${(0.5 / 7) * 100}%`,
-                width: `${(6 / 7) * 100}%`,
-                height: 2.5,
-                backgroundColor: '#E2E8F0',
-                borderRadius: 2,
-              }}
-            />
-            {/* Active Track Line */}
-            <View
-              style={{
-                position: 'absolute',
-                top: 11,
-                left: `${(0.5 / 7) * 100}%`,
-                width: `${
-                  isCompleted
-                    ? (6 / 7) * 100
-                    : ((Math.max(1, progressStage) - 1) / 7) * 100
-                }%`,
-                height: 2.5,
-                backgroundColor: isCompleted ? '#10B981' : statusCfg.color,
-                borderRadius: 2,
-              }}
-            />
+          {/* 7-Stage Stepper Track */}
+          <View className="w-full py-1">
             <View className="flex-row items-start justify-between">
               {CUSTOMER_STEPS.map((stepName, idx) => {
                 const stepNum = idx + 1;
                 const isDone = isCompleted || progressStage > stepNum;
                 const isCurrent = !isCompleted && progressStage === stepNum;
+                const activeColor = isCompleted ? '#10B981' : statusCfg.color;
+                const inactiveColor = '#E2E8F0';
+
+                // Line connecting from previous step
+                const hasLeftLine = idx > 0;
+                const isLeftLineActive = isCompleted || progressStage >= stepNum;
+
+                // Line connecting to next step
+                const hasRightLine = idx < CUSTOMER_STEPS.length - 1;
+                const isRightLineActive = isCompleted || progressStage > stepNum;
 
                 return (
-                  <View key={stepName} className="items-center flex-1 z-10">
-                    <View className="h-6 items-center justify-center">
-                      {isDone ? (
-                        <View className="w-5 h-5 rounded-full bg-emerald-500 items-center justify-center border-2 border-white shadow-xs">
-                          <Ionicons name="checkmark" size={11} color="#FFFFFF" />
-                        </View>
-                      ) : isCurrent ? (
-                        <View
-                          className="w-[22px] h-[22px] rounded-full items-center justify-center border-2 border-white shadow-xs"
-                          style={{
-                            backgroundColor: statusCfg.color,
-                          }}
-                        >
-                          <View className="w-1.5 h-1.5 rounded-full bg-white" />
-                        </View>
-                      ) : (
-                        <View className="w-3.5 h-3.5 rounded-full bg-slate-200 border-2 border-white" />
-                      )}
+                  <View key={stepName} className="items-center flex-1">
+                    {/* Circle and connecting segments: 100% vertically centered via flexbox */}
+                    <View className="w-full h-6 flex-row items-center justify-center">
+                      {/* Left line segment */}
+                      <View
+                        className="flex-1 h-[2.5px]"
+                        style={{
+                          backgroundColor: !hasLeftLine
+                            ? 'transparent'
+                            : isLeftLineActive
+                            ? activeColor
+                            : inactiveColor,
+                        }}
+                      />
+
+                      {/* Circle Node */}
+                      <View className="items-center justify-center z-10">
+                        {isDone ? (
+                          <View className="w-5 h-5 rounded-full bg-emerald-500 items-center justify-center border-2 border-white shadow-xs">
+                            <Ionicons name="checkmark" size={11} color="#FFFFFF" />
+                          </View>
+                        ) : isCurrent ? (
+                          <View
+                            className="w-[22px] h-[22px] rounded-full items-center justify-center border-2 border-white shadow-xs"
+                            style={{
+                              backgroundColor: statusCfg.color,
+                            }}
+                          >
+                            <View className="w-1.5 h-1.5 rounded-full bg-white" />
+                          </View>
+                        ) : (
+                          <View className="w-3.5 h-3.5 rounded-full bg-slate-200 border-2 border-white" />
+                        )}
+                      </View>
+
+                      {/* Right line segment */}
+                      <View
+                        className="flex-1 h-[2.5px]"
+                        style={{
+                          backgroundColor: !hasRightLine
+                            ? 'transparent'
+                            : isRightLineActive
+                            ? activeColor
+                            : inactiveColor,
+                        }}
+                      />
                     </View>
+
+                    {/* Step label text */}
                     <Text
-                      className={`text-[8.5px] mt-1 font-body text-center ${
+                      className={`text-[9px] mt-1.5 font-body text-center leading-tight ${
                         isCurrent
                           ? 'font-bold'
                           : isDone
                           ? 'font-medium text-slate-700'
                           : 'text-slate-400'
                       }`}
-                      style={isCurrent ? { color: statusCfg.color } : undefined}
+                      style={[{ minHeight: 13 }, isCurrent ? { color: statusCfg.color } : undefined]}
                       numberOfLines={1}
                     >
                       {stepName}
@@ -273,17 +313,17 @@ export default function CustomerJobCard({ item, onPressDetails }: CustomerJobCar
           <View className="flex-row items-center justify-between pt-2.5 border-t border-slate-100">
             <View className="flex-row items-center gap-1.5">
               <Ionicons
-                name={isCompleted ? 'receipt-outline' : 'cash-outline'}
+                name={isCancelled ? 'close-circle-outline' : isCompleted ? 'receipt-outline' : 'cash-outline'}
                 size={15}
-                color={isCompleted ? '#10B981' : '#64748B'}
+                color={isCancelled ? '#B45309' : isCompleted ? '#10B981' : '#64748B'}
               />
               <Text className="text-xs text-slate-500 font-body">
-                {isCompleted ? 'ยอดชำระแล้ว' : 'ยอดรวมค่าซ่อม'}
+                {isCancelled ? 'ค่าตรวจเช็คเครื่อง (ยกเลิกซ่อม)' : isCompleted ? 'ยอดชำระแล้ว' : 'ยอดรวมค่าซ่อม'}
               </Text>
             </View>
             <Text
               className={`text-base font-bold font-heading ${
-                isCompleted ? 'text-emerald-600' : 'text-slate-900'
+                isCancelled ? 'text-amber-700' : isCompleted ? 'text-emerald-600' : 'text-slate-900'
               }`}
             >
               ฿{Number(item.total_amount).toLocaleString()}

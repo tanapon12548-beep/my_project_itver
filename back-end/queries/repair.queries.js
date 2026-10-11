@@ -25,7 +25,9 @@ const SELECT_REPAIR_FIELDS = `
     p_rep.first_name AS rep_first_name,
     p_rep.last_name AS rep_last_name,
     q.quote_status_id,
-    q.customer_remark
+    q.customer_remark,
+    q.total_repair_price,
+    q.total_cancel_price
   FROM repair_job rj
   LEFT JOIN device d ON rj.device_id = d.device_id
   LEFT JOIN device_types dt ON d.device_type_id = dt.device_type_id

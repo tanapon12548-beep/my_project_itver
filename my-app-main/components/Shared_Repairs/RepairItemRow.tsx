@@ -46,13 +46,37 @@ export default function RepairItemRow({
     item.symptom_details ||
     'ไม่ระบุอาการเสีย';
 
-  // Badge text needs dark tone on light tints (lime/yellow) for contrast
+  const isCancelledItem =
+    statusId === 9 ||
+    item.status_id === 9 ||
+    String(item.status || '').includes('ยกเลิก') ||
+    Boolean(item.is_cancelled) ||
+    Number(item.quote_status_id) === 3;
+
+  const effectiveStatusId = Number(statusId || item.status_id);
+  // Badge text needs legible tone for contrast on light tints
   const badgeTextColor =
-    statusId === 1 ? '#4D5E00' : statusId === 3 ? '#92400E' : statusId === 7 ? '#854D0E' : statusColor;
+    isCancelledItem
+      ? '#B91C1C'
+      : effectiveStatusId === 1
+      ? '#0369A1'
+      : effectiveStatusId === 2
+      ? '#1D4ED8'
+      : effectiveStatusId === 3
+      ? '#3730A3'
+      : effectiveStatusId === 4
+      ? '#C2410C'
+      : effectiveStatusId === 6
+      ? '#854D0E'
+      : effectiveStatusId === 7
+      ? '#B45309'
+      : effectiveStatusId === 8
+      ? '#15803D'
+      : statusColor;
 
   return (
     <TouchableOpacity
-      activeOpacity={0.85}
+      activeOpacity={0.7}
       onPress={() => onPressDetails?.(item)}
       accessibilityRole="button"
       accessibilityLabel={`งาน ${item.job_no} ${item.status ?? ''}`}
@@ -70,17 +94,17 @@ export default function RepairItemRow({
         {item.status && (
           <View
             className="px-3 py-1.5 rounded-full flex-row items-center gap-1.5 border"
-            style={{ backgroundColor: `${statusColor}14`, borderColor: `${statusColor}30` }}
+            style={{ backgroundColor: isCancelledItem ? '#FEE2E2' : `${statusColor}14`, borderColor: isCancelledItem ? '#FCA5A5' : `${statusColor}30` }}
           >
             <View
               className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: statusColor }}
+              style={{ backgroundColor: isCancelledItem ? '#DC2626' : statusColor }}
             />
             <Text
               className="text-[13px] font-bold"
               style={{ color: badgeTextColor }}
             >
-              {item.status}
+              {isCancelledItem ? 'ยกเลิกซ่อม' : item.status}
             </Text>
           </View>
         )}
@@ -141,8 +165,10 @@ export default function RepairItemRow({
         <View className="flex-col">
           {(item.total_amount && Number(item.total_amount) > 0) || (item.price && Number(item.price) > 0) ? (
             <View className="flex-row items-baseline gap-1">
-              <Text className="text-[13px] text-slate-500">ยอดค่าซ่อม:</Text>
-              <Text className="text-[17px] font-bold text-[#DC2626]">
+              <Text className={`text-[13px] ${isCancelledItem ? 'text-amber-800 font-bold' : 'text-slate-500'}`}>
+                {isCancelledItem ? 'ค่าตรวจเช็ค:' : 'ยอดค่าซ่อม:'}
+              </Text>
+              <Text className={`text-[17px] font-bold ${isCancelledItem ? 'text-amber-700' : 'text-[#DC2626]'}`}>
                 ฿{Number(item.total_amount || item.price).toLocaleString()}
               </Text>
             </View>

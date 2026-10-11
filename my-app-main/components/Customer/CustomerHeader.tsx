@@ -46,7 +46,7 @@ export default function CustomerHeader({
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => onSelectTab('in_progress')}
-          className={`flex-1 p-2.5 rounded-xl border ${
+          className={`flex-1 py-2 px-2 rounded-xl border ${
             activeTab === 'in_progress'
               ? 'bg-white text-slate-900 border-white'
               : 'bg-white/10 border-white/20'
@@ -67,9 +67,10 @@ export default function CustomerHeader({
             </Text>
           </View>
           <Text
-            className={`text-[11px] font-body ${
+            className={`text-[10.5px] font-body ${
               activeTab === 'in_progress' ? 'text-slate-600 font-medium' : 'text-white/80'
             }`}
+            numberOfLines={1}
           >
             กำลังดำเนินการ
           </Text>
@@ -78,7 +79,7 @@ export default function CustomerHeader({
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => onSelectTab('pending_approval')}
-          className={`flex-1 p-2.5 rounded-xl border ${
+          className={`flex-1 py-2 px-2 rounded-xl border ${
             activeTab === 'pending_approval'
               ? 'bg-white border-white'
               : counts.pendingApproval > 0
@@ -111,13 +112,14 @@ export default function CustomerHeader({
             </Text>
           </View>
           <Text
-            className={`text-[11px] font-body ${
+            className={`text-[10.5px] font-body ${
               activeTab === 'pending_approval'
                 ? 'text-slate-600 font-medium'
                 : counts.pendingApproval > 0
                 ? 'text-amber-100 font-bold'
                 : 'text-white/80'
             }`}
+            numberOfLines={1}
           >
             รออนุมัติราคา
           </Text>
@@ -126,7 +128,7 @@ export default function CustomerHeader({
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={() => onSelectTab('completed')}
-          className={`flex-1 p-2.5 rounded-xl border ${
+          className={`flex-1 py-2 px-2 rounded-xl border ${
             activeTab === 'completed'
               ? 'bg-white border-white'
               : 'bg-white/10 border-white/20'
@@ -147,9 +149,10 @@ export default function CustomerHeader({
             </Text>
           </View>
           <Text
-            className={`text-[11px] font-body ${
+            className={`text-[10.5px] font-body ${
               activeTab === 'completed' ? 'text-slate-600 font-medium' : 'text-white/80'
             }`}
+            numberOfLines={1}
           >
             เสร็จสิ้น
           </Text>

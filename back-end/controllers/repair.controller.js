@@ -20,7 +20,11 @@ function formatRepairRow(row) {
   const directRepName = (row.rep_first_name || row.rep_last_name)
     ? `${row.rep_first_name || ''} ${row.rep_last_name || ''}`.trim()
     : '-';
-  const isRepairCompleted = (row.status_id === REPAIR_STATUS.WAITING_PAYMENT || row.status_id === REPAIR_STATUS.COMPLETED) && (row.quote_status_id !== QUOTE_STATUS.CANCELLED);
+  const isCancelled = Number(row.status_id) === REPAIR_STATUS.CANCELLED || Number(row.quote_status_id) === QUOTE_STATUS.CANCELLED || String(row.status_name || '').includes('ยกเลิก');
+  const isRepairCompleted = (row.status_id === REPAIR_STATUS.WAITING_PAYMENT || row.status_id === REPAIR_STATUS.COMPLETED) && !isCancelled;
+  const cancelPrice = Number(row.total_cancel_price) > 0 ? Number(row.total_cancel_price) : (DEFAULTS.CANCEL_INSPECTION_FEE || 300);
+  const repairPrice = Number(row.total_repair_price) > 0 ? Number(row.total_repair_price) : (Number(row.total_amount) || 0);
+  const effectiveTotal = isCancelled ? cancelPrice : (repairPrice > 0 ? repairPrice : (Number(row.total_amount) || 0));
 
   return {
     ...row,
@@ -42,6 +46,10 @@ function formatRepairRow(row) {
     received_by: '-',
     inspector_name: '-',
     repairer_name: isRepairCompleted ? directRepName : '-',
+    total_amount: effectiveTotal,
+    total_cancel_price: cancelPrice,
+    total_repair_price: repairPrice,
+    is_cancelled: isCancelled,
   };
 }
 
@@ -105,10 +113,20 @@ exports.getById = async (req, res, next) => {
 
         // ดึง quotation items
         const qdRes = await pool.query(repairQueries.GET_QUOTATION_ITEMS, [quotation.quotation_id]);
-        const items = qdRes.rows;
+        const items = qdRes.rows.map((it) => {
+          const isService = it.item_type_id === ITEM_TYPES.SERVICE || !it.item_id;
+          const fallbackName = isService ? 'ค่าบริการตรวจเช็คและซ่อมบำรุง' : 'อะไหล่ทดแทน';
+          return {
+            ...it,
+            item_name: it.item_name || fallbackName,
+            name: it.item_name || fallbackName,
+            item_type_id: isService ? ITEM_TYPES.SERVICE : (it.item_type_id || ITEM_TYPES.PART),
+            item_type_name: isService ? 'บริการ (Service)' : (it.item_type_name || 'อะไหล่ (Hardware/Part)'),
+          };
+        });
         quotation.items = items;
-        quotation.parts = items.filter(it => it.item_type_id === ITEM_TYPES.PART);
-        quotation.services = items.filter(it => it.item_type_id === ITEM_TYPES.SERVICE);
+        quotation.parts = items.filter((it) => it.item_type_id === ITEM_TYPES.PART);
+        quotation.services = items.filter((it) => it.item_type_id === ITEM_TYPES.SERVICE);
         quotation.total_parts = quotation.parts.reduce((sum, it) => sum + (parseFloat(it.total_price) || 0), 0);
         quotation.total_services = quotation.services.reduce((sum, it) => sum + (parseFloat(it.total_price) || 0), 0);
       }
@@ -165,12 +183,33 @@ exports.getById = async (req, res, next) => {
       }
     }
 
+    const isCancelled =
+      Number(rows[0].status_id) === REPAIR_STATUS.CANCELLED ||
+      Number(rows[0].quote_status_id) === QUOTE_STATUS.CANCELLED ||
+      Number(quotation?.quote_status_id) === QUOTE_STATUS.CANCELLED ||
+      String(rows[0].status_name || '').includes('ยกเลิก') ||
+      Boolean(formattedRow.is_cancelled);
+
+    const cancelPrice = Number(quotation?.total_cancel_price) > 0
+      ? Number(quotation.total_cancel_price)
+      : (Number(rows[0].total_cancel_price) > 0 ? Number(rows[0].total_cancel_price) : (DEFAULTS.CANCEL_INSPECTION_FEE || 300));
+
+    const repairPrice = Number(quotation?.total_repair_price) > 0
+      ? Number(quotation.total_repair_price)
+      : (Number(rows[0].total_repair_price) > 0 ? Number(rows[0].total_repair_price) : (Number(rows[0].total_amount) || 0));
+
+    const effectiveTotal = isCancelled ? cancelPrice : (repairPrice > 0 ? repairPrice : (Number(rows[0].total_amount) || 0));
+
     const verifiedPaymentDate = rows[0].payment_verified_at || (rows[0].payment_verified ? rows[0].payment_date : null);
 
     res.json({
       success: true,
       data: {
         ...formattedRow,
+        is_cancelled: isCancelled,
+        total_amount: effectiveTotal,
+        total_cancel_price: cancelPrice,
+        total_repair_price: repairPrice,
         received_by: received_by || '-',
         inspector_name: inspector_name || '-',
         repairer_name: repairer_name || '-',
@@ -263,6 +302,22 @@ exports.updateStatus = async (req, res, next) => {
 
     const currentUserId = user_id || req.user?.id || null;
 
+    // ตรวจสอบสิทธิ์: ลูกค้าสามารถยกเลิกงานตนเองได้เท่านั้น (CANCELLED)
+    if (req.user && (req.user.role_id === ROLES.CUSTOMER || req.user.role_name?.toLowerCase() === 'customer')) {
+      const ownerCheck = await pool.query(
+        `SELECT rj.job_id FROM repair_job rj
+         JOIN device d ON rj.device_id = d.device_id
+         WHERE rj.job_id = $1 AND d.customer_id = $2`,
+        [numId, req.user.id]
+      );
+      if (ownerCheck.rows.length === 0) {
+        return res.status(403).json({ success: false, message: 'คุณไม่มีสิทธิ์เข้าถึงหรือแก้ไขงานซ่อมนี้' });
+      }
+      if (numStatus !== REPAIR_STATUS.CANCELLED) {
+        return res.status(403).json({ success: false, message: 'ลูกค้าสามารถเปลี่ยนสถานะเป็นยกเลิกซ่อมได้เท่านั้น' });
+      }
+    }
+
     // ตรวจสอบสถานะเดิมของงาน
     const prevRes = await pool.query('SELECT status_id, quotation_id FROM repair_job WHERE job_id = $1', [numId]);
     if (prevRes.rows.length === 0) {
@@ -281,6 +336,16 @@ exports.updateStatus = async (req, res, next) => {
       const cancelPrice = Number(qRes.rows[0]?.total_cancel_price) || DEFAULTS.CANCEL_INSPECTION_FEE;
       updateSql += `, total_amount = $${updateParams.length + 1}`;
       updateParams.push(cancelPrice);
+
+      // ซิงค์สถานะใบเสนอราคาเป็นยกเลิก (3) ให้ตรงกับสถานะงานซ่อม
+      try {
+        await pool.query(
+          `UPDATE quotation SET quote_status_id = ${QUOTE_STATUS.CANCELLED} WHERE job_id = $1 OR quotation_id = (SELECT quotation_id FROM repair_job WHERE job_id = $1)`,
+          [numId]
+        );
+      } catch (qSyncErr) {
+        console.warn('Could not sync quotation status on cancel:', qSyncErr.message);
+      }
     }
 
     if (numStatus === REPAIR_STATUS.WAITING_PAYMENT && prevStatusId === REPAIR_STATUS.APPROVED_WAIT_REPAIR) {
@@ -363,7 +428,7 @@ exports.updateSignature = async (req, res, next) => {
     let savedFilename = signatureVal;
 
     if (typeof signatureVal === 'string' && (signatureVal.startsWith('data:image/') || signatureVal.includes('base64,'))) {
-      const sigDir = path.join(__dirname, '..', 'pubilc', 'signatures');
+      const sigDir = path.join(__dirname, '..', 'public', 'signatures');
       if (!fs.existsSync(sigDir)) {
         fs.mkdirSync(sigDir, { recursive: true });
       }
@@ -380,8 +445,8 @@ exports.updateSignature = async (req, res, next) => {
       
       const jobCode = `REP-${String(numId).padStart(6, '0')}`;
       savedFilename = `signatures/signature_${jobCode}_${dateStr}.${ext}`;
-      const filePath = path.join(__dirname, '..', 'pubilc', savedFilename);
-      fs.writeFileSync(filePath, Buffer.from(base64Data, 'base64'));
+      const filePath = path.join(__dirname, '..', 'public', savedFilename);
+      await fs.promises.writeFile(filePath, Buffer.from(base64Data, 'base64'));
     }
 
     const { rows } = await pool.query(
@@ -438,6 +503,10 @@ exports.addDetail = exports.logDetail;
  */
 exports.remove = async (req, res, next) => {
   try {
+    if (req.user && req.user.role_id !== ROLES.MANAGER && req.user.role_name?.toLowerCase() !== 'manager') {
+      return res.status(403).json({ success: false, message: 'เฉพาะผู้จัดการเท่านั้นที่สามารถลบงานซ่อมได้' });
+    }
+
     const { id } = req.params;
     const numId = parseInt(id, 10);
     if (isNaN(numId) || numId <= 0) {

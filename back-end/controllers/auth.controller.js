@@ -42,6 +42,11 @@ exports.register = async (req, res, next) => {
       return res.status(400).json({ success: false, message: pwdErr });
     }
 
+    const confirmPwd = req.body.confirm_password || req.body.confirmPassword;
+    if (confirmPwd && password !== confirmPwd) {
+      return res.status(400).json({ success: false, message: 'รหัสผ่านยืนยันไม่ตรงกับรหัสผ่าน' });
+    }
+
     // ตรวจสอบ email ซ้ำ
     const existing = await pool.query('SELECT id FROM profiles WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
     if (existing.rows.length > 0) {
@@ -51,6 +56,16 @@ exports.register = async (req, res, next) => {
     const cleanFirstName = first_name ? String(first_name).trim() : null;
     const cleanLastName = last_name ? String(last_name).trim() : null;
     const cleanPhone = phone ? String(phone).replace(/[^0-9]/g, '').slice(0, 10) : null;
+
+    if (cleanPhone) {
+      if (cleanPhone.length < 9 || cleanPhone.length > 10) {
+        return res.status(400).json({ success: false, message: 'เบอร์โทรศัพท์ต้องมีความยาว 9-10 หลัก' });
+      }
+      const dupPhone = await pool.query('SELECT id FROM profiles WHERE phone = $1 LIMIT 1', [cleanPhone]);
+      if (dupPhone.rows.length > 0) {
+        return res.status(409).json({ success: false, message: 'เบอร์โทรศัพท์นี้ถูกใช้งานในระบบแล้ว' });
+      }
+    }
 
     // Hash password
     const salt = await bcrypt.genSalt(10);
@@ -256,3 +271,62 @@ exports.resetPassword = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * PUT /api/auth/profile
+ * อัปเดตข้อมูลส่วนตัว (first_name, last_name, phone)
+ */
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const { first_name, last_name, phone } = req.body;
+    const cleanFirstName = first_name !== undefined ? String(first_name).trim() : null;
+    const cleanLastName = last_name !== undefined ? String(last_name).trim() : null;
+    const cleanPhone = phone !== undefined ? String(phone).replace(/[^0-9]/g, '').slice(0, 10) : null;
+
+    if (cleanPhone) {
+      if (cleanPhone.length < 9 || cleanPhone.length > 10) {
+        return res.status(400).json({ success: false, message: 'เบอร์โทรศัพท์ต้องมีความยาว 9-10 หลัก' });
+      }
+      const { rows: dupPhone } = await pool.query(
+        'SELECT id FROM profiles WHERE phone = $1 AND id != $2 LIMIT 1',
+        [cleanPhone, req.user.id]
+      );
+      if (dupPhone.length > 0) {
+        return res.status(400).json({ success: false, message: 'เบอร์โทรศัพท์นี้ถูกใช้งานในระบบแล้ว' });
+      }
+    }
+
+    const result = await pool.query(
+      `UPDATE profiles
+       SET first_name = COALESCE($1, first_name),
+           last_name = COALESCE($2, last_name),
+           phone = COALESCE($3, phone)
+       WHERE id = $4
+       RETURNING id, email, first_name, last_name, phone, role_id`,
+      [cleanFirstName, cleanLastName, cleanPhone, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'ไม่พบผู้ใช้งาน' });
+    }
+
+    const { rows: roleRows } = await pool.query(
+      `SELECT r.name AS role_name FROM roles r WHERE r.id = $1`,
+      [result.rows[0].role_id]
+    );
+
+    const updatedUser = {
+      ...result.rows[0],
+      role_name: roleRows[0]?.role_name || '',
+    };
+
+    res.json({
+      success: true,
+      message: 'อัปเดตข้อมูลส่วนตัวสำเร็จ',
+      data: updatedUser,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+

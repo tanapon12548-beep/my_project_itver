@@ -39,6 +39,36 @@ exports.create = async (req, res, next) => {
     const diagnosedSymptom = (actual_symptom || symptom) ? String(actual_symptom || symptom).trim() : null;
     const safeQuoteStatus = quote_status_id ? parseInt(quote_status_id, 10) : QUOTE_STATUS.PENDING;
 
+    // Validation:
+    // 1. ค่าบริการมีได้ ก็ต้องมีอะไหล่ก่อน
+    // 2. มีแค่อะไหล่อย่างเดียวไม่ได้ ต้องมีค่าบริการด้วย
+    const hasParts = (parts && Array.isArray(parts) && parts.length > 0) || (items && Array.isArray(items) && items.some(it => it.item_type_id === ITEM_TYPES.PART));
+    const hasServices = (services && Array.isArray(services) && services.length > 0) || (items && Array.isArray(items) && items.some(it => it.item_type_id === ITEM_TYPES.SERVICE));
+
+    if (req.body.type !== 'cancel_check') {
+      if (hasServices && !hasParts) {
+        return res.status(400).json({
+          success: false,
+          message: 'ไม่สามารถคิดค่าบริการได้หากไม่มีรายการอะไหล่ กรุณาเพิ่มรายการอะไหล่อย่างน้อย 1 รายการก่อน',
+        });
+      }
+
+      if (hasParts && !hasServices) {
+        return res.status(400).json({
+          success: false,
+          message: 'ไม่สามารถสร้างใบเสนอราคาที่มีเฉพาะอะไหล่ได้ กรุณาเพิ่มรายการค่าบริการหรือค่าแรงอย่างน้อย 1 รายการ',
+        });
+      }
+
+      if (!hasParts && !hasServices) {
+        return res.status(400).json({
+          success: false,
+          message: 'กรุณาเพิ่มรายการอะไหล่และค่าบริการอย่างน้อยประเภทละ 1 รายการก่อนบันทึกใบเสนอราคา',
+        });
+      }
+    }
+
+
     // ใช้ Transaction เพื่อให้การบันทึก quotation, repair_job, และ quotation_details สำเร็จพร้อมกัน
     const client = await pool.connect();
     try {
@@ -264,6 +294,44 @@ exports.update = async (req, res, next) => {
     const cancelPrice = Math.max(0, parseFloat(rawCancel) || 0);
     const nextQuoteStatus = quote_status_id ? parseInt(quote_status_id, 10) : QUOTE_STATUS.PENDING;
 
+    // Validation: ค่าบริการมีได้ ก็ต้องมีอะไหล่ก่อน และมีเฉพาะอะไหล่โดยไม่มีค่าบริการไม่ได้
+    const hasParts = (parts && Array.isArray(parts) && parts.length > 0) || (items && Array.isArray(items) && items.some(it => it.item_type_id === ITEM_TYPES.PART));
+    const hasServices = (services && Array.isArray(services) && services.length > 0) || (items && Array.isArray(items) && items.some(it => it.item_type_id === ITEM_TYPES.SERVICE));
+
+    if (hasServices && !hasParts) {
+      return res.status(400).json({
+        success: false,
+        message: 'ไม่สามารถคิดค่าบริการได้หากไม่มีรายการอะไหล่ กรุณาเพิ่มรายการอะไหล่อย่างน้อย 1 รายการก่อน',
+      });
+    }
+
+    if (hasParts && !hasServices) {
+      return res.status(400).json({
+        success: false,
+        message: 'ไม่สามารถแก้ไขใบเสนอราคาให้มีเฉพาะอะไหล่ได้ กรุณาเพิ่มรายการค่าบริการหรือค่าแรงอย่างน้อย 1 รายการ',
+      });
+    }
+
+    if (!hasParts && !hasServices) {
+      return res.status(400).json({
+        success: false,
+        message: 'กรุณาเพิ่มรายการอะไหล่และค่าบริการอย่างน้อยประเภทละ 1 รายการก่อนบันทึกใบเสนอราคา',
+      });
+    }
+
+    // ตรวจสอบว่าใบเสนอราคานี้อยู่ในสถานะที่แก้ไขได้หรือไม่ (ห้ามแก้ไขหากอนุมัติแล้ว หรือลูกค้ายกเลิกแล้ว)
+    const currentQRes = await pool.query('SELECT quote_status_id FROM quotation WHERE quotation_id = $1', [numId]);
+    if (currentQRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'ไม่พบใบเสนอราคา' });
+    }
+    const currentStatus = currentQRes.rows[0].quote_status_id;
+    if (currentStatus === QUOTE_STATUS.APPROVED || currentStatus === QUOTE_STATUS.CANCELLED) {
+      return res.status(400).json({
+        success: false,
+        message: 'ไม่สามารถแก้ไขใบเสนอราคาที่ได้รับการอนุมัติหรือลูกค้ายกเลิกแล้วได้',
+      });
+    }
+
     // ใช้ Transaction เพื่อให้การแก้ไขใบเสนอราคาและรายการอะไหล่สำเร็จพร้อมกัน
     const client = await pool.connect();
     try {
@@ -394,6 +462,14 @@ exports.delete = async (req, res, next) => {
     }
     const q = qRows[0];
 
+    // ตรวจสอบว่าใบเสนอราคานี้อยู่ในสถานะที่ลบได้หรือไม่ (ห้ามลบหากอนุมัติแล้ว หรือลูกค้ายกเลิกแล้ว)
+    if (q.quote_status_id === QUOTE_STATUS.APPROVED || q.quote_status_id === QUOTE_STATUS.CANCELLED) {
+      return res.status(400).json({
+        success: false,
+        message: 'ไม่สามารถลบใบเสนอราคาที่ได้รับการอนุมัติหรือลูกค้ายกเลิกแล้วได้',
+      });
+    }
+
     // ลบรายละเอียดใบเสนอราคา
     await pool.query(quotationQueries.DELETE_QUOTATION_DETAILS, [numId]);
 
@@ -425,6 +501,7 @@ exports.delete = async (req, res, next) => {
  * PATCH /api/quotations/:id/status
  */
 exports.updateStatus = async (req, res, next) => {
+  const client = await pool.connect();
   try {
     const { id } = req.params;
     const numId = parseInt(id, 10);
@@ -439,20 +516,61 @@ exports.updateStatus = async (req, res, next) => {
     }
     const cleanRemark = customer_remark ? String(customer_remark).trim() : null;
 
-    const { rows } = await pool.query(
+    // 1. ตรวจสอบใบเสนอราคาเดิมและความเป็นเจ้าของ
+    const existingQ = await pool.query(
+      `SELECT q.*, rj.job_id, d.customer_id, p.phone, p.email
+       FROM quotation q
+       LEFT JOIN repair_job rj ON q.job_id = rj.job_id
+       LEFT JOIN device d ON rj.device_id = d.device_id
+       LEFT JOIN profiles p ON d.customer_id = p.id
+       WHERE q.quotation_id = $1`,
+      [numId]
+    );
+
+    if (existingQ.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'ไม่พบใบเสนอราคา' });
+    }
+
+    const currentQuote = existingQ.rows[0];
+
+    // 2. ตรวจสอบสิทธิ์กรณีผู้เรียกเป็นลูกค้า (Customer)
+    const isCustomer = req.user && (req.user.role_id === ROLES.CUSTOMER || req.user.role_name?.toLowerCase() === 'customer');
+    if (isCustomer) {
+      const isOwner = (currentQuote.customer_id && Number(currentQuote.customer_id) === Number(req.user.id)) ||
+                      (currentQuote.phone && currentQuote.phone === req.user.phone) ||
+                      (currentQuote.email && currentQuote.email?.toLowerCase() === req.user.email?.toLowerCase());
+
+      if (!isOwner) {
+        return res.status(403).json({ success: false, message: 'คุณไม่มีสิทธิ์เข้าถึงหรือจัดการใบเสนอราคานี้' });
+      }
+
+      // ลูกค้าสามารถเลือกได้เฉพาะ: อนุมัติ (2), ยกเลิก (3), หรือขอแก้ไข (4 หรือ 5)
+      const allowedCustomerStatuses = [QUOTE_STATUS.APPROVED, QUOTE_STATUS.CANCELLED, QUOTE_STATUS.CHANGE_REQUEST, 5];
+      if (!allowedCustomerStatuses.includes(statusNum)) {
+        return res.status(403).json({ success: false, message: 'ลูกค้าสามารถอนุมัติ ขอยกเลิก หรือขอแก้ไขใบเสนอราคาได้เท่านั้น' });
+      }
+    }
+
+    // 3. ตรวจสอบสถานะเดิม — ห้ามเปลี่ยนสถานะหากใบเสนอราคาถูกอนุมัติหรือยกเลิกไปแล้ว
+    if (currentQuote.quote_status_id === QUOTE_STATUS.APPROVED && statusNum !== QUOTE_STATUS.APPROVED) {
+      return res.status(400).json({ success: false, message: 'ใบเสนอราคานี้ได้รับการอนุมัติไปแล้ว ไม่สามารถเปลี่ยนสถานะได้' });
+    }
+    if (currentQuote.quote_status_id === QUOTE_STATUS.CANCELLED && statusNum !== QUOTE_STATUS.CANCELLED) {
+      return res.status(400).json({ success: false, message: 'ใบเสนอราคานี้ถูกยกเลิกไปแล้ว ไม่สามารถเปลี่ยนสถานะได้' });
+    }
+
+    await client.query('BEGIN');
+
+    const { rows } = await client.query(
       'UPDATE quotation SET quote_status_id = $1, customer_remark = COALESCE($2, customer_remark) WHERE quotation_id = $3 RETURNING *',
       [statusNum, cleanRemark, numId]
     );
 
-    if (rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'ไม่พบใบเสนอราคา' });
-    }
-
     const quotation = rows[0];
-    let jobId = quotation.job_id;
+    let jobId = quotation.job_id || currentQuote.job_id;
 
     if (!jobId) {
-      const rjRes = await pool.query('SELECT job_id FROM repair_job WHERE quotation_id = $1', [numId]);
+      const rjRes = await client.query('SELECT job_id FROM repair_job WHERE quotation_id = $1', [numId]);
       if (rjRes.rows.length > 0) {
         jobId = rjRes.rows[0].job_id;
       }
@@ -461,13 +579,13 @@ exports.updateStatus = async (req, res, next) => {
     // Logic จัดการ Status งานซ่อมหลัก
     if (statusNum === QUOTE_STATUS.CANCELLED) {
       const cancelPrice = Number(quotation.total_cancel_price) || DEFAULTS.CANCEL_INSPECTION_FEE;
-      await pool.query(
+      await client.query(
         `UPDATE repair_job SET status_id = ${REPAIR_STATUS.CANCELLED}, total_amount = $2 WHERE job_id = $1 OR quotation_id = $3`,
         [jobId, cancelPrice, id]
       );
       if (jobId) {
         try {
-          await pool.query(
+          await client.query(
             `INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark) VALUES ($1, $2, ${ACTION_TYPES.CUSTOMER_CANCEL}, CURRENT_DATE, $3)`,
             [jobId, req.user?.id || null, `ลูกค้ายกเลิกซ่อม: ${customer_remark || 'ไม่ระบุ'}`]
           );
@@ -477,13 +595,13 @@ exports.updateStatus = async (req, res, next) => {
       }
     } else if (statusNum === QUOTE_STATUS.APPROVED) {
       const repairPrice = Number(quotation.total_repair_price) || 0;
-      await pool.query(
+      await client.query(
         `UPDATE repair_job SET status_id = ${REPAIR_STATUS.APPROVED_WAIT_REPAIR}, total_amount = CASE WHEN $2 > 0 THEN $2 ELSE total_amount END WHERE job_id = $1 OR quotation_id = $3`,
         [jobId, repairPrice, id]
       );
       if (jobId) {
         try {
-          await pool.query(
+          await client.query(
             `INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark) VALUES ($1, $2, ${ACTION_TYPES.START_REPAIR}, CURRENT_DATE, $3)`,
             [jobId, req.user?.id || null, 'ลูกค้าอนุมัติการซ่อม']
           );
@@ -492,13 +610,13 @@ exports.updateStatus = async (req, res, next) => {
         }
       }
     } else if (statusNum === QUOTE_STATUS.CHANGE_REQUEST || statusNum === 5) {
-      await pool.query(
+      await client.query(
         `UPDATE repair_job SET status_id = ${REPAIR_STATUS.MAKING_QUOTE} WHERE job_id = $1 OR quotation_id = $2`,
         [jobId, id]
       );
       if (jobId) {
         try {
-          await pool.query(
+          await client.query(
             `INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark) VALUES ($1, $2, ${ACTION_TYPES.CREATE_QUOTE}, CURRENT_DATE, $3)`,
             [jobId, req.user?.id || null, `ลูกค้าขอแก้ไข/ตีกลับใบเสนอราคา: ${customer_remark || 'ขอแก้ไขรายการ'}`]
           );
@@ -507,14 +625,18 @@ exports.updateStatus = async (req, res, next) => {
         }
       }
     } else if (statusNum === QUOTE_STATUS.PENDING) {
-      await pool.query(
+      await client.query(
         `UPDATE repair_job SET status_id = ${REPAIR_STATUS.PENDING_APPROVAL} WHERE job_id = $1 OR quotation_id = $2`,
         [jobId, id]
       );
     }
 
+    await client.query('COMMIT');
     res.json({ success: true, message: 'อัปเดตสถานะใบเสนอราคาเรียบร้อยแล้ว', data: quotation });
   } catch (err) {
+    await client.query('ROLLBACK');
     next(err);
+  } finally {
+    client.release();
   }
 };

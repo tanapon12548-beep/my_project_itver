@@ -63,29 +63,28 @@ export default function PartTable({ title, data, headerColor = '#0F172A', onPres
               key={item.item_id || index}
               activeOpacity={0.7}
               onPress={() => onPressDetails?.(item)}
-              className={`flex-row items-center py-3.5 px-4 bg-white ${
-                index === data.length - 1 ? '' : 'border-b border-slate-100'
-              }`}
+              className={`flex-row items-center py-3.5 px-4 bg-white ${index === data.length - 1 ? '' : 'border-b border-slate-100'
+                }`}
             >
               <View className="flex-1 pr-2">
                 <Text className="text-sm font-bold text-slate-800 font-heading leading-5" numberOfLines={2}>
                   {item.item_name}
                 </Text>
-                
+
                 <View className="flex-row items-center gap-1.5 mt-1.5 flex-wrap">
                   {catLabel && (
                     <View className="bg-slate-100 rounded-md px-2 py-0.5 border border-slate-200">
                       <Text className="text-[10px] font-medium text-slate-600 font-body">{catLabel}</Text>
                     </View>
                   )}
-                  {Number(item.used_count) > 0 && (
+                  {/* {Number(item.used_count) > 0 && (
                     <View className="bg-blue-50 rounded-md px-2 py-0.5 border border-blue-200 flex-row items-center gap-1">
                       <Ionicons name="receipt-outline" size={10} color="#2563EB" />
                       <Text className="text-[10px] text-blue-700 font-bold font-heading">
                         ใช้ {item.used_count} ครั้ง
                       </Text>
                     </View>
-                  )}
+                  )} */}
                   {item.item_code && (
                     <Text className="text-[10px] text-slate-400 font-body">
                       {item.item_code}

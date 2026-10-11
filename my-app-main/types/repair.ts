@@ -4,7 +4,7 @@ import type { QuotationLineItem } from './quotation';
 export interface ActionLog {
   job_id_detail: number;
   job_id: number;
-  user_id?: string | null;
+  user_id?: number | string | null;
   user_name?: string;
   role_name?: string;
   action_type_id: number;
@@ -66,8 +66,10 @@ export interface RepairJob {
   total_amount?: number;
   total_repair_price?: number;
   total_cancel_price?: number;
+  is_cancelled?: boolean;
   quotation_id?: number | null;
   quotation_status_id?: number;
+  quote_status_id?: number;
   appointment_date?: string | null;
   payment_method_id?: number | null;
   payment_method_name?: string | null;

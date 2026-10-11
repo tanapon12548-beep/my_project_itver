@@ -4,7 +4,6 @@ import { Stack, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -18,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import SuccessToast from '@/components/ui/SuccessToast';
 import FormInput from '@/components/ui/FormInput';
 import PasswordStrengthIndicator from '@/components/ui/PasswordStrengthIndicator';
+import CustomAlert from '@/components/ui/CustomAlert';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** เบอร์โทรไทย: 0 ตามด้วยเลข 8-9 ตัว */
@@ -29,12 +29,27 @@ export default function RegisterScreen() {
   // ── Form state ──
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [focusedField, setFocusedField] = useState<'email' | 'password' | 'firstName' | 'lastName' | 'phone' | null>(null);
+  const [focusedField, setFocusedField] = useState<'email' | 'password' | 'confirmPassword' | 'firstName' | 'lastName' | 'phone' | null>(null);
+
+  // ── Alert Modal State ──
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    type: 'success' | 'warning' | 'danger' | 'info';
+  }>({
+    visible: false,
+    title: '',
+    message: '',
+    type: 'danger',
+  });
 
   // ── Toast ──
   const [showToast, setShowToast] = useState(false);
@@ -53,18 +68,21 @@ export default function RegisterScreen() {
     || !firstName
     || !lastName
     || !phone
-    || !isPasswordStrong;
+    || !isPasswordStrong
+    || !confirmPassword
+    || password !== confirmPassword;
 
   // ════════════════════════════════════════════════════════
   // Helpers
   // ════════════════════════════════════════════════════════
 
-  const showAlert = (title: string, message: string) => {
-    if (Platform.OS === 'web') {
-      window.alert(`${title}\n\n${message}`);
-    } else {
-      Alert.alert(title, message);
-    }
+  const showAlert = (title: string, message: string, type: 'success' | 'warning' | 'danger' | 'info' = 'danger') => {
+    setAlertConfig({
+      visible: true,
+      title,
+      message,
+      type,
+    });
   };
 
   const setError = (field: string, msg: string) => {
@@ -128,6 +146,14 @@ export default function RegisterScreen() {
         'รหัสผ่านไม่ปลอดภัย',
         'รหัสผ่านต้องมีความยาวอย่างน้อย 8 ตัวอักษร และประกอบด้วยตัวพิมพ์เล็ก ตัวพิมพ์ใหญ่ ตัวเลข และสัญลักษณ์'
       );
+      return;
+    }
+    if (!confirmPassword) {
+      showAlert('ข้อผิดพลาด', 'กรุณากรอกยืนยันรหัสผ่าน');
+      return;
+    }
+    if (password !== confirmPassword) {
+      showAlert('ข้อผิดพลาด', 'รหัสผ่านยืนยันไม่ตรงกับรหัสผ่าน');
       return;
     }
 
@@ -270,6 +296,28 @@ export default function RegisterScreen() {
               ruleDefs={ruleDefs}
             />
 
+            <FormInput
+              label="ยืนยันรหัสผ่าน (Confirm Password)"
+              placeholder="กรอกรหัสผ่านอีกครั้งเพื่อยืนยัน"
+              isFocused={focusedField === 'confirmPassword'}
+              onFieldFocus={() => setFocusedField('confirmPassword')}
+              onFieldBlur={() => setFocusedField(null)}
+              value={confirmPassword}
+              onChangeText={(val) => {
+                setConfirmPassword(val);
+                if (val && password && val !== password) {
+                  setError('confirmPassword', 'รหัสผ่านยืนยันไม่ตรงกับรหัสผ่าน');
+                } else {
+                  clearError('confirmPassword');
+                }
+              }}
+              secureTextEntry={!showConfirmPassword}
+              showPasswordToggle
+              showPassword={showConfirmPassword}
+              onTogglePassword={() => setShowConfirmPassword(!showConfirmPassword)}
+              error={errors.confirmPassword}
+            />
+
             {/* Submit Button */}
             <TouchableOpacity
               className={`rounded-xl h-[52px] justify-center items-center mt-4 ${isSubmitDisabled ? 'bg-[#DC2626]/40' : 'bg-[#DC2626] shadow-lg shadow-[#DC2626]/20 elevation-4'}`}
@@ -308,6 +356,14 @@ export default function RegisterScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <CustomAlert
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+        onConfirm={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
+      />
     </SafeAreaView>
   );
 }

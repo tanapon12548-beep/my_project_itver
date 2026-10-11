@@ -25,7 +25,7 @@ export default function SlipsPage() {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mySlips, setMySlips] = useState<SlipRecord[]>([]);
-  const [currentUser, setCurrentUser] = useState<{ id: string; email: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ id: number | string; email: string } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Popup states
@@ -66,7 +66,7 @@ export default function SlipsPage() {
     }
   };
 
-  const fetchMySlips = async (_userId?: string) => {
+  const fetchMySlips = async (_userId?: number | string) => {
     try {
       setLoading(true);
       const res = await getSlips();
@@ -171,7 +171,7 @@ export default function SlipsPage() {
           {new Date(item.uploaded_at).toLocaleString('th-TH')}
         </Text>
         <Text className="text-[11px] text-slate-400" numberOfLines={1}>
-          ID: {item.user_id?.slice(0, 8)}...
+          ID: #{item.id}
         </Text>
       </View>
       <TouchableOpacity className="bg-red-500 py-2.5 items-center" onPress={() => handleDeleteSlip(item)}>
@@ -198,7 +198,7 @@ export default function SlipsPage() {
         {currentUser && (
           <View className="w-full bg-blue-600 rounded-xl p-3 mb-5 items-center">
             <Text className="text-white font-bold text-sm">{currentUser.email}</Text>
-            <Text className="text-blue-200 text-xs mt-0.5">ID: {currentUser.id.slice(0, 8)}...</Text>
+            <Text className="text-blue-200 text-xs mt-0.5">ID: #{currentUser.id}</Text>
           </View>
         )}
 
@@ -256,7 +256,7 @@ export default function SlipsPage() {
         ) : (
           <FlatList
             data={mySlips}
-            keyExtractor={item => item.id}
+            keyExtractor={item => String(item.id)}
             renderItem={renderSlipCard}
             scrollEnabled={false}
             className="w-full"

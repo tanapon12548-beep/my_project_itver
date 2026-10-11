@@ -387,31 +387,61 @@ export default function TechnicianDetailScreen() {
     );
   }
 
+  const isIntakeStatus = job?.status_id === 1 || job?.status === 'รอตรวจเช็ค' || job?.status === 'รอตรวจสอบ';
+  const isCompletedStatus = job?.status_id === 8 || job?.status === 'เสร็จสิ้น';
+  const canPrintDocument = isIntakeStatus || isCompletedStatus;
+
+  const handleViewPdf = () => {
+    if (!job) return;
+    router.push({
+      pathname: '/receipt',
+      params: {
+        jobId: String(job.id || jobIdParam),
+        job_no: job.job_number || jobNo,
+      },
+    });
+  };
+
   return (
     <View className="flex-1 bg-slate-100">
       {/* Top Header */}
       <View className="bg-[#DC2626] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
-        <View className="flex-row items-center">
-          <TouchableOpacity
-            onPress={() => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                if (currentRole === 'manager') {
-                  router.replace('/(meneger)/repairs');
+        <View className="flex-row items-center justify-between">
+          <View className="flex-row items-center flex-1">
+            <TouchableOpacity
+              onPress={() => {
+                if (router.canGoBack()) {
+                  router.back();
                 } else {
-                  router.replace('/(technicain)');
+                  if (currentRole === 'manager') {
+                    router.replace('/(meneger)/repairs');
+                  } else {
+                    router.replace('/(technicain)');
+                  }
                 }
-              }
-            }}
-            className="mr-3"
-          >
-            <Ionicons name="chevron-back" size={28} color="#ffffff" />
-          </TouchableOpacity>
-          <View className="flex-1">
-            <Text className="text-white text-xl font-bold">ใบรับซ่อม</Text>
-            <Text className="text-white text-[13px] opacity-80">Repair Document</Text>
+              }}
+              className="mr-3"
+            >
+              <Ionicons name="chevron-back" size={28} color="#ffffff" />
+            </TouchableOpacity>
+            <View className="flex-1">
+              <Text className="text-white text-xl font-bold">ใบรับซ่อม</Text>
+              <Text className="text-white text-[13px] opacity-80">Repair Document</Text>
+            </View>
           </View>
+
+          {/* Quick PDF Print / View Button (เฉพาะสถานะ รอตรวจเช็ค หรือ เสร็จสิ้น เท่านั้น) */}
+          {canPrintDocument && (
+            <TouchableOpacity
+              onPress={handleViewPdf}
+              className="flex-row items-center bg-white/20 px-3 py-1.5 rounded-xl border border-white/30 active:bg-white/30"
+            >
+              <Ionicons name="print-outline" size={16} color="#ffffff" style={{ marginRight: 5 }} />
+              <Text className="text-white text-xs font-bold font-heading">
+                {isCompletedStatus ? 'พิมพ์ใบเสร็จ' : 'พิมพ์ใบรับซ่อม'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
@@ -419,8 +449,6 @@ export default function TechnicianDetailScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
       >
-
-
         {/* Customer Section */}
         <CustomerInfoCard
           customerName={job.customer_name}
@@ -436,6 +464,8 @@ export default function TechnicianDetailScreen() {
           receivedBy={job.received_by}
           inspectorName={job.inspector_name}
           repairerName={job.repairer_name}
+          onViewPdf={canPrintDocument ? handleViewPdf : undefined}
+          pdfButtonText={isCompletedStatus ? 'ดู / พิมพ์ใบเสร็จรับเงิน (PDF)' : 'ดู / พิมพ์ใบรับซ่อม (PDF)'}
         />
 
         {/* Device Section */}

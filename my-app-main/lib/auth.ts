@@ -59,6 +59,18 @@ export async function getUser(): Promise<User | null> {
 }
 
 /**
+ * แก้ไขข้อมูลส่วนตัวของผู้ใช้ปัจจุบัน
+ */
+export async function updateProfile(data: {
+  first_name?: string;
+  last_name?: string;
+  phone?: string;
+}): Promise<any> {
+  const res = await api.put('/auth/profile', data);
+  return res.data;
+}
+
+/**
  * ตรวจสอบว่า login อยู่หรือไม่
  */
 export async function isLoggedIn(): Promise<boolean> {

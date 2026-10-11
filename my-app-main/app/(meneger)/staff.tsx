@@ -155,7 +155,8 @@ export default function StaffScreen() {
       setMemberToDelete(null);
       await fetchStaff();
     } catch (e: any) {
-      showAlert('ล้มเหลว', e.message || 'ไม่สามารถลบข้อมูลได้', 'danger');
+      setIsDeleteModalVisible(false);
+      showAlert('ไม่สามารถลบข้อมูลได้', e.message || 'ไม่สามารถลบข้อมูลได้', 'danger');
     } finally {
       setIsDeleting(false);
     }
@@ -258,8 +259,8 @@ export default function StaffScreen() {
         visible={isDeleteModalVisible}
         title="ยืนยันการลบผู้ใช้งาน"
         itemName={memberToDelete ? `${memberToDelete.name} (${memberToDelete.role})` : undefined}
-        message="การกระทำนี้จะลบผู้ใช้งานออกจากระบบ และปลดการเชื่อมโยงจากงานซ่อม คุณแน่ใจหรือไม่?"
-        confirmText="ลบข้อมูล"
+        message="ระบบจะตรวจสอบว่าผู้ใช้งานมีหนี้สินค้างชำระ หรืองานซ่อมที่ยังดำเนินการอยู่หรือไม่ หากมีจะไม่สามารถลบได้ คุณแน่ใจหรือไม่ที่จะดำเนินการต่อ?"
+        confirmText="ยืนยันการลบ"
         cancelText="ยกเลิก"
         loading={isDeleting}
         onConfirm={handleConfirmDelete}

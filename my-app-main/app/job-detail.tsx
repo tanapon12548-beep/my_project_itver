@@ -62,6 +62,14 @@ export default function JobDetailScreen() {
         const repPrice = Number(q?.total_repair_price) || (Number(data.total_amount) > 0 ? Number(data.total_amount) : 0);
         const canPrice = Number(q?.total_cancel_price) || CANCEL_INSPECTION_FEE;
 
+        const isJobCancelled = Boolean(
+          data.is_cancelled ||
+          Number(data.status_id) === 9 ||
+          Number(q?.quote_status_id) === 3 ||
+          Number(data.quote_status_id) === 3 ||
+          data.status_name?.includes('ยกเลิก')
+        );
+
         setJob({
           id: String(data.job_id || targetId),
           job_number: `REP-${String(data.job_id || targetId).padStart(6, '0')}`,
@@ -73,11 +81,12 @@ export default function JobDetailScreen() {
           total_amount: Number(data.total_amount) || 0,
           status: data.status_name || (data.status_id === 8 ? 'เสร็จสิ้น' : 'กำลังดำเนินการ'),
           status_id: data.status_id || 1,
+          is_cancelled: isJobCancelled,
           items: q?.items || [],
           quotation_id: data.quotation_id || (q ? q.quotation_id : null),
           total_repair_price: repPrice,
           total_cancel_price: canPrice,
-          quotation_status_id: q?.quote_status_id || 1,
+          quotation_status_id: q?.quote_status_id || data.quote_status_id || (isJobCancelled ? 3 : 1),
           customer_remark: q?.customer_remark || data.customer_remark || null,
           created_at: data.created_at || new Date().toISOString(),
           appointment_date: data.appointment_date || null,
@@ -102,7 +111,7 @@ export default function JobDetailScreen() {
         fetchJob();
         const interval = setInterval(() => {
           fetchJob(true);
-        }, 2500);
+        }, 10000); // 10 วินาที เพื่อประสิทธิภาพและประหยัดแบตเตอรี่
         return () => clearInterval(interval);
       }
     }, [fetchJob, targetId])
@@ -227,11 +236,17 @@ export default function JobDetailScreen() {
     );
   }
 
-  const isWaitingRepair = job.status_id === 5 || job.status === 'อนุมัติแล้ว/รอซ่อม';
-  const isReadyForPickup = job.status_id === 6 || job.status === 'รอลูกค้ามารับเครื่อง';
-  const isReadyForPayment = job.status_id === 7 || job.status === 'รอชำระ';
-  const isCompleted = job.status_id === 8 || job.status === 'เสร็จสิ้น';
-  const isCancelled = job.status_id === 9 || job.status === 'ยกเลิกซ่อม' || job.status === 'ยกเลิก';
+  const isCancelled =
+    job.status_id === 9 ||
+    job.status === 'ยกเลิกซ่อม' ||
+    job.status === 'ยกเลิก' ||
+    Boolean(job.status?.includes('ยกเลิก')) ||
+    job.quotation_status_id === 3 ||
+    Boolean(job.is_cancelled);
+  const isCompleted = (job.status_id === 8 || job.status === 'เสร็จสิ้น') && !isCancelled;
+  const isReadyForPickup = (job.status_id === 6 || job.status === 'รอลูกค้ามารับเครื่อง') && !isCancelled;
+  const isReadyForPayment = (job.status_id === 7 || job.status === 'รอชำระ') && !isCancelled;
+  const isWaitingRepair = (job.status_id === 5 || job.status === 'อนุมัติแล้ว/รอซ่อม') && !isCancelled;
 
   const formatPickupDate = (dateStr?: string | null) => {
     if (!dateStr || dateStr === 'undefined' || dateStr === 'null') return null;
@@ -244,35 +259,42 @@ export default function JobDetailScreen() {
     }
   };
 
-  const getStatusConfig = (status: string, statusId?: number) => {
+  const getStatusConfig = (status: string, statusId?: number, isCancelledJob?: boolean) => {
     const s = status || '';
     const id = Number(statusId);
 
+    // ── ตรวจสอบการยกเลิกก่อนเป็นอันดับแรก ──
+    if (isCancelledJob || id === 9 || s.includes('ยกเลิก')) {
+      return { color: '#DC2626', bg: '#FEE2E2', text: '#B91C1C', icon: 'close-circle' };
+    }
+
+    // ── กลุ่มที่ 3: โทนสีเสร็จสิ้น & ปิดงาน ──
     if (id === 8 || s.includes('เสร็จ') || s.includes('ชำระแล้ว')) {
-      return { color: '#22C55E', bg: '#DCFCE7', text: '#15803D', icon: 'checkmark-circle' };
+      return { color: '#16A34A', bg: '#DCFCE7', text: '#15803D', icon: 'checkmark-circle' };
     }
-    if (id === 9 || s.includes('ยกเลิก')) {
-      return { color: '#EF4444', bg: '#FEE2E2', text: '#B91C1C', icon: 'close-circle' };
-    }
+
+    // ── กลุ่มที่ 2: โทนสีส้ม/อำพัน/เหลือง (ขั้นตอนการรอ & ลูกค้าดำเนินการ) ──
     if (id === 6 || s.includes('มารับเครื่อง') || s.includes('พร้อมรับ')) {
-      return { color: '#0EA5E9', bg: '#E0F2FE', text: '#0369A1', icon: 'cube' };
+      return { color: '#CA8A04', bg: '#FEF9C3', text: '#854D0E', icon: 'cube' };
     }
     if (id === 7 || s.includes('รอชำระ')) {
-      return { color: '#EAB308', bg: '#FEF9C3', text: '#A16207', icon: 'cash' };
-    }
-    if (id === 5 || s.includes('อนุมัติ') || s.includes('ซ่อม')) {
-      return { color: '#6366F1', bg: '#EEF2FF', text: '#4338CA', icon: 'hammer' };
+      return { color: '#D97706', bg: '#FEF3C7', text: '#B45309', icon: 'cash' };
     }
     if (id === 4 || s.includes('รออนุมัติ') || s.includes('รอการอนุมัติ')) {
-      return { color: '#A855F7', bg: '#F3E8FF', text: '#7E22CE', icon: 'alert-circle' };
+      return { color: '#EA580C', bg: '#FFEDD5', text: '#C2410C', icon: 'alert-circle' };
+    }
+
+    // ── กลุ่มที่ 1: โทนสีน้ำเงิน/ฟ้า (ขั้นตอนตรวจเช็ค & กำลังซ่อม) ──
+    if (id === 5 || s.includes('อนุมัติ') || s.includes('ซ่อม')) {
+      return { color: '#1D4ED8', bg: '#EFF6FF', text: '#1E40AF', icon: 'hammer' };
     }
     if (id === 3 || s.includes('เสนอราคา')) {
-      return { color: '#F59E0B', bg: '#FEF3C7', text: '#B45309', icon: 'receipt' };
+      return { color: '#4F46E5', bg: '#E0E7FF', text: '#3730A3', icon: 'receipt' };
     }
     if (id === 2 || s.includes('ดำเนินการตรวจเช็ค')) {
-      return { color: '#D97706', bg: '#FFEDD5', text: '#C2410C', icon: 'search' };
+      return { color: '#2563EB', bg: '#DBEAFE', text: '#1D4ED8', icon: 'search' };
     }
-    return { color: '#84CC16', bg: '#ECFCCB', text: '#4D7C0F', icon: 'clipboard' };
+    return { color: '#0284C7', bg: '#E0F2FE', text: '#0369A1', icon: 'clipboard' };
   };
 
   const getDeviceIcon = (type?: string, brand?: string) => {
@@ -295,11 +317,29 @@ export default function JobDetailScreen() {
     return 'hardware-chip-outline';
   };
 
-  const statusCfg = getStatusConfig(job.status || '', job.status_id);
+  const formatDeviceTitle = (brand?: string, model?: string) => {
+    const b = (brand || '').trim();
+    const m = (model || '').trim();
+    if (!b && !m) return 'อุปกรณ์ไม่ระบุชื่อ';
+    if (b.includes('ประกอบเอง') || b.includes('Custom PC')) {
+      if (!m || m.includes('สเปกประกอบเอง') || m.includes('ไม่ระบุ')) {
+        return 'คอมพิวเตอร์ประกอบเอง (Custom PC)';
+      }
+      return `ประกอบเอง (Custom PC) ${m}`;
+    }
+    if (!b) return m;
+    if (!m) return b;
+    return `${b} ${m}`;
+  };
+
+  const statusCfg = getStatusConfig(job.status || '', job.status_id, isCancelled);
 
   const total = isCancelled
     ? (job.total_cancel_price || CANCEL_INSPECTION_FEE)
     : (job.total_repair_price || job.total_amount || (job.items || []).reduce((sum, item) => sum + Number(item.price || item.unit_price || 0), 0));
+
+  const isIntakeStatus = job.status_id === 1 || job.status === 'รอตรวจเช็ค' || job.status === 'รอตรวจสอบ';
+  const canShowDocumentButton = isIntakeStatus || isCompleted;
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
@@ -321,21 +361,27 @@ export default function JobDetailScreen() {
           </View>
         </View>
 
-        <View className="bg-white/15 px-3 py-1 rounded-full border border-white/20">
-          <Text className="text-white text-xs font-bold font-heading">
-            {job.status}
-          </Text>
-        </View>
+        {canShowDocumentButton && (
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: '/receipt', params: { jobId: job.id, job_no: job.job_number } })}
+            className="bg-white/20 px-2.5 py-1.5 rounded-xl border border-white/30 flex-row items-center active:bg-white/30"
+          >
+            <Ionicons name="document-text-outline" size={15} color="#ffffff" style={{ marginRight: 4 }} />
+            <Text className="text-white text-xs font-bold font-heading">
+              {isCompleted ? 'ใบเสร็จ' : 'ใบรับซ่อม'}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ScrollView className="flex-1 relative z-0" contentContainerClassName="p-4 pb-12">
 
         {/* Device & Status Overview Card */}
         <View className="bg-white rounded-3xl p-4 mb-4 shadow-sm border border-slate-100">
-          <View className="flex-row items-center justify-between mb-3.5">
-            <View className="flex-row items-center gap-3">
+          <View className="flex-row items-start justify-between mb-3.5 gap-2">
+            <View className="flex-row items-center gap-3 flex-1 min-w-0">
               <View
-                className="w-12 h-12 rounded-2xl items-center justify-center border"
+                className="w-12 h-12 rounded-2xl items-center justify-center border shrink-0"
                 style={{
                   backgroundColor: statusCfg.bg,
                   borderColor: `${statusCfg.color}35`,
@@ -347,11 +393,11 @@ export default function JobDetailScreen() {
                   color={statusCfg.color}
                 />
               </View>
-              <View>
-                <Text className="text-base font-bold text-slate-900 font-heading">
-                  {job.brand} {job.model}
+              <View className="flex-1 min-w-0">
+                <Text className="text-base font-bold text-slate-900 font-heading leading-tight" numberOfLines={2}>
+                  {formatDeviceTitle(job.brand, job.model)}
                 </Text>
-                <View className="flex-row items-center gap-2 mt-0.5">
+                <View className="flex-row items-center gap-2 mt-1 flex-wrap">
                   <Text className="text-xs text-slate-400 font-body">
                     {job.device_type || 'อุปกรณ์ไอที'}
                   </Text>
@@ -365,7 +411,7 @@ export default function JobDetailScreen() {
 
             {/* Status Badge */}
             <View
-              className="px-3 py-1.5 rounded-full flex-row items-center gap-1.5 border"
+              className="px-3 py-1.5 rounded-full flex-row items-center gap-1.5 border shrink-0"
               style={{
                 backgroundColor: statusCfg.bg,
                 borderColor: `${statusCfg.color}40`,
@@ -379,7 +425,7 @@ export default function JobDetailScreen() {
                 className="text-xs font-bold font-heading"
                 style={{ color: statusCfg.text }}
               >
-                {job.status}
+                {isCancelled ? 'ยกเลิกซ่อม' : job.status}
               </Text>
             </View>
           </View>
@@ -469,18 +515,6 @@ export default function JobDetailScreen() {
           </View>
         )}
 
-        {isCompleted && (
-          <View className="bg-slate-100 rounded-2xl p-4 mb-4 flex-row items-center border border-slate-200">
-            <View className="w-8 h-8 rounded-full bg-white items-center justify-center mr-3 border border-slate-400">
-              <Ionicons name="checkmark-circle" size={18} color="#475569" />
-            </View>
-            <View className="flex-1">
-              <Text className="text-slate-800 font-bold font-heading text-sm">ส่งมอบเครื่องเสร็จสิ้นแล้ว</Text>
-              <Text className="text-slate-600 text-xs font-body mt-0.5">รับเครื่องและชำระเงินเรียบร้อยแล้ว ขอบคุณที่ใช้บริการ</Text>
-            </View>
-          </View>
-        )}
-
         {/* ปฏิทินกำหนดวันรับเครื่องให้ลูกค้าดู (แสดงเฉพาะเมื่อพร้อมรับ หรือมีนัดหมายระหว่างซ่อม) */}
         {!isCompleted && isReadyForPickup ? (
           <PickupCalendarCard defaultExpanded={false} />
@@ -499,25 +533,27 @@ export default function JobDetailScreen() {
             </Text>
           </View>
 
-          <View className="gap-2">
+          <View className="gap-2.5">
             <View className="flex-row items-center justify-between py-1 border-b border-slate-50">
-              <Text className="text-xs text-slate-400 font-body">หมายเลขงาน</Text>
-              <Text className="text-xs font-bold text-slate-800 font-heading">{job.job_number}</Text>
+              <Text className="text-xs text-slate-400 font-body shrink-0 w-24">หมายเลขงาน</Text>
+              <Text className="text-xs font-bold text-slate-800 font-heading flex-1 text-right">{job.job_number}</Text>
             </View>
 
             <View className="flex-row items-center justify-between py-1 border-b border-slate-50">
-              <Text className="text-xs text-slate-400 font-body">ประเภทอุปกรณ์</Text>
-              <Text className="text-xs font-medium text-slate-700 font-body">{job.device_type || 'อุปกรณ์ไอที'}</Text>
+              <Text className="text-xs text-slate-400 font-body shrink-0 w-24">ประเภทอุปกรณ์</Text>
+              <Text className="text-xs font-medium text-slate-700 font-body flex-1 text-right">{job.device_type || 'อุปกรณ์ไอที'}</Text>
             </View>
 
-            <View className="flex-row items-center justify-between py-1 border-b border-slate-50">
-              <Text className="text-xs text-slate-400 font-body">ยี่ห้อ / รุ่น</Text>
-              <Text className="text-xs font-medium text-slate-700 font-body">{job.brand} {job.model}</Text>
+            <View className="flex-row items-start justify-between py-1 border-b border-slate-50">
+              <Text className="text-xs text-slate-400 font-body shrink-0 w-24 pt-0.5">ยี่ห้อ / รุ่น</Text>
+              <Text className="text-xs font-medium text-slate-700 font-body flex-1 text-right leading-5">
+                {formatDeviceTitle(job.brand, job.model)}
+              </Text>
             </View>
 
             <View className="flex-row items-center justify-between py-1">
-              <Text className="text-xs text-slate-400 font-body">วันที่ส่งเครื่อง</Text>
-              <Text className="text-xs font-medium text-slate-700 font-body">
+              <Text className="text-xs text-slate-400 font-body shrink-0 w-24">วันที่ส่งเครื่อง</Text>
+              <Text className="text-xs font-medium text-slate-700 font-body flex-1 text-right">
                 {job.created_at ? formatPickupDate(job.created_at) : 'วันนี้'}
               </Text>
             </View>
@@ -533,6 +569,7 @@ export default function JobDetailScreen() {
             statusId={job.status_id}
             quotationId={job.quotation_id}
             quoteStatusId={job.quotation_status_id}
+            isCancelled={isCancelled}
             customerRemark={job.customer_remark}
             totalRepairPrice={job.total_repair_price}
             totalCancelPrice={job.total_cancel_price}

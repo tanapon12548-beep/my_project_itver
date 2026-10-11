@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import type { ApiResponse, RepairJob } from '@/types/repair';
 import type { QuotationItem } from '@/types/quotation';
 import type { InventoryItem } from '@/types/item';
@@ -6,24 +7,27 @@ import type { InventoryItem } from '@/types/item';
 // ============================================================
 // API Base URL & Server Origin
 // ============================================================
-export const API_BASE = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3002/api';
+const devHostIp = Constants.expoConfig?.hostUri?.split(':')[0];
+
+export const API_BASE =
+  process.env.EXPO_PUBLIC_API_URL ||
+  (Platform.OS !== 'web' && devHostIp
+    ? `http://${devHostIp}:3002/api`
+    : 'http://localhost:3002/api');
+
 export const API_ORIGIN = API_BASE.replace(/\/api\/?$/, '');
 
 // ============================================================
 // Token Storage (SecureStore for native, localStorage for web)
 // ============================================================
 let SecureStore: any = null;
-
-async function loadSecureStore() {
-  if (Platform.OS !== 'web') {
-    try {
-      SecureStore = require('expo-secure-store');
-    } catch {
-      // fallback
-    }
+if (Platform.OS !== 'web') {
+  try {
+    SecureStore = require('expo-secure-store');
+  } catch {
+    // fallback
   }
 }
-loadSecureStore();
 
 export async function getToken(): Promise<string | null> {
   if (Platform.OS === 'web') {
@@ -72,7 +76,7 @@ export function getImageUrl(filePath: string | null | undefined): string | null 
     !clean.startsWith('/slips') &&
     !clean.startsWith('/signatures')
   ) {
-    return `${base}/pubilc${clean}`;
+    return `${base}/public${clean}`;
   }
   return `${base}${clean}`;
 }
@@ -115,10 +119,16 @@ async function fetchWithAuth(
     await removeToken();
   }
 
-  const data = await response.json();
+  let data: any = null;
+  const rawText = await response.text();
+  try {
+    data = rawText ? JSON.parse(rawText) : {};
+  } catch {
+    data = { message: rawText || `HTTP error ${response.status}` };
+  }
 
   if (!response.ok) {
-    const error: any = new Error(data.message || 'เกิดข้อผิดพลาด');
+    const error: any = new Error(data?.message || `เกิดข้อผิดพลาด (${response.status})`);
     error.status = response.status;
     error.data = data;
     throw error;
@@ -317,6 +327,7 @@ export function deleteStaff(id: number | string) {
 
 export interface DashboardMetricsParams {
   role?: string;
+  period?: 'day' | 'month' | 'year' | string;
   device_type?: string;
   date_start?: string;
   date_end?: string;
@@ -328,6 +339,7 @@ export function getDashboardMetrics(params?: DashboardMetricsParams | string) {
   }
   const query = new URLSearchParams();
   if (params?.role) query.append('role', params.role);
+  if (params?.period) query.append('period', params.period);
   if (params?.device_type && params.device_type !== 'all') query.append('device_type', params.device_type);
   if (params?.date_start) query.append('date_start', params.date_start);
   if (params?.date_end) query.append('date_end', params.date_end);
@@ -358,6 +370,7 @@ export function getDashboardTrend(params?: DashboardTrendParams | string) {
 }
 
 export interface DashboardCategoryParams {
+  period?: 'day' | 'month' | 'year' | string;
   device_type?: string;
   date_start?: string;
   date_end?: string;
@@ -365,12 +378,49 @@ export interface DashboardCategoryParams {
 
 export function getDashboardCategory(params?: DashboardCategoryParams) {
   const query = new URLSearchParams();
+  if (params?.period) query.append('period', params.period);
   if (params?.device_type && params.device_type !== 'all') query.append('device_type', params.device_type);
   if (params?.date_start) query.append('date_start', params.date_start);
   if (params?.date_end) query.append('date_end', params.date_end);
   const qStr = query.toString();
   return api.get(`/dashboard/category${qStr ? `?${qStr}` : ''}`);
 }
+
+export interface DashboardTeamPerformanceParams {
+  period?: 'day' | 'month' | 'year' | string;
+  device_type?: string;
+  date_start?: string;
+  date_end?: string;
+}
+
+export function getDashboardTeamPerformance(params?: DashboardTeamPerformanceParams) {
+  const query = new URLSearchParams();
+  if (params?.period) query.append('period', params.period);
+  if (params?.device_type && params.device_type !== 'all') query.append('device_type', params.device_type);
+  if (params?.date_start) query.append('date_start', params.date_start);
+  if (params?.date_end) query.append('date_end', params.date_end);
+  const qStr = query.toString();
+  return api.get(`/dashboard/team-performance${qStr ? `?${qStr}` : ''}`);
+}
+
+export interface DashboardPartsUsageParams {
+  period?: 'day' | 'month' | 'year' | string;
+  device_type?: string;
+  date_start?: string;
+  date_end?: string;
+}
+
+export function getDashboardPartsUsage(params?: DashboardPartsUsageParams) {
+  const query = new URLSearchParams();
+  if (params?.period) query.append('period', params.period);
+  if (params?.device_type && params.device_type !== 'all') query.append('device_type', params.device_type);
+  if (params?.date_start) query.append('date_start', params.date_start);
+  if (params?.date_end) query.append('date_end', params.date_end);
+  const qStr = query.toString();
+  return api.get(`/dashboard/parts-usage${qStr ? `?${qStr}` : ''}`);
+}
+
+
 
 // --- Slips ---
 // GET  /api/slips     → รายการสลิปของ user
@@ -408,8 +458,70 @@ export function getLookupDeviceTypes() {
   return api.get('/lookup/device-types');
 }
 
-export function getLookupBrands() {
-  return api.get('/lookup/brands');
+export function getLookupBrands(deviceTypeId?: number | string) {
+  let url = '/lookup/brands';
+  if (deviceTypeId) url += `?device_type_id=${deviceTypeId}`;
+  return api.get(url);
+}
+
+// --- Catalog Management (Manager) ---
+export function getCatalogDeviceTypes() {
+  return api.get('/catalog/device-types');
+}
+
+export function createCatalogDeviceType(data: { device_type_name: string }) {
+  return api.post('/catalog/device-types', data);
+}
+
+export function updateCatalogDeviceType(id: number | string, data: { device_type_name: string }) {
+  return api.put(`/catalog/device-types/${id}`, data);
+}
+
+export function deleteCatalogDeviceType(id: number | string) {
+  return api.delete(`/catalog/device-types/${id}`);
+}
+
+export function getCatalogBrands(deviceTypeId?: number | string, search?: string) {
+  let url = '/catalog/brands';
+  const params: string[] = [];
+  if (deviceTypeId) params.push(`device_type_id=${deviceTypeId}`);
+  if (search) params.push(`search=${encodeURIComponent(search)}`);
+  if (params.length > 0) url += `?${params.join('&')}`;
+  return api.get(url);
+}
+
+export function createCatalogBrand(data: { brand_name: string; device_type_ids?: number[] }) {
+  return api.post('/catalog/brands', data);
+}
+
+export function updateCatalogBrand(id: number | string, data: { brand_name: string; device_type_ids?: number[] }) {
+  return api.put(`/catalog/brands/${id}`, data);
+}
+
+export function deleteCatalogBrand(id: number | string) {
+  return api.delete(`/catalog/brands/${id}`);
+}
+
+export function getCatalogModels(params?: { brand_id?: number | string; device_type_id?: number | string; search?: string }) {
+  let url = '/catalog/models';
+  const queryParts: string[] = [];
+  if (params?.brand_id) queryParts.push(`brand_id=${params.brand_id}`);
+  if (params?.device_type_id) queryParts.push(`device_type_id=${params.device_type_id}`);
+  if (params?.search) queryParts.push(`search=${encodeURIComponent(params.search)}`);
+  if (queryParts.length > 0) url += `?${queryParts.join('&')}`;
+  return api.get(url);
+}
+
+export function createCatalogModel(data: { model_name: string; brand_id: number; device_type_id: number }) {
+  return api.post('/catalog/models', data);
+}
+
+export function updateCatalogModel(id: number | string, data: { model_name: string; brand_id: number; device_type_id: number }) {
+  return api.put(`/catalog/models/${id}`, data);
+}
+
+export function deleteCatalogModel(id: number | string) {
+  return api.delete(`/catalog/models/${id}`);
 }
 
 export function getLookupModels(brandId?: number | string, deviceTypeId?: number | string) {

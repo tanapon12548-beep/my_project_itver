@@ -27,6 +27,7 @@ import QuotationFilterTabs from '@/components/Technicain_quotation/QuotationFilt
 import QuotationCard from '@/components/Technicain_quotation/QuotationCard';
 import QuotationTable from '@/components/Technicain_quotation/QuotationTable';
 import QuotationEmptyState from '@/components/Technicain_quotation/QuotationEmptyState';
+import { canEditOrDeleteQuote } from '@/components/Technicain_quotation/QuotationStatusBadge';
 
 // Types
 import type { QuotationFilter, QuotationItem } from '@/types/quotation';
@@ -129,6 +130,15 @@ export default function TechnicianQuotationScreen() {
   });
 
   const handlePromptDelete = (item: QuotationItem) => {
+    if (!canEditOrDeleteQuote(item)) {
+      setAlertConfig({
+        visible: true,
+        title: 'ไม่อนุญาตให้ลบ',
+        message: 'สามารถลบได้เฉพาะใบเสนอราคาที่อยู่ในสถานะ "รอการอนุมัติ" หรือ "ขอแก้ไข" เท่านั้น',
+        type: 'warning',
+      });
+      return;
+    }
     setDeletingId(item.quotation_id);
     setDeletingQuoteNo(item.quote_no || `QUO-${item.quotation_id}`);
     setDeleteModalVisible(true);
@@ -170,6 +180,15 @@ export default function TechnicianQuotationScreen() {
   };
 
   const handleEdit = (item: QuotationItem) => {
+    if (!canEditOrDeleteQuote(item)) {
+      setAlertConfig({
+        visible: true,
+        title: 'ไม่อนุญาตให้แก้ไข',
+        message: 'สามารถแก้ไขได้เฉพาะใบเสนอราคาที่อยู่ในสถานะ "รอการอนุมัติ" หรือ "ขอแก้ไข" เท่านั้น',
+        type: 'warning',
+      });
+      return;
+    }
     router.push({
       pathname: '/make-quote',
       params: {
@@ -280,6 +299,16 @@ export default function TechnicianQuotationScreen() {
         quotationId={selectedQuoteId}
         onClose={() => setDetailModalVisible(false)}
         onEdit={(qId, jNo, jId, cName) => {
+          const targetQuote = quotations.find((q) => q.quotation_id === qId);
+          if (targetQuote && !canEditOrDeleteQuote(targetQuote)) {
+            setAlertConfig({
+              visible: true,
+              title: 'ไม่อนุญาตให้แก้ไข',
+              message: 'สามารถแก้ไขได้เฉพาะใบเสนอราคาที่อยู่ในสถานะ "รอการอนุมัติ" หรือ "ขอแก้ไข" เท่านั้น',
+              type: 'warning',
+            });
+            return;
+          }
           router.push({
             pathname: '/make-quote',
             params: {

@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { QuotationItem } from '@/types/quotation';
-import QuotationStatusBadge, { isModificationQuote } from './QuotationStatusBadge';
+import QuotationStatusBadge, { isModificationQuote, canEditOrDeleteQuote } from './QuotationStatusBadge';
 
 interface QuotationCardProps {
   item: QuotationItem;
@@ -113,26 +113,30 @@ export default function QuotationCard({
         >
           <Text className="text-[13px] font-bold text-sky-700 font-heading">รายละเอียด</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => onEdit(item)}
-          activeOpacity={0.8}
-          style={{ minHeight: 44, backgroundColor: isModification ? '#F59E0B' : '#2563EB' }}
-          className="flex-1 rounded-xl flex-row items-center justify-center gap-1.5 shadow-sm"
-        >
-          <Ionicons name="create-outline" size={15} color="#ffffff" />
-          <Text className="text-[13px] font-bold text-white font-heading">แก้ไข</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => onPromptDelete(item)}
-          activeOpacity={0.75}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={{ minHeight: 44, minWidth: 44 }}
-          accessibilityLabel={`ลบ ${item.quote_no}`}
-          accessibilityRole="button"
-          className="bg-rose-50 border border-rose-200 rounded-xl items-center justify-center px-3 active:bg-rose-100"
-        >
-          <Ionicons name="trash-outline" size={17} color="#e11d48" />
-        </TouchableOpacity>
+        {canEditOrDeleteQuote(item) ? (
+          <>
+            <TouchableOpacity
+              onPress={() => onEdit(item)}
+              activeOpacity={0.8}
+              style={{ minHeight: 44, backgroundColor: isModification ? '#F59E0B' : '#2563EB' }}
+              className="flex-1 rounded-xl flex-row items-center justify-center gap-1.5 shadow-sm"
+            >
+              <Ionicons name="create-outline" size={15} color="#ffffff" />
+              <Text className="text-[13px] font-bold text-white font-heading">แก้ไข</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => onPromptDelete(item)}
+              activeOpacity={0.75}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={{ minHeight: 44, minWidth: 44 }}
+              accessibilityLabel={`ลบ ${item.quote_no}`}
+              accessibilityRole="button"
+              className="bg-rose-50 border border-rose-200 rounded-xl items-center justify-center px-3 active:bg-rose-100"
+            >
+              <Ionicons name="trash-outline" size={17} color="#e11d48" />
+            </TouchableOpacity>
+          </>
+        ) : null}
       </View>
     </TouchableOpacity>
   );
