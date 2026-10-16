@@ -11,8 +11,9 @@ import {
   getDashboardCategory,
   getDashboardMetrics,
   getDashboardPartsUsage,
-  getDashboardTeamPerformance,
+  getDashboardSymptoms,
   getDashboardTrend,
+  getDashboardWorkActivity,
   getRepairs,
 } from '@/lib/api';
 
@@ -22,8 +23,10 @@ import DashboardFilters from '@/components/Shared_Dashboard/DashboardFilters';
 import Header from '@/components/Shared_Dashboard/Header';
 import MetricCards from '@/components/Shared_Dashboard/MetricCards';
 import PartsUsageChart, { type PartUsageItem } from '@/components/Shared_Dashboard/PartsUsageChart';
-import TeamPerformanceChart, { type TeamMemberPerformance } from '@/components/Shared_Dashboard/TeamPerformanceChart';
-import TrendChart from '@/components/Shared_Dashboard/TrendChart';
+import SymptomsChart, { type SymptomItem } from '@/components/Shared_Dashboard/SymptomsChart';
+import RepairTrendChart from '@/components/Shared_Dashboard/RepairTrendChart';
+import RevenueTrendChart from '@/components/Shared_Dashboard/RevenueTrendChart';
+import WorkActivityChart, { type WorkActivityMember } from '@/components/Shared_Dashboard/WorkActivityChart';
 
 interface DashboardScreenProps {
   /** 'staff' or 'manager' — passed to getDashboardMetrics */
@@ -45,6 +48,9 @@ const STATUS_CONFIG: Record<number, { label: string; color: string; bg: string }
 export default function DashboardScreen({ role }: DashboardScreenProps) {
   const router = useRouter();
 
+  /** ข้อมูลการเงิน (รายได้ / ต้นทุน / กำไร) เห็นได้เฉพาะผู้จัดการ — พนักงานเห็นแค่จำนวนงาน */
+  const canViewRevenue = role === 'manager';
+
   // Filters
   const [timeFilter, setTimeFilter] = useState<'day' | 'month' | 'year'>('day');
   const [deviceType, setDeviceType] = useState('all');
@@ -55,11 +61,14 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [metrics, setMetrics] = useState({
     totalRevenue: 0,
+    partsCost: 0,
+    grossProfit: 0,
     totalJobs: 0,
     completedJobs: 0,
     pendingJobs: 0,
   });
   const [trendData, setTrendData] = useState<{ value: number; label: string }[]>([]);
+  const [revenueTrendData, setRevenueTrendData] = useState<{ value: number; label: string }[]>([]);
   const [categoryData, setCategoryData] = useState<{
     pc: number;
     laptop: number;
@@ -67,7 +76,8 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
     other?: number;
     total?: number;
   }>({ pc: 0, laptop: 0, printer: 0, other: 0, total: 0 });
-  const [teamData, setTeamData] = useState<TeamMemberPerformance[]>([]);
+  const [workActivityData, setWorkActivityData] = useState<WorkActivityMember[]>([]);
+  const [symptomsData, setSymptomsData] = useState<SymptomItem[]>([]);
   const [partsUsageData, setPartsUsageData] = useState<PartUsageItem[]>([]);
   const [recentRepairs, setRecentRepairs] = useState<any[]>([]);
 
@@ -84,7 +94,9 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
         date_end: dateEnd,
       };
 
-      const [metricsRes, trendRes, categoryRes, teamRes, partsRes, repairsRes] = await Promise.all([
+      const showRevenue = role === 'manager';
+
+      const [metricsRes, trendRes, revenueTrendRes, categoryRes, workRes, symptomsRes, partsRes, repairsRes] = await Promise.all([
         getDashboardMetrics(filterParams),
         getDashboardTrend({
           period: timeFilter,
@@ -92,13 +104,29 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
           date_start: dateStart,
           date_end: dateEnd,
         }),
+        // แนวโน้มรายได้ = ข้อมูลการเงิน → ไม่เรียกเลยถ้าไม่ใช่ผู้จัดการ (backend กันซ้ำอีกชั้นด้วย 403)
+        showRevenue
+          ? getDashboardTrend({
+              period: timeFilter,
+              metric_type: 'revenue',
+              device_type: deviceType,
+              date_start: dateStart,
+              date_end: dateEnd,
+            })
+          : Promise.resolve(null),
         getDashboardCategory({
           period: timeFilter,
           device_type: deviceType,
           date_start: dateStart,
           date_end: dateEnd,
         }),
-        getDashboardTeamPerformance({
+        getDashboardWorkActivity({
+          period: timeFilter,
+          device_type: deviceType,
+          date_start: dateStart,
+          date_end: dateEnd,
+        }),
+        getDashboardSymptoms({
           period: timeFilter,
           device_type: deviceType,
           date_start: dateStart,
@@ -114,7 +142,8 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
       ]);
 
       if (metricsRes?.success && metricsRes.data) {
-        setMetrics(metricsRes.data);
+        // merge กับค่าเดิม เพื่อกันฟิลด์ใหม่ (partsCost/grossProfit) หายถ้า backend ยังไม่รีสตาร์ท
+        setMetrics((prev) => ({ ...prev, ...metricsRes.data }));
       }
 
       if (trendRes?.success && Array.isArray(trendRes.data)) {
@@ -123,14 +152,26 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
         setTrendData([]);
       }
 
+      if (revenueTrendRes?.success && Array.isArray(revenueTrendRes.data)) {
+        setRevenueTrendData(revenueTrendRes.data);
+      } else {
+        setRevenueTrendData([]);
+      }
+
       if (categoryRes?.success && categoryRes.data) {
         setCategoryData(categoryRes.data);
       }
 
-      if (teamRes?.success && Array.isArray(teamRes.data)) {
-        setTeamData(teamRes.data);
+      if (workRes?.success && Array.isArray(workRes.data)) {
+        setWorkActivityData(workRes.data);
       } else {
-        setTeamData([]);
+        setWorkActivityData([]);
+      }
+
+      if (symptomsRes?.success && Array.isArray(symptomsRes.data)) {
+        setSymptomsData(symptomsRes.data);
+      } else {
+        setSymptomsData([]);
       }
 
       if (partsRes?.success && Array.isArray(partsRes.data)) {
@@ -177,9 +218,12 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
           onChangeDateStart={setDateStart}
           onChangeDateEnd={setDateEnd}
         />
-        {/* KPI Metrics */}
+        {/* KPI Metrics — พนักงาน (Staff) ไม่เห็นตัวเลขการเงิน */}
         <MetricCards
+          showRevenue={canViewRevenue}
           totalRevenue={metrics.totalRevenue}
+          partsCost={metrics.partsCost}
+          grossProfit={metrics.grossProfit}
           totalJobs={metrics.totalJobs}
           completedJobs={metrics.completedJobs}
           pendingJobs={metrics.pendingJobs}
@@ -255,13 +299,25 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
           </View>
         </View>
 
-        {/* Trend Chart */}
-        <TrendChart
+        {/* Repair Count Trend Chart (แนวโน้มจำนวนงานซ่อม) */}
+        <RepairTrendChart
           timeFilter={timeFilter}
           deviceType={deviceType}
           data={trendData}
           isLoading={isLoading}
         />
+
+        {/* Revenue Trend Chart (แนวโน้มรายได้) — เฉพาะผู้จัดการ */}
+        {canViewRevenue && (
+          <RevenueTrendChart
+            timeFilter={timeFilter}
+            deviceType={deviceType}
+            data={revenueTrendData}
+            isLoading={isLoading}
+            partsCost={metrics.partsCost}
+            grossProfit={metrics.grossProfit}
+          />
+        )}
 
         {/* Category Distribution Chart */}
         <CategoryChart
@@ -275,20 +331,29 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
           isLoading={isLoading}
         />
 
-        {/* Team Performance Bar Chart */}
-        <TeamPerformanceChart
-          data={teamData}
+        {/* Work Activity Bar Chart (แทนกราฟประสิทธิภาพทีม) */}
+        {/* <WorkActivityChart
+          data={workActivityData}
+          deviceType={deviceType}
+          timeFilter={timeFilter}
+          isLoading={isLoading}
+        /> */}
+
+        {/* Symptoms Chart (อาการเสียที่พบบ่อย) */}
+        <SymptomsChart
+          data={symptomsData}
           deviceType={deviceType}
           timeFilter={timeFilter}
           isLoading={isLoading}
         />
 
-        {/* Parts Usage Chart (สถิติการใช้อะไหล่) */}
+        {/* Parts Usage Chart (สถิติการใช้อะไหล่) — พนักงานเห็นแค่จำนวน ไม่เห็นมูลค่า */}
         <PartsUsageChart
           data={partsUsageData}
           deviceType={deviceType}
           timeFilter={timeFilter}
           isLoading={isLoading}
+          showCost={canViewRevenue}
         />
       </ScrollView>
     </View>

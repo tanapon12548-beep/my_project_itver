@@ -57,6 +57,35 @@ export default function PartDetailsModal({ visible, item, onClose, onEdit }: Par
                   : '-'}
               </Text>
             </View>
+
+            {isPart && (
+              <>
+                <View className="flex-row justify-between items-start py-2.5">
+                  <Text className="text-sm text-slate-500 flex-1">ราคาทุน</Text>
+                  <Text className="text-sm font-bold text-amber-700 flex-[2] text-right font-heading">
+                    {Number(item.cost_price || 0).toLocaleString()} บาท
+                  </Text>
+                </View>
+
+                <View className="flex-row justify-between items-start py-2.5">
+                  <Text className="text-sm text-slate-500 flex-1">กำไรต่อชิ้น</Text>
+                  {(() => {
+                    const sell = Number(item.selling_price) || 0;
+                    const cost = Number(item.cost_price) || 0;
+                    const profit = sell - cost;
+                    return (
+                      <Text
+                        className={`text-sm font-bold flex-[2] text-right font-heading ${profit < 0 ? 'text-red-600' : 'text-emerald-600'
+                          }`}
+                      >
+                        {profit.toLocaleString()} บาท
+                        {sell > 0 ? ` (${Math.round((profit / sell) * 100)}%)` : ''}
+                      </Text>
+                    );
+                  })()}
+                </View>
+              </>
+            )}
           </View>
 
           <View className="flex-row justify-between gap-2.5">

@@ -29,6 +29,7 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
   const [itemType, setItemType] = useState<'parts' | 'services'>('parts');
   const [itemName, setItemName] = useState('');
   const [sellingPrice, setSellingPrice] = useState('');
+  const [costPrice, setCostPrice] = useState('');
   const [loading, setLoading] = useState(false);
 
   const [alertConfig, setAlertConfig] = useState<{
@@ -49,6 +50,7 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
       setItemType(itemToEdit.item_type_id === 2 ? 'services' : 'parts');
       setItemName(itemToEdit.item_name || '');
       setSellingPrice(itemToEdit.selling_price ? String(itemToEdit.selling_price) : '');
+      setCostPrice(itemToEdit.cost_price ? String(itemToEdit.cost_price) : '');
     } else {
       resetForm();
     }
@@ -58,6 +60,7 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
     setItemType('parts');
     setItemName('');
     setSellingPrice('');
+    setCostPrice('');
   };
 
   const showAlert = (
@@ -87,10 +90,35 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
       return;
     }
 
+    // ราคาทุนมีเฉพาะอะไหล่ (ค่าบริการไม่มีต้นทุนสินค้า) → ใช้คิดกำไรขั้นต้นในแดชบอร์ด
+    // บังคับต้องกรอกและมากกว่า 0 เพื่อไม่ให้กำไรขั้นต้นสูงเกินจริง
+    const isPart = itemType === 'parts';
+    let costNum = 0;
+    if (isPart) {
+      if (costPrice.trim() === '') {
+        showAlert('ข้อผิดพลาด', 'กรุณากรอกราคาทุนของอะไหล่ (ต้องมากกว่า 0 บาท)', 'warning');
+        return;
+      }
+      costNum = parseFloat(costPrice);
+      if (isNaN(costNum) || costNum <= 0) {
+        showAlert('ข้อผิดพลาด', 'ราคาทุนของอะไหล่ต้องมากกว่า 0 บาท', 'warning');
+        return;
+      }
+      if (costNum > priceNum) {
+        showAlert(
+          'ข้อผิดพลาด',
+          'ราคาทุนต้องไม่สูงกว่าราคาขาย มิฉะนั้นกำไรขั้นต้นจะติดลบ',
+          'warning'
+        );
+        return;
+      }
+    }
+
     const payload = {
       item_name: itemName.trim(),
-      item_type_id: itemType === 'parts' ? 1 : 2,
+      item_type_id: isPart ? 1 : 2,
       selling_price: priceNum,
+      cost_price: costNum,
     };
 
     setLoading(true);
@@ -191,6 +219,43 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
               editable={!loading}
             />
           </View>
+
+          {itemType === 'parts' && (
+            <View className="mb-4">
+              <Text className="text-sm font-medium text-slate-800 mb-1.5 font-heading">
+                ราคาทุน / ต้นทุนอะไหล่ (บาท) <Text className="text-red-500">*</Text>
+              </Text>
+              <TextInput
+                className="border border-slate-200 rounded-xl px-3.5 h-12 bg-slate-50 text-slate-800 font-body text-sm"
+                placeholder="กรอกราคาทุนที่ร้านซื้อมา (ต้องมากกว่า 0)"
+                keyboardType="numeric"
+                placeholderTextColor="#94a3b8"
+                value={costPrice}
+                onChangeText={(text) => setCostPrice(text.replace(/[^0-9.]/g, ''))}
+                editable={!loading}
+              />
+              {(() => {
+                const sell = parseFloat(sellingPrice);
+                const cost = parseFloat(costPrice);
+                if (isNaN(sell) || isNaN(cost) || cost <= 0) {
+                  return (
+                    <Text className="text-[11px] text-slate-400 font-body mt-1.5">
+                      จำเป็นต้องกรอก — ใช้คำนวณกำไรขั้นต้น (รายรับรวม − ต้นทุนอะไหล่)
+                    </Text>
+                  );
+                }
+                const profit = sell - cost;
+                return (
+                  <Text
+                    className={`text-[11px] font-body mt-1.5 ${profit < 0 ? 'text-red-500' : 'text-emerald-600'}`}
+                  >
+                    กำไรต่อชิ้น ฿{profit.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                    {sell > 0 ? ` (${Math.round((profit / sell) * 100)}%)` : ''}
+                  </Text>
+                );
+              })()}
+            </View>
+          )}
 
           <TouchableOpacity
             className={`bg-[#DC2626] h-12 rounded-xl justify-center items-center mt-2.5 shadow-sm active:opacity-90 ${loading ? 'opacity-70' : ''}`}

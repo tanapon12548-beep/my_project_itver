@@ -48,7 +48,6 @@ router.get('/:id', auth, ctrl.getById);
  *             properties:
  *               device_id: { type: integer }
  *               symptom: { type: string }
- *               appointment_date: { type: string, format: date }
  *               status_id: { type: integer }
  *     responses:
  *       201: { description: สร้างสำเร็จ }

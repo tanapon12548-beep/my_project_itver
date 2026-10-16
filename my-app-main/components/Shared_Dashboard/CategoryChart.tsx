@@ -6,6 +6,8 @@ import { ActivityIndicator, Text, View, useWindowDimensions } from 'react-native
 import { Ionicons } from '@expo/vector-icons';
 import { PieChart } from 'react-native-gifted-charts';
 
+import { getDeviceTypeSuffix } from '@/lib/deviceTypeLabel';
+
 interface CategoryChartProps {
   pcCount?: number;
   laptopCount?: number;
@@ -140,7 +142,7 @@ export default function CategoryChart({
               สัดส่วนอุปกรณ์ตามประเภท
             </Text>
             <Text className="text-[11px] text-slate-400 font-body">
-              จำแนกตามชนิดอุปกรณ์ • ซิงค์ตามตัวกรอง{deviceType && deviceType !== 'all' ? ` (${deviceType === 'pc' ? 'คอมพิวเตอร์' : deviceType === 'laptop' ? 'โน๊ตบุ๊ค' : 'ปริ้นเตอร์'})` : ''}
+              จำแนกตามชนิดอุปกรณ์ • ซิงค์ตามตัวกรอง{getDeviceTypeSuffix(deviceType)}
             </Text>
           </View>
         </View>

@@ -16,16 +16,33 @@ interface PartTableProps {
   headerColor?: string;
   onPressDetails?: (item: any) => void;
   onPressDelete?: (item: any) => void;
+  /** แสดงราคาทุนต่อหน่วยใต้ราคาขาย (ใช้กับตารางอะไหล่ เพื่อดูกำไรต่อชิ้น) */
+  showCost?: boolean;
 }
 
-export default function PartTable({ title, data, headerColor = '#0F172A', onPressDetails, onPressDelete }: PartTableProps) {
+export default function PartTable({ title, data, headerColor = '#0F172A', onPressDetails, onPressDelete, showCost = false }: PartTableProps) {
+  // เตือนเมื่อยังมีอะไหล่ที่ไม่ได้กรอกราคาทุน (ทุน = 0 จะทำให้กำไรขั้นต้นสูงเกินจริง)
+  const missingCostCount = showCost
+    ? data.filter((item) => Number(item.item_type_id) !== 2 && !(Number(item.cost_price) > 0)).length
+    : 0;
+
   return (
     <View className="bg-white mb-6 rounded-2xl overflow-hidden border border-slate-200 shadow-sm">
       {/* Table Header Strip */}
       <View className="py-3 px-4 flex-row items-center justify-between" style={{ backgroundColor: headerColor }}>
         <Text className="text-white font-bold text-sm font-heading">{title}</Text>
-        <View className="bg-white/20 px-2.5 py-0.5 rounded-full">
-          <Text className="text-white text-xs font-bold font-heading">{data.length} รายการ</Text>
+        <View className="flex-row items-center gap-1.5">
+          {missingCostCount > 0 && (
+            <View className="bg-red-500/90 px-2.5 py-0.5 rounded-full flex-row items-center gap-1">
+              <Ionicons name="alert-circle" size={11} color="#FFFFFF" />
+              <Text className="text-white text-xs font-bold font-heading">
+                ยังไม่ใส่ทุน {missingCostCount}
+              </Text>
+            </View>
+          )}
+          <View className="bg-white/20 px-2.5 py-0.5 rounded-full">
+            <Text className="text-white text-xs font-bold font-heading">{data.length} รายการ</Text>
+          </View>
         </View>
       </View>
 
@@ -35,9 +52,8 @@ export default function PartTable({ title, data, headerColor = '#0F172A', onPres
           ชื่อรายการ / หมวดหมู่
         </Text>
         <Text className="font-bold text-xs text-slate-600 text-right font-heading min-w-[85px]">
-          ราคาขาย (บาท)
-        </Text>
-        {(onPressDetails || onPressDelete) && (
+          {showCost ? 'ราคาขาย / ต้นทุน' : 'ราคาขาย (บาท)'}
+        </Text>        {(onPressDetails || onPressDelete) && (
           <Text className="font-bold text-xs text-slate-600 text-center w-[76px] font-heading">
             จัดการ
           </Text>
@@ -93,9 +109,25 @@ export default function PartTable({ title, data, headerColor = '#0F172A', onPres
                 </View>
               </View>
 
-              <Text className="text-sm font-bold text-slate-900 text-right font-heading min-w-[85px]">
-                ฿{item.selling_price ? Number(item.selling_price).toLocaleString() : '-'}
-              </Text>
+              <View className="min-w-[85px] items-end">
+                <Text className="text-sm font-bold text-slate-900 text-right font-heading">
+                  ฿{item.selling_price ? Number(item.selling_price).toLocaleString() : '-'}
+                </Text>
+                {showCost && !isService && (
+                  Number(item.cost_price) > 0 ? (
+                    <Text className="text-[10px] text-slate-400 font-body mt-0.5">
+                      ทุน ฿{Number(item.cost_price).toLocaleString()}
+                    </Text>
+                  ) : (
+                    <View className="flex-row items-center gap-0.5 mt-0.5">
+                      <Ionicons name="alert-circle" size={10} color="#DC2626" />
+                      <Text className="text-[10px] font-bold text-red-600 font-heading">
+                        ยังไม่ใส่ทุน
+                      </Text>
+                    </View>
+                  )
+                )}
+              </View>
 
               {(onPressDetails || onPressDelete) && (
                 <View className="w-[76px] flex-row items-center justify-end gap-1.5">

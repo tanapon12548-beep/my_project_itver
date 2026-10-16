@@ -106,7 +106,7 @@ export default function CustomerLockedCard({
           <View className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex-row items-start">
             <Ionicons name="information-circle" size={18} color="#0284c7" style={{ marginRight: 8, marginTop: 1 }} />
             <Text className="text-xs text-slate-600 font-body flex-1 leading-5">
-              บันทึกความประสงค์เรียบร้อยแล้ว กรุณาติดต่อชำระเงินและรับเครื่องคืนที่เคาน์เตอร์ IT Vertex Service ในวันนัดหมาย
+              บันทึกความประสงค์เรียบร้อยแล้ว กรุณาติดต่อชำระเงินและรับเครื่องคืนที่เคาน์เตอร์ IT Vertex Service ในวันและเวลาทำการของร้าน
             </Text>
           </View>
         </View>

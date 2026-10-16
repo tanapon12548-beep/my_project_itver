@@ -186,11 +186,11 @@ export default function StaffReceiveScreen() {
       const createdDeviceId = devRes.data.device_id;
 
       // 2. สร้างงานซ่อมผ่าน POST /api/repairs (ตรงตาม ER: repair_job table)
+      // หมายเหตุ: วันที่ของระบบคือ "วันรับเครื่องมา" = created_at และ "วันรับเครื่องคืน" = return_date (บันทึกตอนลูกค้าเซ็นรับเครื่อง)
       const repairPayload: any = {
         device_id: createdDeviceId,
         symptom_id: null,
         symptom_details: symptomDetails.trim() || 'รับซ่อมเครื่อง',
-        appointment_date: new Date().toISOString().slice(0, 10),
         status_id: 1, // 1 = รอตรวจเช็ค
       };
 

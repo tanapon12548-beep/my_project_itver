@@ -7,7 +7,11 @@ export interface InventoryItem {
   type_name?: string;
   category?: string;
   price: number | string;
+  /** ราคาขาย (ชื่อจริงที่ API ส่งกลับ) */
+  selling_price?: number | string;
   cost?: number | string;
+  /** ราคาทุน/ต้นทุนอะไหล่ (ชื่อจริงที่ API ส่งกลับ) — ใช้คิดกำไรขั้นต้น */
+  cost_price?: number | string;
   unit?: string;
   quantity?: number;
   stock_quantity?: number;

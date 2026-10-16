@@ -181,7 +181,6 @@ export default function TechnicianDetailScreen() {
             created_at: dataJob.created_at || new Date().toISOString(),
             received_by: dataJob.received_by || '-',
             return_date: dataJob.return_date || null,
-            appointment_date: dataJob.appointment_date || null,
             payment_date: dataJob.payment_date || null,
             payment_method_id: dataJob.payment_method_id || null,
             payment_method_name: dataJob.payment_method_name || null,

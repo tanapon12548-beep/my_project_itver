@@ -25,18 +25,14 @@ export default function SchedulePickupScreen() {
     jobId?: string;
     id?: string;
     amount?: string;
-    pickupDate?: string;
-    appointmentDate?: string;
   }>();
 
   const targetJobId = params.jobId || params.id;
-  const initialDateStr = params.pickupDate || params.appointmentDate;
 
   const [loading, setLoading] = useState(false);
-  const [appointmentDate, setAppointmentDate] = useState<string | null>(initialDateStr || null);
   const [jobInfo, setJobInfo] = useState<any>(null);
 
-  // Load repair job data if appointmentDate is not provided directly
+  // โหลดข้อมูลงานซ่อม เพื่อแสดงเลขที่งาน / ยอดเงิน
   useEffect(() => {
     async function loadData() {
       if (!targetJobId) return;
@@ -45,9 +41,6 @@ export default function SchedulePickupScreen() {
         const res = await getRepair(targetJobId);
         if (res.success && res.data) {
           setJobInfo(res.data);
-          if (res.data.appointment_date) {
-            setAppointmentDate(res.data.appointment_date);
-          }
         }
       } catch (err) {
         console.error('Error fetching job in schedule-pickup:', err);
@@ -121,7 +114,7 @@ export default function SchedulePickupScreen() {
           <Ionicons name="chevron-back" size={24} color="#ffffff" />
         </TouchableOpacity>
         <View className="flex-1">
-          <Text className="text-white text-lg font-bold font-heading">ปฏิทินกำหนดวันรับเครื่อง</Text>
+          <Text className="text-white text-lg font-bold font-heading">ปฏิทินวันเปิดร้าน (มารับเครื่อง)</Text>
           {displayJobNo ? (
             <Text className="text-red-100 text-xs font-body">{displayJobNo}</Text>
           ) : null}
@@ -140,7 +133,7 @@ export default function SchedulePickupScreen() {
           <View className="bg-white rounded-2xl p-5 shadow-sm border border-slate-100 mb-4">
             <View className="flex-row justify-between items-center mb-1">
               <Text className="text-base font-bold text-slate-800 font-heading">
-                กำหนดวันที่สามารถมารับเครื่อง
+                วันที่สามารถมารับเครื่อง
               </Text>
               <View className="bg-red-50 px-2.5 py-1 rounded-full border border-red-200 flex-row items-center">
                 <Ionicons name="calendar-outline" size={13} color="#D32F2F" style={{ marginRight: 4 }} />
@@ -331,7 +324,6 @@ export default function SchedulePickupScreen() {
                   jobId: String(targetJobId),
                   job_no: displayJobNo,
                   amount: params.amount || String(jobInfo?.total_amount || ''),
-                  pickupDate: appointmentDate || '',
                 },
               });
             }}

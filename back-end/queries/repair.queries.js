@@ -86,8 +86,8 @@ exports.GET_ACTION_LOGS = `
 `;
 
 exports.INSERT_REPAIR_JOB = `
-  INSERT INTO repair_job (device_id, symptom_details, appointment_date, status_id)
-  VALUES ($1, $2, $3, $4)
+  INSERT INTO repair_job (device_id, symptom_details, status_id)
+  VALUES ($1, $2, $3)
   RETURNING *
 `;
 
@@ -95,14 +95,13 @@ exports.UPDATE_REPAIR_JOB = `
   UPDATE repair_job SET
     device_id = COALESCE($1, device_id), 
     symptom_details = COALESCE($2, symptom_details), 
-    appointment_date = COALESCE($3, appointment_date), 
-    status_id = COALESCE($4, status_id),
-    total_amount = COALESCE($5, total_amount), 
-    slip_image = COALESCE($6, slip_image), 
-    payment_date = COALESCE($7, payment_date), 
-    payment_method_id = COALESCE($8, payment_method_id), 
-    quotation_id = COALESCE($9, quotation_id)
-  WHERE job_id = $10
+    status_id = COALESCE($3, status_id),
+    total_amount = COALESCE($4, total_amount), 
+    slip_image = COALESCE($5, slip_image), 
+    payment_date = COALESCE($6, payment_date), 
+    payment_method_id = COALESCE($7, payment_method_id), 
+    quotation_id = COALESCE($8, quotation_id)
+  WHERE job_id = $9
   RETURNING *
 `;
 

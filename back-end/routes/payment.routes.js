@@ -18,7 +18,6 @@ const role = require('../middleware/role');
  *             properties:
  *               job_id: { type: integer }
  *               payment_method: { type: string, enum: [cash, transfer] }
- *               pickup_date: { type: string, format: date }
  *               slip_image: { type: string, format: binary }
  *         application/json:
  *           schema:
@@ -26,7 +25,6 @@ const role = require('../middleware/role');
  *             properties:
  *               job_id: { type: integer }
  *               payment_method: { type: string, enum: [cash, transfer] }
- *               pickup_date: { type: string, format: date }
  *     responses:
  *       201: { description: บันทึกการชำระเงินสำเร็จ }
  */

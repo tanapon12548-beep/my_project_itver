@@ -14,10 +14,9 @@ exports.UPDATE_PAYMENT_INFO = `
       payment_method_id = $1,
       payment_date = CURRENT_DATE,
       slip_image = COALESCE($2, slip_image),
-      appointment_date = COALESCE($3, appointment_date),
       payment_verified = false,
       payment_reject_reason = NULL
-  WHERE job_id = $4
+  WHERE job_id = $3
 `;
 
 exports.INSERT_PAYMENT_ACTION_LOG = `

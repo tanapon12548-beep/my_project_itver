@@ -10,6 +10,44 @@ const {
 } = require('../constants');
 
 /**
+ * ตรวจรายการ "อะไหล่" ในใบเสนอราคา: ต้องเป็นอะไหล่ที่ "มีอยู่ในคลัง" เท่านั้น
+ *
+ * เหตุผล: ถ้าปล่อยให้สร้างอะไหล่ใหม่จากใบเสนอราคา (พิมพ์ชื่อเอง) อะไหล่นั้นจะถูกสร้างด้วย
+ * cost_price = 0 ทำให้ "ต้นทุนอะไหล่" ในแดชบอร์ดต่ำกว่าจริง → กำไรขั้นต้นสูงเกินจริง
+ * ทางแก้คือบังคับให้ผู้จัดการเพิ่มอะไหล่ (พร้อมราคาทุน) ที่หน้าจัดการรายการก่อน
+ *
+ * เรียก "ก่อน" เริ่ม transaction เพื่อไม่ให้มีข้อมูลค้างใน DB เมื่อ validation ไม่ผ่าน
+ * @returns {{ error?: string }}
+ */
+async function assertPartsExistInCatalog(parts) {
+  if (!Array.isArray(parts) || parts.length === 0) return {};
+
+  for (const p of parts) {
+    const itemId = parseInt(p?.item_id, 10);
+    if (Number.isInteger(itemId) && itemId > 0) continue; // เลือกจากคลังมาแล้ว
+
+    const name = String(p?.name || '').trim();
+    if (!name) {
+      return { error: 'พบรายการอะไหล่ที่ยังไม่ได้เลือกจากคลัง กรุณาเลือกอะไหล่จากคลังอีกครั้ง' };
+    }
+
+    const { rows } = await pool.query(quotationQueries.FIND_ITEM_BY_NAME, [name]);
+    if (rows.length === 0) {
+      return {
+        error: `ไม่พบอะไหล่ "${name}" ในคลัง — ระบบต้องใช้อะไหล่จากคลังเพื่อคำนวณกำไรขั้นต้น กรุณาเพิ่มรายการนี้ที่หน้าจัดการรายการ (พร้อมกรอกราคาทุน) แล้วเลือกจากคลังอีกครั้ง`,
+      };
+    }
+    if (Number(rows[0].item_type_id) !== ITEM_TYPES.PART) {
+      return {
+        error: `"${name}" ในคลังถูกบันทึกเป็นค่าบริการ ไม่ใช่อะไหล่ กรุณาเลือกอะไหล่รายการอื่นจากคลัง`,
+      };
+    }
+  }
+
+  return {};
+}
+
+/**
  * POST /api/quotations
  */
 exports.create = async (req, res, next) => {
@@ -69,6 +107,14 @@ exports.create = async (req, res, next) => {
     }
 
 
+    // อะไหล่ต้องเลือกจากคลังเท่านั้น (ห้ามสร้างอะไหล่ใหม่จากใบเสนอราคา ไม่งั้นราคาทุนจะเป็น 0)
+    if (!Array.isArray(items) || items.length === 0) {
+      const partsCheck = await assertPartsExistInCatalog(parts);
+      if (partsCheck.error) {
+        return res.status(400).json({ success: false, message: partsCheck.error });
+      }
+    }
+
     // ใช้ Transaction เพื่อให้การบันทึก quotation, repair_job, และ quotation_details สำเร็จพร้อมกัน
     const client = await pool.connect();
     try {
@@ -100,12 +146,15 @@ exports.create = async (req, res, next) => {
             let itemId = p.item_id || null;
             if (!itemId && p.name) {
               const existItem = await client.query(quotationQueries.FIND_ITEM_BY_NAME, [p.name.trim()]);
-              if (existItem.rows.length > 0) {
-                itemId = existItem.rows[0].item_id;
-              } else {
-                const newItem = await client.query(quotationQueries.INSERT_NEW_ITEM, [p.name.trim(), ITEM_TYPES.PART, price]);
-                itemId = newItem.rows[0].item_id;
+              // อะไหล่ต้องมีอยู่ในคลังเท่านั้น (ห้ามสร้างใหม่จากใบ เพราะจะได้ราคาทุน = 0)
+              if (existItem.rows.length === 0 || Number(existItem.rows[0].item_type_id) !== ITEM_TYPES.PART) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({
+                  success: false,
+                  message: `ไม่พบอะไหล่ "${p.name.trim()}" ในคลัง กรุณาเพิ่มรายการนี้ที่หน้าจัดการรายการ (พร้อมกรอกราคาทุน) แล้วเลือกจากคลังอีกครั้ง`,
+                });
               }
+              itemId = existItem.rows[0].item_id;
             }
             combinedItems.push({
               item_id: itemId,
@@ -332,6 +381,14 @@ exports.update = async (req, res, next) => {
       });
     }
 
+    // อะไหล่ต้องเลือกจากคลังเท่านั้น (ห้ามสร้างอะไหล่ใหม่จากใบเสนอราคา ไม่งั้นราคาทุนจะเป็น 0)
+    if (!Array.isArray(items) || items.length === 0) {
+      const partsCheck = await assertPartsExistInCatalog(parts);
+      if (partsCheck.error) {
+        return res.status(400).json({ success: false, message: partsCheck.error });
+      }
+    }
+
     // ใช้ Transaction เพื่อให้การแก้ไขใบเสนอราคาและรายการอะไหล่สำเร็จพร้อมกัน
     const client = await pool.connect();
     try {
@@ -381,12 +438,15 @@ exports.update = async (req, res, next) => {
             let itemId = p.item_id || null;
             if (!itemId && p.name) {
               const existItem = await client.query(quotationQueries.FIND_ITEM_BY_NAME, [p.name.trim()]);
-              if (existItem.rows.length > 0) {
-                itemId = existItem.rows[0].item_id;
-              } else {
-                const newItem = await client.query(quotationQueries.INSERT_NEW_ITEM, [p.name.trim(), ITEM_TYPES.PART, price]);
-                itemId = newItem.rows[0].item_id;
+              // อะไหล่ต้องมีอยู่ในคลังเท่านั้น (ห้ามสร้างใหม่จากใบ เพราะจะได้ราคาทุน = 0)
+              if (existItem.rows.length === 0 || Number(existItem.rows[0].item_type_id) !== ITEM_TYPES.PART) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({
+                  success: false,
+                  message: `ไม่พบอะไหล่ "${p.name.trim()}" ในคลัง กรุณาเพิ่มรายการนี้ที่หน้าจัดการรายการ (พร้อมกรอกราคาทุน) แล้วเลือกจากคลังอีกครั้ง`,
+                });
               }
+              itemId = existItem.rows[0].item_id;
             }
             combinedItems.push({
               item_id: itemId,

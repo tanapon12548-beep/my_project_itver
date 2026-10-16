@@ -163,6 +163,8 @@ CREATE TABLE IF NOT EXISTS public.item
     item_name text NOT NULL,
     item_type_id integer,
     selling_price numeric(10, 2) DEFAULT 0,
+    -- ราคาทุน (ต้นทุนที่ร้านซื้อมา) ใช้คำนวณกำไรขั้นต้น = รายรับรวม - ต้นทุนอะไหล่
+    cost_price numeric(10, 2) DEFAULT 0,
     CONSTRAINT item_pkey PRIMARY KEY (item_id)
 );
 
@@ -173,7 +175,6 @@ CREATE TABLE IF NOT EXISTS public.repair_job
     device_id integer,
     quotation_id integer,
     symptom_details text,
-    appointment_date date,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     customer_send_signature text,
     customer_receive_signature text,
@@ -231,6 +232,8 @@ CREATE TABLE IF NOT EXISTS public.quotation_details
     quantity numeric(10, 2) DEFAULT 1,
     unit_price numeric(10, 2) DEFAULT 0,
     total_price numeric(10, 2) DEFAULT 0,
+    -- ต้นทุนต่อหน่วย ณ วันที่เสนอราคา (snapshot) — เก็บไว้เพื่อไม่ให้กำไรย้อนหลังเปลี่ยนตามราคาทุนที่แก้ทีหลัง
+    unit_cost numeric(10, 2) DEFAULT 0,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT quotation_details_pkey PRIMARY KEY (details_id)
 );
@@ -280,6 +283,16 @@ ALTER TABLE IF EXISTS public.slips_records ADD CONSTRAINT slips_records_user_id_
 
 
 -- ============================================================
+-- 3.5 Migration: เพิ่มคอลัมน์ต้นทุนอะไหล่ (กันฐานข้อมูลเดิมที่สร้างไปแล้ว)
+-- ============================================================
+ALTER TABLE IF EXISTS public.item
+    ADD COLUMN IF NOT EXISTS cost_price numeric(10, 2) DEFAULT 0;
+
+ALTER TABLE IF EXISTS public.quotation_details
+    ADD COLUMN IF NOT EXISTS unit_cost numeric(10, 2) DEFAULT 0;
+
+
+-- ============================================================
 -- 4. View: repair_jobs_view
 -- ============================================================
 
@@ -311,7 +324,6 @@ SELECT
     rj.tech_repair_signature,
     rj.customer_send_signature,
     rj.customer_receive_signature,
-    rj.appointment_date,
     rj.created_at,
     rj.device_id,
     rj.quotation_id,

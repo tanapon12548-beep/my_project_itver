@@ -5,6 +5,8 @@ import { ActivityIndicator, Text, View } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { getDeviceTypeSuffix } from '@/lib/deviceTypeLabel';
+
 export interface PartUsageItem {
   item_id: number | string;
   item_name: string;
@@ -19,6 +21,8 @@ interface PartsUsageChartProps {
   isLoading?: boolean;
   deviceType?: string;
   timeFilter?: string;
+  /** แสดงมูลค่าอะไหล่ (ราคาขาย) — ปิดสำหรับพนักงาน (Staff) เห็นแค่จำนวนชิ้น */
+  showCost?: boolean;
 }
 
 export default function PartsUsageChart({
@@ -26,6 +30,7 @@ export default function PartsUsageChart({
   isLoading = false,
   deviceType,
   timeFilter,
+  showCost = true,
 }: PartsUsageChartProps) {
   const totalPartsUsed = data.reduce((sum, item) => sum + (item.total_quantity || 0), 0);
   const maxQty = data.length > 0 ? Math.max(...data.map((d) => d.total_quantity || 1)) : 1;
@@ -45,7 +50,7 @@ export default function PartsUsageChart({
               สถิติการใช้อะไหล่
             </Text>
             <Text className="text-[11px] text-slate-400 font-body">
-              จำนวนอะไหล่ที่ใช้ไปในงานซ่อม (ชิ้น) • ซิงค์ตามตัวกรอง{deviceType && deviceType !== 'all' ? ` (${deviceType === 'pc' ? 'คอมพิวเตอร์' : deviceType === 'laptop' ? 'โน๊ตบุ๊ค' : 'ปริ้นเตอร์'})` : ''}
+              จำนวนอะไหล่ที่ใช้ไปในงานซ่อม (ชิ้น) • ซิงค์ตามตัวกรอง{getDeviceTypeSuffix(deviceType)}
             </Text>
           </View>
         </View>
@@ -80,7 +85,8 @@ export default function PartsUsageChart({
                       {item.item_name}
                     </Text>
                     <Text className="text-[10px] text-slate-400 font-body mt-0.5">
-                      ใช้ในงานซ่อม {item.jobs_count} เครื่อง • มูลค่ารวม ฿{item.total_cost.toLocaleString()}
+                      ใช้ในงานซ่อม {item.jobs_count} เครื่อง
+                      {showCost ? ` • มูลค่ารวม ฿${item.total_cost.toLocaleString()}` : ''}
                     </Text>
                   </View>
 

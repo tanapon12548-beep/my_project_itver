@@ -89,7 +89,6 @@ export default function JobDetailScreen() {
           quotation_status_id: q?.quote_status_id || data.quote_status_id || (isJobCancelled ? 3 : 1),
           customer_remark: q?.customer_remark || data.customer_remark || null,
           created_at: data.created_at || new Date().toISOString(),
-          appointment_date: data.appointment_date || null,
           payment_method_id: data.payment_method_id || null,
           payment_method_name: data.payment_method_name || null,
           slip_image: data.slip_image || null,
@@ -248,7 +247,7 @@ export default function JobDetailScreen() {
   const isReadyForPayment = (job.status_id === 7 || job.status === 'รอชำระ') && !isCancelled;
   const isWaitingRepair = (job.status_id === 5 || job.status === 'อนุมัติแล้ว/รอซ่อม') && !isCancelled;
 
-  const formatPickupDate = (dateStr?: string | null) => {
+  const formatThaiDate = (dateStr?: string | null) => {
     if (!dateStr || dateStr === 'undefined' || dateStr === 'null') return null;
     try {
       const d = new Date(dateStr);
@@ -465,7 +464,6 @@ export default function JobDetailScreen() {
               <Text className="text-emerald-900 font-bold font-heading text-sm">อนุมัติแล้ว / กำลังดำเนินการซ่อม</Text>
               <Text className="text-emerald-700 text-xs font-body mt-0.5">
                 ยอดรวม {total.toLocaleString()} บาท — ช่างกำลังดำเนินการซ่อมและทดสอบระบบตามรายการที่อนุมัติ
-                {job.appointment_date ? ` (กำหนดรับเครื่อง: ${formatPickupDate(job.appointment_date)})` : ''}
               </Text>
             </View>
           </View>
@@ -494,7 +492,6 @@ export default function JobDetailScreen() {
               <Text className="text-sky-900 font-bold font-heading text-sm">ชำระเงินเรียบร้อยแล้ว (รอมารับเครื่อง)</Text>
               <Text className="text-sky-700 text-xs font-body mt-0.5">
                 ยอดรวม {total.toLocaleString()} บาท — สามารถติดต่อรับเครื่องที่ร้านและเซ็นรับเครื่องกับเจ้าหน้าที่ได้เลย
-                {job.appointment_date ? ` (นัดรับ: ${formatPickupDate(job.appointment_date)})` : ''}
               </Text>
             </View>
           </View>
@@ -508,17 +505,15 @@ export default function JobDetailScreen() {
             <View className="flex-1">
               <Text className="text-red-900 font-bold font-heading text-sm">ยกเลิกซ่อมเรียบร้อย</Text>
               <Text className="text-red-700 text-xs font-body mt-0.5">
-                ยอดรวม {total.toLocaleString()} บาท (ค่าตรวจเช็ค)
-                {job.appointment_date ? ` — สามารถมารับเครื่องได้ในวันที่ ${formatPickupDate(job.appointment_date)}` : ''}
+                ยอดรวม {total.toLocaleString()} บาท (ค่าตรวจเช็ค) — สามารถมารับเครื่องได้ที่ร้าน
               </Text>
             </View>
           </View>
         )}
 
-        {/* ปฏิทินกำหนดวันรับเครื่องให้ลูกค้าดู (แสดงเฉพาะเมื่อพร้อมรับ หรือมีนัดหมายระหว่างซ่อม) */}
-        {!isCompleted && isReadyForPickup ? (
-          <PickupCalendarCard defaultExpanded={false} />
-        ) : (!isCompleted && job.appointment_date && (isWaitingRepair || isReadyForPayment || isCancelled)) ? (
+        {/* ปฏิทินวันเปิดร้าน (จ–ส) ให้ลูกค้าดู — แสดงเมื่อพร้อมรับ หรือระหว่างซ่อม/รอชำระ/ยกเลิกซ่อม
+            หมายเหตุ: "วันรับเครื่องคืน" คือ return_date ซึ่งบันทึกตอนลูกค้าเซ็นรับเครื่อง */}
+        {!isCompleted && (isReadyForPickup || isWaitingRepair || isReadyForPayment || isCancelled) ? (
           <PickupCalendarCard defaultExpanded={false} />
         ) : null}
 
@@ -554,7 +549,7 @@ export default function JobDetailScreen() {
             <View className="flex-row items-center justify-between py-1">
               <Text className="text-xs text-slate-400 font-body shrink-0 w-24">วันที่ส่งเครื่อง</Text>
               <Text className="text-xs font-medium text-slate-700 font-body flex-1 text-right">
-                {job.created_at ? formatPickupDate(job.created_at) : 'วันนี้'}
+                {job.created_at ? formatThaiDate(job.created_at) : 'วันนี้'}
               </Text>
             </View>
           </View>
@@ -600,7 +595,7 @@ export default function JobDetailScreen() {
                   </View>
                 </View>
                 <Text className="text-emerald-700 text-xs font-body mb-3">
-                  ระบบได้บันทึกข้อมูลการชำระเงินแล้ว ข้อมูลถูกล็อกและไม่สามารถแก้ไขได้ กรุณาติดต่อรับเครื่องในวันนัดหมาย
+                  ระบบได้บันทึกข้อมูลการชำระเงินแล้ว ข้อมูลถูกล็อกและไม่สามารถแก้ไขได้ กรุณาติดต่อรับเครื่องคืนที่ร้าน
                 </Text>
                 <TouchableOpacity
                   className="w-full bg-white border border-emerald-300 py-2.5 rounded-xl items-center justify-center flex-row gap-2 active:bg-emerald-50"

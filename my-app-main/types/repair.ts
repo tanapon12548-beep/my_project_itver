@@ -70,7 +70,6 @@ export interface RepairJob {
   quotation_id?: number | null;
   quotation_status_id?: number;
   quote_status_id?: number;
-  appointment_date?: string | null;
   payment_method_id?: number | null;
   payment_method_name?: string | null;
   payment_method?: string | null;

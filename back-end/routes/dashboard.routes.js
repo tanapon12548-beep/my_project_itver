@@ -8,7 +8,7 @@ const role = require('../middleware/role');
  * /api/dashboard/metrics:
  *   get:
  *     tags: [Dashboard]
- *     summary: สรุป metrics (Manager only)
+ *     summary: สรุป metrics — ฟิลด์การเงิน (รายได้/ต้นทุน/กำไร) ส่งเฉพาะ Manager, Staff ได้แค่จำนวนงาน
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: query
@@ -19,7 +19,8 @@ const role = require('../middleware/role');
  *         schema: { type: string, format: date }
  *       - in: query
  *         name: device_type
- *         schema: { type: string, enum: [all, pc, laptop, printer] }
+ *         description: ใส่ชื่อประเภทอุปกรณ์จากตาราง device_types (เช่น "Notebook / Laptop") หรือคีย์เดิม pc/laptop/printer/all
+ *         schema: { type: string, example: "Notebook / Laptop" }
  *     responses:
  *       200: { description: metrics data }
  */
@@ -30,14 +31,18 @@ router.get('/metrics', auth, role('Manager', 'Staff'), ctrl.getMetrics);
  * /api/dashboard/trend:
  *   get:
  *     tags: [Dashboard]
- *     summary: Trend chart data
+ *     summary: Trend chart data — metric_type=revenue ใช้ได้เฉพาะ Manager (Staff จะได้ 403)
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: query
  *         name: period
  *         schema: { type: string, enum: [day, month, year] }
+ *       - in: query
+ *         name: metric_type
+ *         schema: { type: string, enum: [count, revenue] }
  *     responses:
  *       200: { description: trend data }
+ *       403: { description: ไม่มีสิทธิ์ดูข้อมูลรายได้ (เฉพาะ Manager) }
  */
 router.get('/trend', auth, role('Manager', 'Staff'), ctrl.getTrend);
 
@@ -69,11 +74,58 @@ router.get('/category', auth, role('Manager', 'Staff'), ctrl.getCategory);
  *         schema: { type: string, format: date }
  *       - in: query
  *         name: device_type
- *         schema: { type: string, enum: [all, pc, laptop, printer] }
+ *         description: ใส่ชื่อประเภทอุปกรณ์จากตาราง device_types (เช่น "Notebook / Laptop") หรือคีย์เดิม pc/laptop/printer/all
+ *         schema: { type: string, example: "Notebook / Laptop" }
  *     responses:
  *       200: { description: team performance data }
  */
 router.get('/team-performance', auth, role('Manager', 'Staff'), ctrl.getTeamPerformance);
+
+/**
+ * @swagger
+ * /api/dashboard/work-activity:
+ *   get:
+ *     tags: [Dashboard]
+ *     summary: วันเคลื่อนงานรายบุคคล (ใช้แทนการลงเวลาเข้างาน)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: date_start
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: date_end
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: device_type
+ *         description: ใส่ชื่อประเภทอุปกรณ์จากตาราง device_types (เช่น "Notebook / Laptop") หรือคีย์เดิม pc/laptop/printer/all
+ *         schema: { type: string, example: "Notebook / Laptop" }
+ *     responses:
+ *       200: { description: work activity data }
+ */
+router.get('/work-activity', auth, role('Manager', 'Staff'), ctrl.getWorkActivity);
+
+/**
+ * @swagger
+ * /api/dashboard/symptoms:
+ *   get:
+ *     tags: [Dashboard]
+ *     summary: อาการเสียที่พบบ่อย (จัดกลุ่มคีย์เวิร์ด)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: date_start
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: date_end
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: device_type
+ *         description: ใส่ชื่อประเภทอุปกรณ์จากตาราง device_types (เช่น "Notebook / Laptop") หรือคีย์เดิม pc/laptop/printer/all
+ *         schema: { type: string, example: "Notebook / Laptop" }
+ *     responses:
+ *       200: { description: symptoms data }
+ */
+router.get('/symptoms', auth, role('Manager', 'Staff'), ctrl.getSymptoms);
 
 /**
  * @swagger
@@ -91,7 +143,8 @@ router.get('/team-performance', auth, role('Manager', 'Staff'), ctrl.getTeamPerf
  *         schema: { type: string, format: date }
  *       - in: query
  *         name: device_type
- *         schema: { type: string, enum: [all, pc, laptop, printer] }
+ *         description: ใส่ชื่อประเภทอุปกรณ์จากตาราง device_types (เช่น "Notebook / Laptop") หรือคีย์เดิม pc/laptop/printer/all
+ *         schema: { type: string, example: "Notebook / Laptop" }
  *     responses:
  *       200: { description: parts usage data }
  */

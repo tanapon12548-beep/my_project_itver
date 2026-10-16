@@ -6,7 +6,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  useWindowDimensions,
   View,
 } from 'react-native';
 
@@ -20,12 +19,6 @@ import type { PartItem } from '@/types/quotation';
 
 interface PartsCostCardProps {
   parts: PartItem[];
-  partInputName: string;
-  setPartInputName: (text: string) => void;
-  partInputPrice: string;
-  setPartInputPrice: (text: string) => void;
-  partInputQty: string;
-  setPartInputQty: (text: string) => void;
   onAddPart: (itemFromDb?: any) => void;
   onRemovePart: (id: string) => void;
   onUpdatePartQty?: (id: string, newQty: number) => void;
@@ -34,20 +27,11 @@ interface PartsCostCardProps {
 
 export default function PartsCostCard({
   parts,
-  partInputName,
-  setPartInputName,
-  partInputPrice,
-  setPartInputPrice,
-  partInputQty,
-  setPartInputQty,
   onAddPart,
   onRemovePart,
   onUpdatePartQty,
   totalPartsCost,
 }: PartsCostCardProps) {
-  const { width: windowWidth } = useWindowDimensions();
-  // iPhone SE / compact iPhone / split-screen safe breakpoint
-  const isCompactScreen = windowWidth < 420;
   const [dbParts, setDbParts] = useState<any[]>([]);
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -80,6 +64,8 @@ export default function PartsCostCard({
   const openPicker = () => {
     setPickerSearch('');
     setShowPicker(true);
+    // ดึงคลังล่าสุดทุกครั้งที่เปิด เพื่อให้เห็นอะไหล่ที่เพิ่งเพิ่มจากหน้าจัดการรายการ
+    fetchDbParts();
   };
 
   // ค้นหาในคลัง (ชื่อ + รหัส)
@@ -100,7 +86,9 @@ export default function PartsCostCard({
             <Text className="font-bold text-[15px] text-[#0369A1]">
               ค่าอะไหล่ (Parts Cost)
             </Text>
-            <Text className="text-xs text-slate-600 mt-0.5">เลือกอะไหล่จากคลัง หรือระบุเอง</Text>
+            <Text className="text-xs text-slate-600 mt-0.5">
+              เลือกอะไหล่จากคลัง (ระบบใช้ราคาทุนคำนวณกำไรขั้นต้น)
+            </Text>
           </View>
           <TouchableOpacity
             className="flex-row items-center gap-1 bg-white px-2.5 py-1.5 rounded-2xl border border-[#0369A1]"
@@ -112,70 +100,18 @@ export default function PartsCostCard({
         </View>
       </View>
       <View className="p-3.5">
-        {/* Clean 2-Row Form Input Layout */}
-        <View className="gap-2.5 mb-3.5">
-          <TextInput
-            className="border border-slate-300 rounded-xl px-3.5 h-[46px] text-sm text-slate-800 bg-slate-50 w-full"
-            placeholder="ชื่ออะไหล่"
-            placeholderTextColor="#94A3B8"
-            value={partInputName}
-            onChangeText={setPartInputName}
-          />
-          {/* Row 2a: ราคา + Stepper จำนวน (inline) */}
-          <View className="flex-row gap-2 items-center">
-            <TextInput
-              className="flex-[1.3] border border-slate-300 rounded-xl px-3 h-11 text-sm text-slate-800 bg-slate-50"
-              placeholder="ราคา (บาท)"
-              placeholderTextColor="#94A3B8"
-              keyboardType="numeric"
-              value={partInputPrice}
-              onChangeText={(text) => setPartInputPrice(text.replace(/[^0-9.]/g, ''))}
-            />
-            <View className="flex-row items-center border border-slate-300 rounded-xl bg-white h-11 overflow-hidden">
-              <TouchableOpacity
-                className="w-9 h-11 justify-center items-center bg-slate-100"
-                onPress={() => {
-                  const current = parseInt(partInputQty, 10) || 1;
-                  setPartInputQty(String(Math.max(1, current - 1)));
-                }}
-                activeOpacity={0.6}
-              >
-                <Ionicons name="remove" size={16} color="#0369A1" />
-              </TouchableOpacity>
-              <View className="w-10 h-11 justify-center items-center bg-white">
-                <TextInput
-                  className="text-sm font-bold text-slate-800 w-full text-center p-0 m-0"
-                  keyboardType="numeric"
-                  value={partInputQty}
-                  onChangeText={(text) => setPartInputQty(text.replace(/[^0-9]/g, ''))}
-                  selectTextOnFocus
-                />
-              </View>
-              <TouchableOpacity
-                className="w-9 h-11 justify-center items-center bg-slate-100"
-                onPress={() => {
-                  const current = parseInt(partInputQty, 10) || 1;
-                  setPartInputQty(String(current + 1));
-                }}
-                activeOpacity={0.6}
-              >
-                <Ionicons name="add" size={16} color="#0369A1" />
-              </TouchableOpacity>
-            </View>
+        {/* อะไหล่ต้องเลือกจากคลังเท่านั้น → ระบบจึงรู้ราคาทุน ใช้คำนวณกำไรขั้นต้นได้ */}
+        <View className="flex-row items-start gap-2.5 bg-sky-50 border border-sky-100 rounded-xl p-3 mb-3.5">
+          <Ionicons name="information-circle" size={18} color="#0369A1" style={{ marginTop: 1 }} />
+          <View className="flex-1">
+            <Text className="text-[13px] font-bold text-[#0369A1] font-heading">
+              เลือกอะไหล่จากคลังเท่านั้น
+            </Text>
+            <Text className="text-[11px] text-slate-600 mt-0.5 leading-4">
+              ระบบต้องรู้ราคาทุนของอะไหล่เพื่อคำนวณกำไรขั้นต้น หากไม่พบรายการที่ต้องการ
+              กรุณาเพิ่มที่หน้าจัดการรายการก่อน (พร้อมกรอกราคาทุน) แล้วกลับมาเลือกจากคลัง
+            </Text>
           </View>
-          {/* Row 2b: ปุ่ม + เพิ่ม (เต็มความกว้างตอนจอแคบ, inline ตอนจอใหญ่) */}
-          <TouchableOpacity
-            className={`bg-sky-600 px-4 h-11 rounded-xl flex-row justify-center items-center min-w-[84px] shadow-sm active:bg-sky-700 ${isCompactScreen ? 'w-full min-w-0' : ''} ${!partInputName.trim() || !partInputPrice.trim() ? 'opacity-50' : ''}`}
-            onPress={() => {
-              if (!partInputName.trim() || !partInputPrice.trim()) return;
-              onAddPart();
-            }}
-            disabled={!partInputName.trim() || !partInputPrice.trim()}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="add-circle" size={18} color="#FFFFFF" style={{ marginRight: 4 }} />
-            <Text className="text-white font-bold text-sm font-heading">เพิ่ม</Text>
-          </TouchableOpacity>
         </View>
 
         {/* List Box */}

@@ -355,6 +355,7 @@ export default function PartsScreen() {
                 setDetailsVisible(true);
               }}
               onPressDelete={handleDeleteItem}
+              showCost={activeTab === 'parts'}
             />
           </ScrollView>
         )}

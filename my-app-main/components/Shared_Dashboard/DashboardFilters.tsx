@@ -1,5 +1,5 @@
 // 1. React & React Native
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 // 2. Third-party / Expo
@@ -9,12 +9,24 @@ import { Dropdown } from 'react-native-element-dropdown';
 // 3. Components
 import DatePickerModal from '@/components/ui/DatePickerModal';
 
-const typeData = [
+// 4. API helpers
+import { getCatalogDeviceTypes } from '@/lib/api';
+
+/**
+ * ตัวเลือกเริ่มต้น (ใช้ก่อนโหลดเสร็จ หรือกรณีโหลดรายการประเภทอุปกรณ์ไม่สำเร็จ)
+ * ตัวจริงจะถูกแทนที่ด้วยข้อมูลจากตาราง device_types หลัง fetch เสร็จ
+ */
+const FALLBACK_TYPE_DATA = [
   { label: 'ทั้งหมด', value: 'all' },
   { label: 'คอมพิวเตอร์', value: 'pc' },
   { label: 'โน๊ตบุ๊ค', value: 'laptop' },
   { label: 'ปริ้นเตอร์', value: 'printer' },
 ];
+
+interface DeviceTypeOption {
+  label: string;
+  value: string;
+}
 
 const THAI_MONTHS_SHORT = [
   'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
@@ -60,6 +72,43 @@ export default function DashboardFilters({
   onChangeDateEnd,
 }: DashboardFiltersProps) {
   const [activePicker, setActivePicker] = useState<'start' | 'end' | null>(null);
+  const [typeData, setTypeData] = useState<DeviceTypeOption[]>(FALLBACK_TYPE_DATA);
+
+  // ดึงประเภทอุปกรณ์จากฐานข้อมูล (ตาราง device_types) แทนการ hardcode
+  // → เพิ่ม/เปลี่ยนชื่อประเภทอุปกรณ์ในหน้าจัดการอุปกรณ์แล้ว ตัวกรองจะอัปเดตตามทันที
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const res = await getCatalogDeviceTypes();
+        const rows = Array.isArray(res?.data) ? res.data : [];
+        const options: DeviceTypeOption[] = rows
+          .map((row: any) => ({
+            label: String(row?.device_type_name || '').trim(),
+            // ส่ง "ชื่อประเภท" เป็นค่า filter เพื่อให้ backend กรองตรงกับประเภทจริงได้
+            value: String(row?.device_type_name || '').trim(),
+          }))
+          .filter((opt: DeviceTypeOption) => Boolean(opt.label));
+
+        if (!cancelled && options.length > 0) {
+          setTypeData([{ label: 'ทั้งหมด', value: 'all' }, ...options]);
+        }
+      } catch {
+        // โหลดไม่ได้ → ใช้ตัวเลือกสำรอง (ไม่ให้ตัวกรองหายไป)
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // ถ้าประเภทที่เลือกไว้ถูกลบ/เปลี่ยนชื่อไปแล้ว ให้คงชื่อเดิมที่เลือกไว้ในลิสต์ไว้ ไม่ให้ช่องว่าง
+  const dropdownData =
+    deviceType && deviceType !== 'all' && !typeData.some((t) => t.value === deviceType)
+      ? [...typeData, { label: deviceType, value: deviceType }]
+      : typeData;
 
   const timeButtons: { key: 'day' | 'month' | 'year'; label: string }[] = [
     { key: 'day', label: 'วัน' },
@@ -134,7 +183,7 @@ export default function DashboardFilters({
             selectedTextStyle={{ fontSize: 13, color: '#333333', fontFamily: 'IBMPlexSansThai-Regular' }}
             itemTextStyle={{ fontSize: 13, color: '#333333', fontFamily: 'IBMPlexSansThai-Regular' }}
             containerStyle={{ borderRadius: 8, borderWidth: 1, borderColor: '#E9ECEF' }}
-            data={typeData}
+            data={dropdownData}
             maxHeight={200}
             labelField="label"
             valueField="value"

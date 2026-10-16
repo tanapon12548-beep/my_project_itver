@@ -1,38 +1,100 @@
 const pool = require('../config/db');
 const dashboardQueries = require('../queries/dashboard.queries');
-const { REPAIR_STATUS } = require('../constants');
+const { REPAIR_STATUS, QUOTE_STATUS } = require('../constants');
+
+/**
+ * เขตเวลาของร้าน (ไทย)
+ * หมายเหตุสำคัญ: TIMEZONE ของ session ในฐานข้อมูลชุดนี้ไม่ใช่เวลาไทย (เป็น UTC-1)
+ * ถ้าใช้ TO_CHAR()/CURRENT_DATE ตรง ๆ วันของงานที่ทำช่วง 00:00-07:00 น. จะถูกนับเป็นวันก่อนหน้า
+ * จึงต้องผ่าน AT TIME ZONE 'Asia/Bangkok' ทุกครั้งก่อนตัดวัน
+ */
+const TZ = 'Asia/Bangkok';
+
+/** วันปัจจุบันตามเวลาไทย (date) */
+const LOCAL_TODAY_SQL = `(now() AT TIME ZONE '${TZ}')::date`;
+
+/**
+ * คอลัมน์วันที่ที่ใช้รับรู้ "รายได้"
+ * ลำดับ: ส่งมอบเครื่อง (return_date) → ซ่อมเสร็จ (repaired_at) → ชำระเงิน (payment_date) → รับเครื่อง (created_at)
+ * จำเป็นต้องมี fallback เพราะ repaired_at ถูกบันทึกไม่ครบ (งานที่ปิดแล้วส่วนใหญ่เป็น null)
+ */
+const REVENUE_DATE_COL = 'COALESCE(rj.return_date, rj.repaired_at, rj.payment_date, rj.created_at)';
+
+/**
+ * แปลงคอลัมน์วันที่ให้เป็น date ตามเวลาไทย
+ * @param {boolean} isPlainDate คอลัมน์เป็น type date อยู่แล้ว (เช่น repair_job_detail.action_date) ไม่ต้องแปลง TZ
+ */
+function toLocalDate(column, isPlainDate = false) {
+  return isPlainDate ? `(${column})` : `((${column}) AT TIME ZONE '${TZ}')::date`;
+}
+
+/** จัดรูปแบบวันที่เป็น YYYY-MM-DD ด้วยเวลา local ของเครื่อง (ไม่ใช้ toISOString เพื่อกันวันเพี้ยน) */
+function formatISODate(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/** อ่านค่า YYYY-MM-DD เป็น Date เวลา local ของเครื่อง */
+function parseISODate(value) {
+  const [y, m, d] = String(value).split('-').map(Number);
+  return new Date(y || 1970, (m || 1) - 1, d || 1);
+}
+
+/** วันแรกของเดือน วันนี้ และวันสุดท้ายของเดือน ตามเวลาไทย (ใช้สร้างแกนกราฟรายวัน) */
+async function getLocalMonthRange() {
+  const { rows } = await pool.query(
+    `SELECT to_char(DATE_TRUNC('month', ${LOCAL_TODAY_SQL}), 'YYYY-MM-DD') AS first_day,
+            to_char(${LOCAL_TODAY_SQL}, 'YYYY-MM-DD') AS today,
+            to_char((DATE_TRUNC('month', ${LOCAL_TODAY_SQL}) + INTERVAL '1 month' - INTERVAL '1 day')::date, 'YYYY-MM-DD') AS last_day`
+  );
+  return { firstDay: rows[0].first_day, today: rows[0].today, lastDay: rows[0].last_day };
+}
 
 /**
  * รวมฟังก์ชันสร้างเงื่อนไขตัวกรองวันที่ ช่วงเวลา (day/month/year) และประเภทอุปกรณ์
  * เพื่อให้กราฟและรายงานทุกตัวกรองตรงกันและซิงค์ไปด้วยกันทั้งหมด
+ * @param {boolean} isPlainDate ส่ง true เมื่อ dateCol เป็นคอลัมน์ type date อยู่แล้ว
  */
-function buildDateAndDeviceConditions(query, dateCol = 'rj.created_at', devCol = 'dt.device_type_name') {
+function buildDateAndDeviceConditions(
+  query,
+  dateCol = 'rj.created_at',
+  devCol = 'dt.device_type_name',
+  isPlainDate = false
+) {
   const { period, date_start, date_end, device_type } = query;
   let conditions = '';
   const params = [];
   let paramIdx = 1;
 
-  if (date_start && String(date_start).trim()) {
-    conditions += ` AND ${dateCol} >= $${paramIdx++}`;
+  const localDate = toLocalDate(dateCol, isPlainDate);
+  const hasDateStart = Boolean(date_start && String(date_start).trim());
+  const hasDateEnd = Boolean(date_end && String(date_end).trim());
+
+  // เลือกช่วงวันที่เอง → เทียบเป็น date ตรง ๆ (รวมวันสุดท้ายเต็มวัน ไม่ต้อง + interval '1 day')
+  if (hasDateStart) {
+    conditions += ` AND ${localDate} >= $${paramIdx++}::date`;
     params.push(String(date_start).trim());
   }
-  if (date_end && String(date_end).trim()) {
-    conditions += ` AND ${dateCol} <= $${paramIdx++}::date + interval '1 day'`;
+  if (hasDateEnd) {
+    conditions += ` AND ${localDate} <= $${paramIdx++}::date`;
     params.push(String(date_end).trim());
   }
 
-  // หากไม่ได้ระบุช่วงวันที่ชัดเจน ให้กรองตาม period (วัน=30 วันล่าสุด, เดือน=ปีนี้, ปี=5 ปีย้อนหลัง)
-  if ((!date_start || !String(date_start).trim()) && (!date_end || !String(date_end).trim())) {
+  // หากไม่ได้ระบุช่วงวันที่ชัดเจน ให้กรองตาม period (วัน=เดือนปัจจุบัน, เดือน=ปีนี้, ปี=5 ปีย้อนหลัง)
+  if (!hasDateStart && !hasDateEnd) {
     if (period === 'day') {
-      conditions += ` AND ${dateCol} >= CURRENT_DATE - INTERVAL '30 days'`;
+      conditions += ` AND ${localDate} >= DATE_TRUNC('month', ${LOCAL_TODAY_SQL})::date`;
     } else if (period === 'month') {
-      conditions += ` AND ${dateCol} >= DATE_TRUNC('year', CURRENT_DATE)`;
+      conditions += ` AND ${localDate} >= DATE_TRUNC('year', ${LOCAL_TODAY_SQL})::date`;
     } else if (period === 'year') {
-      conditions += ` AND ${dateCol} >= DATE_TRUNC('year', CURRENT_DATE) - INTERVAL '4 years'`;
+      conditions += ` AND ${localDate} >= (DATE_TRUNC('year', ${LOCAL_TODAY_SQL}) - INTERVAL '4 years')::date`;
     }
   }
 
-  // กรองตามประเภทอุปกรณ์ (pc, laptop, printer)
+  // กรองตามประเภทอุปกรณ์
+  // รับได้ทั้งคีย์เดิม (pc / laptop / printer) และ "ชื่อประเภทอุปกรณ์จริง" จากตาราง device_types
   if (device_type && device_type !== 'all') {
     if (device_type === 'pc') {
       conditions += ` AND (LOWER(${devCol}) LIKE '%desktop%' OR LOWER(${devCol}) LIKE '%pc%')`;
@@ -40,10 +102,25 @@ function buildDateAndDeviceConditions(query, dateCol = 'rj.created_at', devCol =
       conditions += ` AND (LOWER(${devCol}) LIKE '%notebook%' OR LOWER(${devCol}) LIKE '%laptop%')`;
     } else if (device_type === 'printer') {
       conditions += ` AND (LOWER(${devCol}) LIKE '%printer%' OR LOWER(${devCol}) LIKE '%print%')`;
+    } else {
+      // ชื่อประเภทจริงจากฐานข้อมูล → เทียบชื่อตรงตัว (ตัดช่องว่างหัวท้ายให้แล้ว)
+      conditions += ` AND LOWER(${devCol}) = LOWER($${paramIdx++})`;
+      params.push(String(device_type).trim());
     }
   }
 
-  return { conditions, params };
+  return { conditions, params, localDate };
+}
+
+/**
+ * สิทธิ์ดู "ข้อมูลการเงิน" (รายได้ / ต้นทุนอะไหล่ / กำไร / มูลค่าอะไหล่)
+ * เปิดให้เฉพาะ role "Manager" เท่านั้น
+ *
+ * ตัดสินจาก role ที่แนบมากับ JWT (req.user จาก auth middleware) เท่านั้น
+ * ไม่ใช้ query param `role` เพราะ client ปลอมค่าได้ (role param เหลือไว้เพื่อความเข้ากันได้ของ API เดิม)
+ */
+function canViewRevenue(req) {
+  return String(req.user?.role_name || '').toLowerCase() === 'manager';
 }
 
 /**
@@ -51,53 +128,119 @@ function buildDateAndDeviceConditions(query, dateCol = 'rj.created_at', devCol =
  */
 exports.getMetrics = async (req, res, next) => {
   try {
+    // จำนวนงาน → นับตามวันรับเครื่อง (created_at)
     const { conditions, params } = buildDateAndDeviceConditions(req.query, 'rj.created_at', 'dt.device_type_name');
 
     const query = dashboardQueries.BUILD_METRICS_QUERY(conditions);
     const { rows: jobs } = await pool.query(query, params);
 
     const totalJobs = jobs.length;
-    let totalRevenue = 0;
     let completedJobs = 0;
     let pendingJobs = 0;
 
+    const pendingStatusIds = [
+      REPAIR_STATUS.PENDING_CHECK,
+      REPAIR_STATUS.CHECKING,
+      REPAIR_STATUS.MAKING_QUOTE,
+      REPAIR_STATUS.PENDING_APPROVAL,
+      REPAIR_STATUS.APPROVED_WAIT_REPAIR,
+      REPAIR_STATUS.WAITING_PAYMENT,
+      REPAIR_STATUS.READY_FOR_PICKUP,
+    ];
+
     // Calculate metrics
     jobs.forEach(job => {
-      const isPaid = job.status_id === REPAIR_STATUS.COMPLETED;
-      if (job.total_amount && isPaid) {
-        totalRevenue += parseFloat(job.total_amount);
-      }
-
       if (job.status_id === REPAIR_STATUS.COMPLETED) {
         completedJobs++;
       }
-
-      const pendingStatusIds = [
-        REPAIR_STATUS.PENDING_CHECK,
-        REPAIR_STATUS.CHECKING,
-        REPAIR_STATUS.MAKING_QUOTE,
-        REPAIR_STATUS.PENDING_APPROVAL,
-        REPAIR_STATUS.APPROVED_WAIT_REPAIR,
-        REPAIR_STATUS.WAITING_PAYMENT,
-        REPAIR_STATUS.READY_FOR_PICKUP,
-      ];
       if (pendingStatusIds.includes(job.status_id)) {
         pendingJobs++;
       }
     });
 
+    // ── ข้อมูลการเงิน (รายได้ / ต้นทุน / กำไร) ── เปิดเฉพาะผู้จัดการ
+    const showRevenue = canViewRevenue(req);
+
+    // รายได้ + ต้นทุนอะไหล่ → คิดจาก "วันรับรู้รายได้" (ส่งมอบ/ซ่อมเสร็จ/ชำระ/รับเครื่อง)
+    // เพื่อให้ยอด KPI ตรงกับกราฟแนวโน้มรายได้ที่ใช้คอลัมน์วันที่เดียวกัน
+    let totalRevenue = 0;
+    let partsCost = 0;
+    let grossProfit = 0;
+
+    if (showRevenue) {
+      const { conditions: revenueConditions, params: revenueParams } = buildDateAndDeviceConditions(
+        req.query,
+        REVENUE_DATE_COL,
+        'dt.device_type_name'
+      );
+
+      // กำไรขั้นต้น = รายรับรวม - ต้นทุนอะไหล่
+      // นับเฉพาะใบเสนอราคาที่ "ลูกค้าอนุมัติแล้ว" เพราะงานที่ถูกยกเลิกจะยังมีรายการอะไหล่ค้างในใบ
+      // แต่ของจริงไม่ได้ถูกติดตั้ง (ยอดที่เก็บจากงานที่ยกเลิกคือค่าตรวจเช็คเท่านั้น)
+      // หมายเหตุ: ต้องแยก CTE เพื่อกันแถวทวีคูณจากการ join repair_job กับ quotation_details ตรง ๆ
+      const revenueQuery = `
+        WITH revenue_jobs AS (
+          SELECT rj.job_id, rj.total_amount
+          FROM repair_job rj
+          LEFT JOIN device d ON rj.device_id = d.device_id
+          LEFT JOIN device_types dt ON d.device_type_id = dt.device_type_id
+          WHERE rj.status_id = ${REPAIR_STATUS.COMPLETED} ${revenueConditions}
+        ),
+        job_parts_cost AS (
+          SELECT q.job_id,
+                 SUM(
+                   COALESCE(qd.quantity, 1)
+                   -- ใช้ต้นทุนที่ snapshot ไว้ตอนเสนอราคา ถ้ามี; ถ้าใบเก่ายังไม่มี ให้ใช้ราคาทุนปัจจุบันจากคลังอะไหล่
+                   * COALESCE(NULLIF(qd.unit_cost, 0), i.cost_price, 0)
+                 ) AS cost
+          FROM quotation q
+          JOIN quotation_details qd ON qd.quote_id = q.quotation_id
+          LEFT JOIN item i ON i.item_id = qd.item_id
+          WHERE q.quote_status_id = ${QUOTE_STATUS.APPROVED}
+          GROUP BY q.job_id
+        )
+        SELECT
+          COALESCE(SUM(rj.total_amount), 0)::float AS revenue,
+          COALESCE(SUM(COALESCE(pc.cost, 0)), 0)::float AS parts_cost
+        FROM revenue_jobs rj
+        LEFT JOIN job_parts_cost pc ON pc.job_id = rj.job_id
+      `;
+      const { rows: revenueRows } = await pool.query(revenueQuery, revenueParams);
+      totalRevenue = Number(revenueRows[0]?.revenue) || 0;
+      partsCost = Number(revenueRows[0]?.parts_cost) || 0;
+      grossProfit = totalRevenue - partsCost;
+    }
+
     res.json({
       success: true,
-      data: { totalRevenue, totalJobs, completedJobs, pendingJobs },
+      data: {
+        canViewRevenue: showRevenue,
+        // ส่งฟิลด์การเงินเฉพาะผู้จัดการ — พนักงานจะไม่ได้รับค่านี้ไปที่เครื่องเลย
+        ...(showRevenue ? { totalRevenue, partsCost, grossProfit } : {}),
+        totalJobs,
+        completedJobs,
+        pendingJobs,
+      },
     });
   } catch (err) {
     next(err);
   }
 };
 
+/** จำนวนวันสูงสุดที่ยอมให้วาดในโหมดรายวัน (กันกราฟ 365 จุดบนมือถือ) */
+const MAX_DAY_POINTS = 92;
+
+/** ชื่อเดือนแบบย่อ (ใช้เป็น label ของแกนรายเดือน) */
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
 /**
  * GET /api/dashboard/trend
- * แสดงแนวโน้มวัน เดือน ปี แบบเต็มช่วง (เช่น 1-31 วัน, 12 เดือน, ปีเต็ม) รองรับการกรอง
+ * แสดงแนวโน้มวัน เดือน ปี แบบเต็มช่วง รองรับการกรอง
+ *
+ * หมายเหตุโลจิกสำคัญ 2 ข้อ:
+ *  1) โหมดรายวันต้อง group ด้วยวันที่เต็ม (YYYY-MM-DD) ไม่ใช่ TO_CHAR(...,'DD')
+ *     เพราะ 'DD' จะยุบวันที่ของคนละเดือน (17 ก.ย. กับ 17 ต.ค.) ให้เป็นช่องเดียวกัน ทำให้ข้อมูลไปโผล่ผิดวัน
+ *  2) แนวโน้มรายได้ต้องคิดจาก "วันรับรู้รายได้" (วันส่งมอบ/ซ่อมเสร็จ/ชำระ) ไม่ใช่วันรับเครื่อง
  */
 exports.getTrend = async (req, res, next) => {
   try {
@@ -106,98 +249,148 @@ exports.getTrend = async (req, res, next) => {
     const safePeriod = ['day', 'month', 'year'].includes(period) ? period : 'day';
     const safeMetric = metric_type === 'revenue' ? 'revenue' : 'count';
 
+    // แนวโน้มรายได้ = ข้อมูลการเงิน → เปิดเฉพาะผู้จัดการ
+    if (safeMetric === 'revenue' && !canViewRevenue(req)) {
+      return res.status(403).json({
+        success: false,
+        message: 'ไม่มีสิทธิ์เข้าถึงข้อมูลรายได้',
+      });
+    }
+
     const selectExpr = safeMetric === 'revenue'
       ? `COALESCE(SUM(CASE WHEN rj.status_id = ${REPAIR_STATUS.COMPLETED} THEN rj.total_amount ELSE 0 END), 0) AS value`
       : "COUNT(*) AS value";
 
-    const { conditions: whereConditions, params } = buildDateAndDeviceConditions(req.query, 'rj.created_at', 'dt.device_type_name');
+    // รายได้ → วันรับรู้รายได้, จำนวนงาน → วันรับเครื่อง
+    const metricDateCol = safeMetric === 'revenue' ? REVENUE_DATE_COL : 'rj.created_at';
+
+    const { conditions: whereConditions, params, localDate } = buildDateAndDeviceConditions(
+      req.query,
+      metricDateCol,
+      'dt.device_type_name'
+    );
 
     let result = [];
 
     if (safePeriod === 'day') {
-      const hasDateRange = date_start && date_end;
-      const s = hasDateRange ? new Date(String(date_start).trim()) : null;
-      const e = hasDateRange ? new Date(String(date_end).trim()) : null;
+      const hasDateStart = Boolean(date_start && String(date_start).trim());
+      const hasDateEnd = Boolean(date_end && String(date_end).trim());
 
-      if (s && e && !isNaN(s.getTime()) && !isNaN(e.getTime()) && s <= e) {
-        // กรองตามช่วงวันที่ที่เลือก และเติมวันทุกวันที่อยู่ในช่วง
-        const query = dashboardQueries.BUILD_TREND_QUERY({
-          labelFormat: "TO_CHAR(rj.created_at, 'YYYY-MM-DD')",
-          selectExpr,
-          whereConditions,
-          groupBy: "TO_CHAR(rj.created_at, 'YYYY-MM-DD')",
+      // จัดกลุ่มด้วยวันที่เต็มเสมอ (YYYY-MM-DD) แล้วค่อย map กับวันในแกน
+      const isoLabel = `TO_CHAR(${localDate}, 'YYYY-MM-DD')`;
+      const query = dashboardQueries.BUILD_TREND_QUERY({
+        labelFormat: isoLabel,
+        selectExpr,
+        whereConditions,
+        groupBy: isoLabel,
+      });
+      const { rows } = await pool.query(query, params);
+      const valueMap = new Map();
+      rows.forEach((r) => valueMap.set(r.label, Math.round(parseFloat(r.value) || 0)));
+
+      // ไม่ได้ระบุช่วงวันที่ → เดือนปัจจุบัน 1 → วันสุดท้ายของเดือน (ตามเวลาไทย)
+      // เติมช่องวันในอนาคตเป็น 0 เพื่อให้เห็นแกนเต็มเดือน 1-31 (ไม่ได้หมายความว่ามียอดขาย)
+      const monthRange = hasDateStart && hasDateEnd ? null : await getLocalMonthRange();
+      const range = {
+        firstDay: hasDateStart ? String(date_start).trim() : monthRange.firstDay,
+        lastDay: hasDateEnd ? String(date_end).trim() : monthRange.lastDay,
+      };
+
+      const lastDay = parseISODate(range.lastDay);
+      let cursor = parseISODate(range.firstDay);
+
+      // กันช่วงวันที่ยาวเกินจนกราฟมีจุดเยิ่นเย้อบนมือถือ → เก็บเฉพาะท้ายช่วง
+      const spanDays = Math.round((lastDay.getTime() - cursor.getTime()) / 86400000) + 1;
+      if (spanDays > MAX_DAY_POINTS) {
+        cursor = new Date(lastDay);
+        cursor.setDate(cursor.getDate() - (MAX_DAY_POINTS - 1));
+      }
+      const totalDays = Math.round((lastDay.getTime() - cursor.getTime()) / 86400000) + 1;
+
+      while (cursor <= lastDay) {
+        const isoKey = formatISODate(cursor);
+        const dayNum = cursor.getDate();
+        result.push({
+          label: totalDays <= 31 ? String(dayNum) : `${dayNum}/${cursor.getMonth() + 1}`,
+          value: valueMap.get(isoKey) || 0,
+          full_date: isoKey,
         });
-        const { rows } = await pool.query(query, params);
-        const map = new Map();
-        rows.forEach((r) => map.set(r.label, Math.round(parseFloat(r.value) || 0)));
-
-        const curr = new Date(s);
-        const totalDays = Math.round((e.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-        while (curr <= e) {
-          const isoKey = curr.toISOString().slice(0, 10);
-          const dayNum = curr.getDate();
-          result.push({
-            label: totalDays <= 31 ? String(dayNum) : `${String(dayNum)}/${String(curr.getMonth() + 1)}`,
-            value: map.get(isoKey) || 0,
-            full_date: isoKey,
-          });
-          curr.setDate(curr.getDate() + 1);
-        }
-      } else {
-        // แสดงวันเต็มเดือน 1 - 31
-        const query = dashboardQueries.BUILD_TREND_QUERY({
-          labelFormat: "TO_CHAR(rj.created_at, 'DD')",
-          selectExpr,
-          whereConditions,
-          groupBy: "TO_CHAR(rj.created_at, 'DD')",
-        });
-        const { rows } = await pool.query(query, params);
-        const map = new Map();
-        rows.forEach((r) => map.set(String(parseInt(r.label, 10)), Math.round(parseFloat(r.value) || 0)));
-
-        for (let d = 1; d <= 31; d++) {
-          result.push({
-            label: String(d),
-            value: map.get(String(d)) || 0,
-          });
-        }
+        cursor.setDate(cursor.getDate() + 1);
       }
     } else if (safePeriod === 'month') {
-      // แสดง 12 เดือนเต็ม (Jan - Dec / ม.ค. - ธ.ค.)
+      // จัดกลุ่มด้วย ปี-เดือน เพื่อไม่ให้เดือนของคนละปีถูกยุบรวมกัน
+      const monthLabel = `TO_CHAR(${localDate}, 'YYYY-MM')`;
       const query = dashboardQueries.BUILD_TREND_QUERY({
-        labelFormat: "TO_CHAR(rj.created_at, 'MM')",
+        labelFormat: monthLabel,
         selectExpr,
         whereConditions,
-        groupBy: "TO_CHAR(rj.created_at, 'MM')",
+        groupBy: monthLabel,
       });
       const { rows } = await pool.query(query, params);
-      const map = new Map();
-      rows.forEach((r) => map.set(String(parseInt(r.label, 10)), Math.round(parseFloat(r.value) || 0)));
+      const valueMap = new Map();
+      rows.forEach((r) => valueMap.set(r.label, Math.round(parseFloat(r.value) || 0)));
 
-      const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      for (let m = 1; m <= 12; m++) {
+      const hasDateRange = Boolean(
+        date_start && String(date_start).trim() && date_end && String(date_end).trim()
+      );
+      const today = parseISODate((await getLocalMonthRange()).today);
+
+      let startMonth;
+      let endMonth;
+      if (hasDateRange) {
+        startMonth = parseISODate(date_start);
+        endMonth = parseISODate(date_end);
+      } else {
+        startMonth = new Date(today.getFullYear(), 0, 1); // ม.ค. ของปีนี้
+        endMonth = today; // ถึงเดือนปัจจุบัน (ไม่เติมเดือนในอนาคต)
+      }
+      if (startMonth > endMonth) [startMonth, endMonth] = [endMonth, startMonth];
+
+      const crossesYears = startMonth.getFullYear() !== endMonth.getFullYear();
+      const cursor = new Date(startMonth.getFullYear(), startMonth.getMonth(), 1);
+      const last = new Date(endMonth.getFullYear(), endMonth.getMonth(), 1);
+      while (cursor <= last) {
+        const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
         result.push({
-          label: MONTH_NAMES[m - 1],
-          value: map.get(String(m)) || 0,
+          label: crossesYears
+            ? `${MONTH_NAMES[cursor.getMonth()]} ${String(cursor.getFullYear()).slice(2)}`
+            : MONTH_NAMES[cursor.getMonth()],
+          value: valueMap.get(key) || 0,
         });
+        cursor.setMonth(cursor.getMonth() + 1);
       }
     } else if (safePeriod === 'year') {
-      // แสดงปีเต็ม 5 ปีล่าสุด
+      const yearLabel = `TO_CHAR(${localDate}, 'YYYY')`;
       const query = dashboardQueries.BUILD_TREND_QUERY({
-        labelFormat: "TO_CHAR(rj.created_at, 'YYYY')",
+        labelFormat: yearLabel,
         selectExpr,
         whereConditions,
-        groupBy: "TO_CHAR(rj.created_at, 'YYYY')",
+        groupBy: yearLabel,
       });
       const { rows } = await pool.query(query, params);
-      const map = new Map();
-      rows.forEach((r) => map.set(r.label, Math.round(parseFloat(r.value) || 0)));
+      const valueMap = new Map();
+      rows.forEach((r) => valueMap.set(r.label, Math.round(parseFloat(r.value) || 0)));
 
-      const currentYear = new Date().getFullYear();
-      for (let y = currentYear - 4; y <= currentYear; y++) {
+      const hasDateRange = Boolean(
+        date_start && String(date_start).trim() && date_end && String(date_end).trim()
+      );
+      const today = parseISODate((await getLocalMonthRange()).today);
+
+      let startYear;
+      let endYear;
+      if (hasDateRange) {
+        startYear = parseISODate(date_start).getFullYear();
+        endYear = parseISODate(date_end).getFullYear();
+      } else {
+        startYear = today.getFullYear() - 4; // 5 ปีล่าสุด
+        endYear = today.getFullYear();
+      }
+      if (startYear > endYear) [startYear, endYear] = [endYear, startYear];
+
+      for (let y = startYear; y <= endYear; y++) {
         result.push({
           label: String(y),
-          value: map.get(String(y)) || 0,
+          value: valueMap.get(String(y)) || 0,
         });
       }
     }
@@ -232,13 +425,17 @@ exports.getPartsUsage = async (req, res, next) => {
       LEFT JOIN device d ON rj.device_id = d.device_id
       LEFT JOIN device_types dt ON d.device_type_id = dt.device_type_id
       JOIN item i ON qd.item_id = i.item_id
-      WHERE i.item_type_id = 1 ${whereConditions}
+      WHERE i.item_type_id = 1
+        AND q.quote_status_id = ${QUOTE_STATUS.APPROVED} ${whereConditions}
       GROUP BY i.item_id, i.item_name
       ORDER BY total_quantity DESC, total_cost DESC
       LIMIT 10;
     `;
 
     const { rows } = await pool.query(query, params);
+
+    // มูลค่าอะไหล่ (ราคาขาย) = ข้อมูลการเงิน → ส่งเป็น 0 ให้พนักงาน (เจ้าหน้าที่เห็นแค่จำนวนชิ้น)
+    const showMoney = canViewRevenue(req);
 
     res.json({
       success: true,
@@ -247,7 +444,7 @@ exports.getPartsUsage = async (req, res, next) => {
         item_name: r.item_name,
         total_quantity: Number(r.total_quantity) || 0,
         jobs_count: Number(r.jobs_count) || 0,
-        total_cost: Number(r.total_cost) || 0,
+        total_cost: showMoney ? Number(r.total_cost) || 0 : 0,
         unit: 'ชิ้น',
       })),
     });
@@ -299,6 +496,59 @@ exports.getCategory = async (req, res, next) => {
         printer: printerCount,
         other: otherCount,
       }
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/dashboard/work-activity
+ * ดูวันเคลื่อนงานรายบุคคลจาก repair_job_detail (ใช้แทนการลงเวลาเข้างาน
+ * โดยไม่ต้องเพิ่มตารางใหม่) — หน่วย: วัน
+ */
+exports.getWorkActivity = async (req, res, next) => {
+  try {
+    const { conditions, params } = buildDateAndDeviceConditions(req.query, 'd.action_date', 'dt.device_type_name', true);
+
+    const query = dashboardQueries.BUILD_WORK_ACTIVITY_QUERY(conditions);
+    const { rows } = await pool.query(query, params);
+
+    res.json({
+      success: true,
+      data: rows.map((r) => ({
+        id: r.id,
+        name: r.name || 'เจ้าหน้าที่',
+        role_name: r.role_name,
+        active_days: Number(r.active_days) || 0,
+        total_actions: Number(r.total_actions) || 0,
+        jobs_touched: Number(r.jobs_touched) || 0,
+        unit: 'วัน',
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/dashboard/symptoms
+ * ดูอาการเสียที่พบบ่อย (จัดกลุ่มข้อความอิสระเป็นหมวดคีย์เวิร์ด) — หน่วย: เครื่อง
+ */
+exports.getSymptoms = async (req, res, next) => {
+  try {
+    const { conditions, params } = buildDateAndDeviceConditions(req.query, 'rj.created_at', 'dt.device_type_name');
+
+    const query = dashboardQueries.BUILD_SYMPTOMS_QUERY(conditions);
+    const { rows } = await pool.query(query, params);
+
+    res.json({
+      success: true,
+      data: rows.map((r) => ({
+        label: r.label,
+        jobs_count: Number(r.jobs_count) || 0,
+        unit: 'เครื่อง',
+      })),
     });
   } catch (err) {
     next(err);

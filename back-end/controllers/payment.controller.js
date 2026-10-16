@@ -29,27 +29,18 @@ exports.upload = multer({
 /**
  * POST /api/payments
  * บันทึกการชำระเงิน (รองรับทั้งเงินสด และการโอนพร้อมสลิป)
+ *
+ * หมายเหตุ: วันที่ของระบบคือ "วันรับเครื่องมา" = created_at และ "วันรับเครื่องคืน" = return_date
+ * ที่บันทึกตอนลูกค้าเซ็นรับเครื่อง — ขั้นตอนนี้บันทึกเฉพาะการชำระเงิน (วิธีชำระ/วันที่ชำระ/สลิป)
  */
 exports.create = async (req, res, next) => {
   try {
-    const { job_id, job_no, payment_method, pickup_date } = req.body;
+    const { job_id, job_no, payment_method } = req.body;
     const userId = req.user?.id;
 
     const numJobId = parseInt(job_id, 10);
     if (isNaN(numJobId) || numJobId <= 0) {
       return res.status(400).json({ success: false, message: 'กรุณาระบุรหัสงานซ่อมที่ถูกต้อง' });
-    }
-
-    if (pickup_date) {
-      const cleanDateStr = String(pickup_date).trim();
-      if (cleanDateStr && cleanDateStr !== 'null' && cleanDateStr !== 'undefined') {
-        const pickup = new Date(cleanDateStr);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        if (!isNaN(pickup.getTime()) && pickup < today) {
-          return res.status(400).json({ success: false, message: 'วันนัดรับเครื่องต้องไม่เป็นวันที่ผ่านมาแล้ว' });
-        }
-      }
     }
 
     const cleanJobCode = (() => {
@@ -107,10 +98,9 @@ exports.create = async (req, res, next) => {
     }
 
     // 2. อัปเดตตาราง repair_job: ดันสถานะเป็น 7 (รอชำระ)
-    const cleanPickupDate = (pickup_date && pickup_date !== 'null' && pickup_date !== 'undefined' && String(pickup_date).trim() !== '') ? pickup_date : null;
     await pool.query(
       paymentQueries.UPDATE_PAYMENT_INFO,
-      [paymentMethodId, slipFilename, cleanPickupDate, numJobId]
+      [paymentMethodId, slipFilename, numJobId]
     );
 
     // 3. บันทึก action log ประวัติการชำระเงิน
@@ -143,7 +133,6 @@ exports.create = async (req, res, next) => {
         job_number: cleanJobCode,
         payment_method_id: paymentMethodId,
         slip_filename: slipFilename,
-        pickup_date: pickup_date || null,
       },
     });
   } catch (err) {

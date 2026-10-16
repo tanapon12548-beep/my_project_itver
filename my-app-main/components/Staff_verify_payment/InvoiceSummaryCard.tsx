@@ -1,22 +1,17 @@
 import React from 'react';
 import { View, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 
 interface InvoiceSummaryCardProps {
   displayJobNo: string;
   customerName?: string;
-  appointmentDate?: string | null;
   formattedAmount: string;
-  formatDate: (dateStr: string | null) => string;
   isCancelled?: boolean;
 }
 
 export default function InvoiceSummaryCard({
   displayJobNo,
   customerName,
-  appointmentDate,
   formattedAmount,
-  formatDate,
   isCancelled = false,
 }: InvoiceSummaryCardProps) {
   return (
@@ -47,18 +42,6 @@ export default function InvoiceSummaryCard({
         <Text className={`font-bold text-xs font-body ${isCancelled ? 'text-amber-800' : 'text-slate-800'}`}>
           {isCancelled ? 'ค่าบริการตรวจเช็คสภาพเครื่อง (ยกเลิกซ่อม)' : 'ค่าบริการซ่อมแซมและอะไหล่'}
         </Text>
-      </View>
-
-      <View className="py-2 border-b border-slate-100">
-        <View className="flex-row justify-between items-center">
-          <Text className="text-slate-500 text-xs font-body">กำหนดวันรับเครื่อง</Text>
-          <View className="flex-row items-center">
-            <Ionicons name="calendar-outline" size={14} color="#64748b" style={{ marginRight: 4 }} />
-            <Text className="text-slate-800 font-bold text-xs font-body">
-              {formatDate(appointmentDate ?? null)}
-            </Text>
-          </View>
-        </View>
       </View>
 
       <View className="flex-row justify-between items-center pt-3">

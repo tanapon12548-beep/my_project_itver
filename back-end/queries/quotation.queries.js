@@ -20,7 +20,7 @@ exports.UPDATE_REPAIR_FOR_NEW_QUOTATION = `
 `;
 
 exports.FIND_ITEM_BY_NAME = `
-  SELECT item_id FROM item WHERE item_name = $1
+  SELECT item_id, item_type_id FROM item WHERE item_name = $1
 `;
 
 exports.INSERT_NEW_ITEM = `
@@ -29,9 +29,14 @@ exports.INSERT_NEW_ITEM = `
   RETURNING item_id
 `;
 
+/**
+ * บันทึกรายการในใบเสนอราคา
+ * unit_cost = snapshot ราคาทุนของอะไหล่ ณ วันที่เสนอราคา (ดึงจาก item.cost_price)
+ * เก็บ snapshot ไว้เพื่อไม่ให้กำไรย้อนหลังเปลี่ยนตามราคาทุนที่ถูกแก้ในภายหลัง
+ */
 exports.INSERT_QUOTATION_DETAIL = `
-  INSERT INTO quotation_details (quote_id, item_id, quantity, unit_price, total_price)
-  VALUES ($1, $2, $3, $4, $5)
+  INSERT INTO quotation_details (quote_id, item_id, quantity, unit_price, total_price, unit_cost)
+  VALUES ($1, $2, $3, $4, $5, COALESCE((SELECT cost_price FROM item WHERE item_id = $2), 0))
 `;
 
 exports.GET_QUOTATION_BY_ID = `

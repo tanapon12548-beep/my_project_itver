@@ -1,6 +1,33 @@
 const pool = require('../config/db');
 
 /**
+ * ตรวจสอบ "ราคาทุน" ของรายการ
+ *  - อะไหล่ (item_type_id = 1): ต้องมีทุนมากกว่า 0 เสมอ (ห้ามว่าง/ห้าม 0) และต้องไม่เกินราคาขาย
+ *    เพราะถ้าปล่อยให้ทุนเป็น 0 กำไรขั้นต้นในแดชบอร์ดจะเท่ากับรายรับ (สูงเกินจริง)
+ *  - ค่าบริการ (item_type_id = 2): ไม่มีต้นทุนสินค้า → บังคับเป็น 0
+ * @returns {{ cost?: number, error?: string }}
+ */
+function resolveCostPrice(itemTypeId, rawCost, sellingPrice) {
+  if (itemTypeId !== 1) return { cost: 0 };
+
+  const isBlank = rawCost === undefined || rawCost === null || String(rawCost).trim() === '';
+  if (isBlank) {
+    return { error: 'กรุณากรอกราคาทุนของอะไหล่ (ต้องมากกว่า 0 บาท)' };
+  }
+
+  const cost = parseFloat(rawCost);
+  if (isNaN(cost) || cost <= 0) {
+    return { error: 'ราคาทุนของอะไหล่ต้องมากกว่า 0 บาท' };
+  }
+
+  if (cost > sellingPrice) {
+    return { error: 'ราคาทุนต้องไม่สูงกว่าราคาขาย' };
+  }
+
+  return { cost };
+}
+
+/**
  * GET /api/items
  * ?type=parts → item_type_id = 1
  * ?type=services → item_type_id = 2
@@ -50,7 +77,7 @@ exports.getAll = async (req, res, next) => {
  */
 exports.create = async (req, res, next) => {
   try {
-    const { item_name, item_type_id, selling_price, price } = req.body;
+    const { item_name, item_type_id, selling_price, price, cost_price } = req.body;
     const cleanName = (item_name || '').trim();
     if (!cleanName) {
       return res.status(400).json({ success: false, message: 'กรุณากรอกชื่อรายการ' });
@@ -64,11 +91,16 @@ exports.create = async (req, res, next) => {
     const rawPrice = selling_price !== undefined ? selling_price : (price || 0);
     const safePrice = Math.max(0, parseFloat(rawPrice) || 0);
 
+    const { cost: safeCost, error: costError } = resolveCostPrice(numTypeId, cost_price, safePrice);
+    if (costError) {
+      return res.status(400).json({ success: false, message: costError });
+    }
+
     const { rows } = await pool.query(
-      `INSERT INTO item (item_name, item_type_id, selling_price)
-       VALUES ($1, $2, $3)
+      `INSERT INTO item (item_name, item_type_id, selling_price, cost_price)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [cleanName, numTypeId, safePrice]
+      [cleanName, numTypeId, safePrice, safeCost]
     );
 
     res.status(201).json({ success: true, data: rows[0] });
@@ -88,7 +120,7 @@ exports.update = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'ID รายการไม่ถูกต้อง' });
     }
 
-    const { item_name, item_type_id, selling_price, price } = req.body;
+    const { item_name, item_type_id, selling_price, price, cost_price } = req.body;
     const cleanName = (item_name || '').trim();
     if (!cleanName) {
       return res.status(400).json({ success: false, message: 'กรุณากรอกชื่อรายการ' });
@@ -102,11 +134,16 @@ exports.update = async (req, res, next) => {
     const rawPrice = selling_price !== undefined ? selling_price : (price || 0);
     const safePrice = Math.max(0, parseFloat(rawPrice) || 0);
 
+    const { cost: safeCost, error: costError } = resolveCostPrice(numTypeId, cost_price, safePrice);
+    if (costError) {
+      return res.status(400).json({ success: false, message: costError });
+    }
+
     const { rows } = await pool.query(
-      `UPDATE item SET item_name=$1, item_type_id=$2, selling_price=$3
-       WHERE item_id=$4
+      `UPDATE item SET item_name=$1, item_type_id=$2, selling_price=$3, cost_price=$4
+       WHERE item_id=$5
        RETURNING *`,
-      [cleanName, numTypeId, safePrice, numId]
+      [cleanName, numTypeId, safePrice, safeCost, numId]
     );
 
     if (rows.length === 0) {

@@ -54,9 +54,6 @@ export default function MakeQuoteScreen() {
   const [customerRemark, setCustomerRemark] = useState('');
   const [quoteStatusId, setQuoteStatusId] = useState<number | null>(null);
 
-  const [partInputName, setPartInputName] = useState('');
-  const [partInputPrice, setPartInputPrice] = useState('');
-  const [partInputQty, setPartInputQty] = useState('1');
   const [serviceInputName, setServiceInputName] = useState('');
   const [serviceInputPrice, setServiceInputPrice] = useState('');
 
@@ -285,48 +282,31 @@ export default function MakeQuoteScreen() {
     setItemToDelete(null);
   };
 
-  // Add Part
+  // Add Part — เลือกจากคลังเท่านั้น (ระบบต้องรู้ราคาทุนเพื่อคำนวณกำไรขั้นต้น)
   const handleAddPart = (itemFromDb?: any) => {
-    const qNum = Math.max(1, parseInt(partInputQty, 10) || 1);
-    if (itemFromDb) {
-      setParts((prev) => [
-        ...prev,
-        {
-          id: Date.now().toString(),
-          name: itemFromDb.item_name,
-          price: Math.max(0, parseFloat(itemFromDb.selling_price || itemFromDb.unit_price || 0)),
-          qty: qNum,
-          item_id: itemFromDb.item_id,
-        },
-      ]);
-      setPartInputQty('1');
-      return;
-    }
-
-    if (!partInputName.trim() || !partInputPrice.trim()) return;
-    const priceNum = parseFloat(partInputPrice);
-    if (isNaN(priceNum)) return;
-    if (priceNum < 0) {
+    if (!itemFromDb) {
       showAlert({
-        title: 'ราคาไม่ถูกต้อง',
-        message: 'ราคาอะไหล่ต้องไม่เป็นค่าติดลบ',
+        title: 'เลือกอะไหล่จากคลังเท่านั้น',
+        message:
+          'ระบบต้องรู้ราคาทุนของอะไหล่เพื่อคำนวณกำไรขั้นต้น จึงต้องเลือกจากคลัง\nถ้าไม่พบรายการที่ต้องการ กรุณาเพิ่มที่หน้าจัดการรายการ (พร้อมกรอกราคาทุน) ก่อน',
         type: 'warning',
+        confirmText: 'เข้าใจแล้ว',
+        onConfirm: hideAlert,
       });
       return;
     }
 
+    const qNum = Math.max(1, parseInt(String(itemFromDb.qty ?? 1), 10) || 1);
     setParts((prev) => [
       ...prev,
       {
         id: Date.now().toString(),
-        name: partInputName.trim(),
-        price: priceNum,
+        name: itemFromDb.item_name,
+        price: Math.max(0, parseFloat(itemFromDb.selling_price || itemFromDb.unit_price || 0)),
         qty: qNum,
+        item_id: itemFromDb.item_id,
       },
     ]);
-    setPartInputName('');
-    setPartInputPrice('');
-    setPartInputQty('1');
   };
 
   // Remove Part (prompt confirmation)
@@ -591,12 +571,6 @@ export default function MakeQuoteScreen() {
               {/* ค่าอะไหล่ */}
               <PartsCostCard
                 parts={parts}
-                partInputName={partInputName}
-                setPartInputName={setPartInputName}
-                partInputPrice={partInputPrice}
-                setPartInputPrice={setPartInputPrice}
-                partInputQty={partInputQty}
-                setPartInputQty={setPartInputQty}
                 onAddPart={handleAddPart}
                 onRemovePart={handleRemovePart}
                 onUpdatePartQty={handleUpdatePartQty}

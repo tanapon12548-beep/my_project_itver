@@ -230,7 +230,7 @@ exports.getById = async (req, res, next) => {
  */
 exports.create = async (req, res, next) => {
   try {
-    const { device_id, symptom_details, symptom, appointment_date, status_id } = req.body;
+    const { device_id, symptom_details, symptom, status_id } = req.body;
     const numDeviceId = parseInt(device_id, 10);
     if (isNaN(numDeviceId) || numDeviceId <= 0) {
       return res.status(400).json({ success: false, message: 'กรุณาระบุอุปกรณ์ที่ถูกต้อง' });
@@ -240,7 +240,7 @@ exports.create = async (req, res, next) => {
 
     const { rows } = await pool.query(
       repairQueries.INSERT_REPAIR_JOB,
-      [numDeviceId, symptomText, appointment_date || null, isNaN(numStatusId) ? REPAIR_STATUS.PENDING_CHECK : numStatusId]
+      [numDeviceId, symptomText, isNaN(numStatusId) ? REPAIR_STATUS.PENDING_CHECK : numStatusId]
     );
 
     res.status(201).json({ success: true, data: rows[0] });
@@ -260,7 +260,7 @@ exports.update = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'รหัสงานซ่อมไม่ถูกต้อง' });
     }
     const {
-      device_id, symptom_details, symptom, appointment_date, status_id,
+      device_id, symptom_details, symptom, status_id,
       total_amount, slip_image, payment_date, payment_method_id, quotation_id,
     } = req.body;
     const symptomText = symptom_details || symptom ? String(symptom_details || symptom).trim() : null;
@@ -270,7 +270,7 @@ exports.update = async (req, res, next) => {
 
     const { rows } = await pool.query(
       repairQueries.UPDATE_REPAIR_JOB,
-      [numDeviceId, symptomText, appointment_date, numStatusId,
+      [numDeviceId, symptomText, numStatusId,
        safeAmount, slip_image, payment_date, payment_method_id, quotation_id, numId]
     );
 

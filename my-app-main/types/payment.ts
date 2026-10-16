@@ -9,7 +9,6 @@ export interface PaymentData {
   payment_method: 'cash' | 'transfer';
   payment_method_id?: number;
   payment_method_name?: string;
-  pickup_date?: string;
   slip_image?: string | null;
   slip_filename?: string | null;
   payment_verified?: boolean;

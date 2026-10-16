@@ -19,7 +19,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // 3. API helpers & Types
 import { createPayment, getRepair, verifyPayment, rejectPayment, getImageUrl } from '@/lib/api';
 import { REPAIR_STATUS, QUOTE_STATUS, PAYMENT_METHODS, CANCEL_INSPECTION_FEE } from '@/constants/status';
-import type { RepairJob } from '@/types/repair';
 
 // 4. Components
 import CustomAlert from '@/components/ui/CustomAlert';
@@ -38,7 +37,6 @@ export default function VerifyPaymentScreen() {
     job_no?: string;
     customer_name?: string;
     amount?: string;
-    pickupDate?: string;
     role?: string;
   }>();
 
@@ -63,7 +61,6 @@ export default function VerifyPaymentScreen() {
   const [customerName, setCustomerName] = useState<string>(params.customer_name || '');
   const [totalAmount, setTotalAmount] = useState<number>(Number(params.amount || 0));
   const [isCancelled, setIsCancelled] = useState<boolean>(false);
-  const [appointmentDate, setAppointmentDate] = useState<string | null>(params.pickupDate || null);
   const [existingSlipUrl, setExistingSlipUrl] = useState<string | null>(null);
   const [existingSlipFilename, setExistingSlipFilename] = useState<string | null>(null);
   const [existingPaymentMethodId, setExistingPaymentMethodId] = useState<number | null>(null);
@@ -148,9 +145,6 @@ export default function VerifyPaymentScreen() {
           setTotalAmount(computedTotal);
           setIsCancelled(isCancelledJob);
 
-          if (d.appointment_date && !params.pickupDate) {
-            setAppointmentDate(d.appointment_date);
-          }
           if (d.payment_method_id) {
             setExistingPaymentMethodId(d.payment_method_id);
             if (d.payment_method_id === PAYMENT_METHODS.TRANSFER) setPaymentMethod('transfer');
@@ -174,7 +168,7 @@ export default function VerifyPaymentScreen() {
       }
     }
     loadJobInfo();
-  }, [rawJobId, numericJobId, params.amount, params.pickupDate]);
+  }, [rawJobId, numericJobId, params.amount]);
 
   const handlePickImage = async () => {
     if (Platform.OS !== 'web') {
@@ -212,7 +206,6 @@ export default function VerifyPaymentScreen() {
     if (isBusy) return;
     setSubmitting(true);
     try {
-      const pickupDateToUse = appointmentDate || new Date(Date.now() + 86400000).toISOString().slice(0, 10);
       let payload: any;
       let isFormData = false;
 
@@ -222,7 +215,6 @@ export default function VerifyPaymentScreen() {
         formData.append('job_id', String(numericJobId || rawJobId));
         formData.append('job_no', displayJobNo);
         formData.append('payment_method', paymentMethod);
-        formData.append('pickup_date', pickupDateToUse);
 
         if (Platform.OS === 'web') {
           const res = await fetch(slipImage);
@@ -246,7 +238,6 @@ export default function VerifyPaymentScreen() {
           job_id: numericJobId || rawJobId,
           job_no: displayJobNo,
           payment_method: paymentMethod,
-          pickup_date: pickupDateToUse,
         };
       }
 
@@ -254,7 +245,7 @@ export default function VerifyPaymentScreen() {
       if (res.success) {
         showAppAlert(
           'บันทึกสำเร็จ!',
-          'ระบบได้บันทึกข้อมูลการชำระเงินและนัดรับเครื่องเรียบร้อยแล้ว',
+          'ระบบได้บันทึกข้อมูลการชำระเงินเรียบร้อยแล้ว',
           'success',
           {
             confirmText: 'ตกลง',
@@ -343,7 +334,6 @@ export default function VerifyPaymentScreen() {
         job_id: numericJobId || rawJobId,
         job_no: displayJobNo,
         payment_method: 'cash',
-        pickup_date: appointmentDate || new Date().toISOString().slice(0, 10),
       });
       const res = await verifyPayment(numericJobId || rawJobId);
       if (res.success) {
@@ -361,20 +351,6 @@ export default function VerifyPaymentScreen() {
   const isBusy = submitting || verifying || rejecting;
   const formattedAmount = Number(totalAmount).toLocaleString();
 
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return 'ไม่ได้ระบุ';
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('th-TH', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
       <StatusBar style="light" backgroundColor="#D32F2F" />
@@ -386,7 +362,7 @@ export default function VerifyPaymentScreen() {
         </TouchableOpacity>
         <View>
           <Text className="text-white text-lg font-bold font-heading">
-            {isStaff ? 'ตรวจสอบการชำระเงิน' : 'ชำระเงินและนัดรับเครื่อง'}
+            {isStaff ? 'ตรวจสอบการชำระเงิน' : 'ชำระเงินค่าซ่อม'}
           </Text>
           <Text className="text-red-200 text-xs font-body">{displayJobNo}</Text>
         </View>
@@ -402,9 +378,7 @@ export default function VerifyPaymentScreen() {
           <InvoiceSummaryCard
             displayJobNo={displayJobNo}
             customerName={customerName}
-            appointmentDate={appointmentDate}
             formattedAmount={formattedAmount}
-            formatDate={formatDate}
             isCancelled={isCancelled}
           />
 
