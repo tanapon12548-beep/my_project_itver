@@ -205,11 +205,11 @@ export default function JobDetailScreen() {
     if (actionLoading || !job?.quotation_id) return;
     setActionLoading(true);
     try {
-      // API call to update status to 5 (request modify) with remark
-      const res = await updateQuotationStatus(job.quotation_id as number, { quote_status_id: 5, customer_remark: remark });
+      // API call to update status to CHANGE_REQUEST (5) with remark
+      const res = await updateQuotationStatus(job.quotation_id as number, { quote_status_id: QUOTE_STATUS.CHANGE_REQUEST, customer_remark: remark });
       if (res.success) {
         showToast('สำเร็จ', 'ส่งคำขอแก้ไขไปยังช่างเรียบร้อยแล้ว');
-        setJob((prev) => (prev ? { ...prev, customer_remark: remark, quotation_status_id: 5, status_id: 3, status: 'ดำเนินการเสนอราคา' } : null));
+        setJob((prev) => (prev ? { ...prev, customer_remark: remark, quotation_status_id: QUOTE_STATUS.CHANGE_REQUEST, status_id: REPAIR_STATUS.MAKING_QUOTE, status: 'ดำเนินการเสนอราคา' } : null));
         fetchJob(true);
       } else {
         throw new Error(res.message);

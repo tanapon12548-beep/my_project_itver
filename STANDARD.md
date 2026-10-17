@@ -306,7 +306,9 @@
 | ISS-08 | โฟลเดอร์ + กลุ่มเส้นทางสะกดผิด `Meneger_*`, `Technicain_*`, `(meneger)`, `(technicain)` | `Manager_*`, `Technician_*`, `(manager)`, `(technician)` | ✅ **แก้แล้ว (Phase 3)** — 8 โฟลเดอร์ + 64 จุดอ้างอิงใน 13 ไฟล์ |
 | ISS-09 | SQL อยู่inline ใน 8 controller แต่แยก `queries/` แค่ 4 | งานยาว/ซ้ำ → ย้ายเข้า `queries/` | ⏳ รอพิจารณา |
 | ISS-10 | `AGENTS.md` บอกว่าแอปใช้ Supabase query ตรง + route group `(tabs)` + realtime tab badge + `.env` แบบ Supabase (ไม่มีจริงในโค้ด) และ `eas.json` ยังฝังตัวแปร `EXPO_PUBLIC_SUPABASE_*` ที่ไม่มีใครใช้ | ตัดออก/แก้ให้ตรงจริง | ✅ **แก้แล้ว (Phase 4)** — เขียน `AGENTS.md` ใหม่ทั้งไฟล์ + ลบตัวแปรใน `eas.json`; `handoff.md` ติดป้าย "เอกสารรุ่นเก่า" |
-| ISS-11 | `quotation_status` มี id 5 ในฐานข้อมูล แต่ `constants.QUOTE_STATUS` ไม่มี | เพิ่มให้ครบ | ⏳ Phase 1.1 |
+| ISS-11 | `quotation_status` มี id 5 ในฐานข้อมูล แต่ `constants.QUOTE_STATUS` ไม่มี → ทำให้ controller ต้อง **ฝังเลข `5` ดิบ 2 จุด** (`quotation.controller.js:608, 672`) | เพิ่มให้ครบ + ตรงชื่อกับตารางจริง | ✅ **แก้แล้ว (Follow-up)** — กำหนดตรงกับตาราง `quotation_status`: 4 = `REVISING` (ปรับปรุงใบเสนอราคา), 5 = `CHANGE_REQUEST` (ขอแก้ไข/เพิ่มเติมรายการ) ทั้งฝั่งแอปและ API + ลบเลขดิบและคงรายการที่ลูกค้าแก้ได้เป็น `[2,3,4,5]` เท่าเดิม |
+| ISS-12 | ฝั่งแอปเทียบสถานะด้วยเลขดิบปนกับค่าคงที่ (`quote_status_id === 5`, `repair_status_id === 3`) ใน `QuotationStatusBadge.tsx`, `(technician)/repairing.tsx`, `job-detail.tsx` | ใช้ `QUOTE_STATUS.*` / `REPAIR_STATUS.*` | ⏳ รอพิจารณา — ค่าตรงกันอยู่ จึงไม่กระทบพฤติกรรม (แก้เฉพาะจุดที่ *เขียน* สถานะแล้ว) |
+| ISS-13 | `constants/status.ts` ฝั่งแอป มี `ROLES` **สลับ 2/3** (STAFF 2 / TECHNICIAN 3) เหมือนบั๊กเดิมของฝั่ง API | ต้องตรงกับตาราง `roles` | ✅ **แก้แล้ว (Follow-up)** — ตรวจแล้วไม่มีโค้ดใดอ้างถึง `ROLES` ฝั่งแอป จึงไม่กระทบพฤติกรรม แต่ปิดกับดักไว้ |
 
 ---
 
@@ -346,6 +348,13 @@
 4. `my-app-main/handoff.md` — ติดป้าย "เอกสารส่งมอบรุ่นเก่า" พร้อมชี้ไปเอกสารปัจจุบัน (คงเนื้อหาเดิมไว้เป็นบันทึกประวัติศาสตร์)
 5. `my-app-main/eas.json` — ลบตัวแปร `EXPO_PUBLIC_SUPABASE_*` ที่ไม่มีโค้ดใช้งานแล้ว
 6. ตรวจผล: ไม่เหลือคำว่า `supabase` ในโค้ด/config (เหลือเฉพาะในเอกสารที่ระบุว่าเป็นของเก่าหรือเป็นข้อห้าม) · `tsc --noEmit` = exit 0 · `eslint` = 4 error / 30 warning เท่าเดิม
+
+**Follow-up — ปิดค่าคงที่ที่ไม่ตรงฐานข้อมูล (ทำแล้วรอบนี้)**
+1. `my-app-main/constants/status.ts` — `ROLES` ฝั่งแอปยังเป็นค่าเก่าที่ **สลับ 2/3** (STAFF 2 / TECHNICIAN 3) ตรงข้ามกับตาราง `roles` จริง → แก้เป็น 1 Manager / 2 Technician / 3 Staff / 4 Customer (ตรวจแล้วไม่มีโค้ดไหนอ้างถึง `ROLES` ฝั่งแอป จึงไม่กระทบพฤติกรรม) = **ISS-13**
+2. `constants/status.ts` + `back-end/constants/index.js` — `QUOTE_STATUS` ขาด id 5 และตั้งชื่อ 4 ไม่ตรงความหมาย → ทำตรงกับตาราง `quotation_status`: 4 = `REVISING` (ปรับปรุงใบเสนอราคา), 5 = `CHANGE_REQUEST` (ขอแก้ไข/เพิ่มเติมรายการ) = **ISS-11**
+3. `back-end/controllers/quotation.controller.js` — ลบ **magic number `5`** ที่ฝังไว้ 2 จุด (มีเพราะค่าคงที่ขาด) → ใช้ `QUOTE_STATUS.CHANGE_REQUEST`; และเพิ่ม `REVISING` เข้ารายการที่ลูกค้าเปลี่ยนสถานะได้ เพื่อคงพฤติกรรมเดิมครบ `[2,3,4,5]`
+4. `app/job-detail.tsx` — จุดที่ *เขียน* สถานะเปลี่ยนจาก `5` / `3` ดิบ → `QUOTE_STATUS.CHANGE_REQUEST` / `REPAIR_STATUS.MAKING_QUOTE`
+5. ยังเหลือ: การ *เปรียบเทียบ* สถานะด้วยเลขดิบใน `QuotationStatusBadge.tsx`, `(technician)/repairing.tsx`, `job-detail.tsx` (= **ISS-12** — ค่าตรงกันอยู่ จึงไม่กระทบพฤติกรรม) และการย้าย SQL ที่ฝังใน controller เข้า `queries/` (= **ISS-09**)
 
 ---
 

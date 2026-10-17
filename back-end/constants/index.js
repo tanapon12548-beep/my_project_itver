@@ -28,11 +28,13 @@ exports.REPAIR_STATUS = {
 };
 
 // 3. สถานะใบเสนอราคา (Quotation Status)
+// ⚠️ ค่าต้องตรงกับตาราง `quotation_status` ในฐานข้อมูลเสมอ (quotation_status.quote_status_id)
 exports.QUOTE_STATUS = {
-  PENDING: 1,               // รอลูกค้าอนุมัติ
-  APPROVED: 2,              // ลูกค้าอนุมัติแล้ว
-  CANCELLED: 3,             // ลูกค้ายกเลิก
-  CHANGE_REQUEST: 4,        // ขอแก้ไข/เพิ่มเติมรายการ
+  PENDING: 1,               // รอการอนุมัติ
+  APPROVED: 2,              // อนุมัติแล้ว
+  CANCELLED: 3,             // ยกเลิก
+  REVISING: 4,              // ปรับปรุงใบเสนอราคา (ช่างกำลังแก้ไข)
+  CHANGE_REQUEST: 5,        // ขอแก้ไข/เพิ่มเติมรายการ (ลูกค้าขอแก้ไข/ตีกลับ)
 };
 
 // 4. ประเภทประวัติการกระทำ (Action Log Types)

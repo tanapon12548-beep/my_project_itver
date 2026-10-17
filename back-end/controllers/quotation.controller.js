@@ -605,7 +605,7 @@ exports.updateStatus = async (req, res, next) => {
       }
 
       // ลูกค้าสามารถเลือกได้เฉพาะ: อนุมัติ (2), ยกเลิก (3), หรือขอแก้ไข (4 หรือ 5)
-      const allowedCustomerStatuses = [QUOTE_STATUS.APPROVED, QUOTE_STATUS.CANCELLED, QUOTE_STATUS.CHANGE_REQUEST, 5];
+      const allowedCustomerStatuses = [QUOTE_STATUS.APPROVED, QUOTE_STATUS.CANCELLED, QUOTE_STATUS.REVISING, QUOTE_STATUS.CHANGE_REQUEST];
       if (!allowedCustomerStatuses.includes(statusNum)) {
         return res.status(403).json({ success: false, message: 'ลูกค้าสามารถอนุมัติ ขอยกเลิก หรือขอแก้ไขใบเสนอราคาได้เท่านั้น' });
       }
@@ -669,7 +669,7 @@ exports.updateStatus = async (req, res, next) => {
           console.warn('Could not log approve action:', e.message);
         }
       }
-    } else if (statusNum === QUOTE_STATUS.CHANGE_REQUEST || statusNum === 5) {
+    } else if (statusNum === QUOTE_STATUS.REVISING || statusNum === QUOTE_STATUS.CHANGE_REQUEST) {
       await client.query(
         `UPDATE repair_job SET status_id = ${REPAIR_STATUS.MAKING_QUOTE} WHERE job_id = $1 OR quotation_id = $2`,
         [jobId, id]

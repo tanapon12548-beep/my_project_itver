@@ -16,17 +16,21 @@ export const REPAIR_STATUS = {
   CANCELLED: 9,            // ยกเลิกซ่อม
 } as const;
 
+// ⚠️ ค่าต้องตรงกับตาราง `quotation_status` ในฐานข้อมูล (ดู ../back-end/constants/index.js)
 export const QUOTE_STATUS = {
-  PENDING: 1,              // รอลูกค้าอนุมัติ
-  APPROVED: 2,             // ลูกค้าอนุมัติแล้ว
-  CANCELLED: 3,            // ลูกค้ายกเลิก
-  CHANGE_REQUEST: 4,       // ขอแก้ไข/เพิ่มเติมรายการ
+  PENDING: 1,              // รอการอนุมัติ
+  APPROVED: 2,             // อนุมัติแล้ว
+  CANCELLED: 3,            // ยกเลิก
+  REVISING: 4,             // ปรับปรุงใบเสนอราคา (ช่างกำลังแก้ไข)
+  CHANGE_REQUEST: 5,       // ขอแก้ไข/เพิ่มเติมรายการ (ลูกค้าขอแก้ไข/ตีกลับ)
 } as const;
 
+// ⚠️ ค่าต้องตรงกับตาราง `roles` ในฐานข้อมูล (roles.id)
+// 1 = Manager, 2 = Technician, 3 = Staff, 4 = Customer
 export const ROLES = {
   MANAGER: 1,
-  STAFF: 2,
-  TECHNICIAN: 3,
+  TECHNICIAN: 2,
+  STAFF: 3,
   CUSTOMER: 4,
 } as const;
 
