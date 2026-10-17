@@ -13,7 +13,7 @@ import {
 
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
-import { CANCEL_INSPECTION_FEE } from '@/constants/status';
+import { CANCEL_INSPECTION_FEE, QUOTE_STATUS, REPAIR_STATUS } from '@/constants/status';
 import type { QuotationLineItem } from '@/types/quotation';
 
 import { Colors } from '@/constants/theme';
@@ -69,8 +69,8 @@ export default function CustomerQuotationCard({
   // 1. ตรวจสอบการยกเลิกก่อนเป็นอันดับแรก (Priority สูงสุด)
   const isCancelled =
     Boolean(propIsCancelled) ||
-    quoteStatusId === 3 ||
-    statusId === 9 ||
+    quoteStatusId === QUOTE_STATUS.CANCELLED ||
+    statusId === REPAIR_STATUS.CANCELLED ||
     status === 'ยกเลิกซ่อม' ||
     status === 'ยกเลิก' ||
     Boolean(status?.includes('ยกเลิก'));
@@ -78,20 +78,20 @@ export default function CustomerQuotationCard({
   // 2. ตรวจสอบการอนุมัติ (ต้องไม่ใช่รายการที่ยกเลิก)
   const isApproved =
     !isCancelled &&
-    (quoteStatusId === 2 ||
-      statusId === 5 ||
-      (statusId === 6 && quoteStatusId !== 3) ||
-      (statusId === 7 && quoteStatusId !== 3) ||
-      (statusId === 8 && quoteStatusId !== 3) ||
+    (quoteStatusId === QUOTE_STATUS.APPROVED ||
+      statusId === REPAIR_STATUS.APPROVED_WAIT_REPAIR ||
+      (statusId === REPAIR_STATUS.READY_FOR_PICKUP && quoteStatusId !== QUOTE_STATUS.CANCELLED) ||
+      (statusId === REPAIR_STATUS.WAITING_PAYMENT && quoteStatusId !== QUOTE_STATUS.CANCELLED) ||
+      (statusId === REPAIR_STATUS.COMPLETED && quoteStatusId !== QUOTE_STATUS.CANCELLED) ||
       status === 'อนุมัติแล้ว/รอซ่อม' ||
-      (status === 'รอชำระ' && quoteStatusId !== 3) ||
-      (status === 'เสร็จสิ้น' && quoteStatusId !== 3));
+      (status === 'รอชำระ' && quoteStatusId !== QUOTE_STATUS.CANCELLED) ||
+      (status === 'เสร็จสิ้น' && quoteStatusId !== QUOTE_STATUS.CANCELLED));
 
   const isModificationRequested =
     !isCancelled &&
     !isApproved &&
     Boolean(customerRemark) &&
-    (quoteStatusId === 5 || quoteStatusId === 4 || statusId === 3 || status?.includes('เสนอราคา'));
+    (quoteStatusId === QUOTE_STATUS.CHANGE_REQUEST || quoteStatusId === QUOTE_STATUS.REVISING || statusId === REPAIR_STATUS.MAKING_QUOTE || status?.includes('เสนอราคา'));
 
   const isPending = !isApproved && !isCancelled && !isModificationRequested;
 

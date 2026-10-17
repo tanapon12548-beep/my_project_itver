@@ -6,6 +6,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { RepairJob } from '@/types/repair';
 
+import { QUOTE_STATUS, REPAIR_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 
 // Unified 7-stage progress indicator:
@@ -114,18 +115,18 @@ export default function CustomerJobCard({ item, onPressDetails }: CustomerJobCar
   const jobNo = item.job_number || item.job_no || (targetId ? `REP-${String(targetId).padStart(6, '0')}` : '-');
   const symptomText = item.symptoms || item.symptom_details || item.symptom || 'ไม่ระบุอาการเสีย';
   const statusText = item.status || item.status_name || 'รอตรวจเช็ค';
-  const statusId = Number(item.status_id || 1);
+  const statusId = Number(item.status_id || REPAIR_STATUS.PENDING_CHECK);
   const isCancelled =
-    statusId === 9 ||
+    statusId === REPAIR_STATUS.CANCELLED ||
     statusText.includes('ยกเลิก') ||
-    Number(item.quote_status_id ?? item.quotation?.quote_status_id) === 3 ||
+    Number(item.quote_status_id ?? item.quotation?.quote_status_id) === QUOTE_STATUS.CANCELLED ||
     Boolean(item.is_cancelled);
   const statusCfg = getStatusConfig(statusText, statusId, isCancelled);
-  const isCompleted = (statusId === 8 || statusText.includes('เสร็จ') || statusText.includes('ส่งมอบ')) && !isCancelled;
+  const isCompleted = (statusId === REPAIR_STATUS.COMPLETED || statusText.includes('เสร็จ') || statusText.includes('ส่งมอบ')) && !isCancelled;
   const progressStage = getProgressStage(statusId, statusText);
-  const isReadyForPickup = (statusId === 6 || statusText.includes('มารับเครื่อง') || statusText.includes('พร้อมรับ')) && !isCancelled;
-  const isNeedsApproval = (statusId === 4 || statusText.includes('รอการอนุมัติ') || statusText.includes('รออนุมัติ')) && !isCancelled;
-  const isPendingPayment = (statusId === 7 || statusText.includes('รอชำระ')) && !isCancelled;
+  const isReadyForPickup = (statusId === REPAIR_STATUS.READY_FOR_PICKUP || statusText.includes('มารับเครื่อง') || statusText.includes('พร้อมรับ')) && !isCancelled;
+  const isNeedsApproval = (statusId === REPAIR_STATUS.PENDING_APPROVAL || statusText.includes('รอการอนุมัติ') || statusText.includes('รออนุมัติ')) && !isCancelled;
+  const isPendingPayment = (statusId === REPAIR_STATUS.WAITING_PAYMENT || statusText.includes('รอชำระ')) && !isCancelled;
 
   return (
     <View className="bg-white rounded-3xl mb-4 border border-slate-200/90 shadow-sm overflow-hidden">
@@ -336,9 +337,9 @@ export default function CustomerJobCard({ item, onPressDetails }: CustomerJobCar
             <View className="flex-row items-center gap-1.5 flex-1 pr-2">
               <Ionicons name="time-outline" size={15} color="#94A3B8" />
               <Text className="text-xs text-slate-400 font-body" numberOfLines={1}>
-                {statusId === 1 || statusId === 2
+                {statusId === REPAIR_STATUS.PENDING_CHECK || statusId === REPAIR_STATUS.CHECKING
                   ? 'อยู่ระหว่างตรวจเช็คสภาพเครื่อง'
-                  : statusId === 3
+                  : statusId === REPAIR_STATUS.MAKING_QUOTE
                   ? 'กำลังจัดทำใบเสนอราคา'
                   : 'รอการสรุปค่าบริการ'}
               </Text>

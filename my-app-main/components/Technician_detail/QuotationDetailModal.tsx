@@ -11,6 +11,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getQuotation } from '@/lib/api';
 import { canEditOrDeleteQuote } from '../Technician_quotation/QuotationStatusBadge';
 
+import { QUOTE_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 
 interface QuotationDetailModalProps {
@@ -77,7 +78,7 @@ export default function QuotationDetailModal({
     const sId = data.quote_status_id;
     const sName = data.quote_status_name || '';
 
-    if (sId === 2 || sName.includes('อนุมัติแล้ว')) {
+    if (sId === QUOTE_STATUS.APPROVED || sName.includes('อนุมัติแล้ว')) {
       return {
         bg: 'bg-emerald-50',
         border: 'border-emerald-300',
@@ -86,7 +87,7 @@ export default function QuotationDetailModal({
         icon: 'checkmark-circle-outline' as const,
       };
     }
-    if (sId === 3 || sName.includes('ยกเลิก') || sName.includes('ไม่อนุมัติ')) {
+    if (sId === QUOTE_STATUS.CANCELLED || sName.includes('ยกเลิก') || sName.includes('ไม่อนุมัติ')) {
       return {
         bg: 'bg-rose-50',
         border: 'border-rose-300',
@@ -95,7 +96,7 @@ export default function QuotationDetailModal({
         icon: 'close-circle-outline' as const,
       };
     }
-    if (sId === 4 || sId === 5 || data.customer_remark) {
+    if (sId === QUOTE_STATUS.REVISING || sId === QUOTE_STATUS.CHANGE_REQUEST || data.customer_remark) {
       return {
         bg: 'bg-amber-50',
         border: 'border-amber-300',
@@ -271,7 +272,7 @@ export default function QuotationDetailModal({
               <View className="bg-slate-50 border border-slate-200 rounded-xl p-4 mt-3 flex-row justify-between items-center">
                 <View>
                   <Text className="text-xs font-bold text-slate-700 font-heading">ยอดรวมเสนอราคาทั้งสิ้น</Text>
-                  {data.quote_status_id === 3 ? (
+                  {data.quote_status_id === QUOTE_STATUS.CANCELLED ? (
                     <Text className="text-[11px] text-rose-600 font-medium">
                       (ลูกค้ายกเลิก ชำระค่าตรวจเช็ค 300 บ.)
                     </Text>

@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 // 3. Types
 import type { RepairItem } from './types';
 
+import { QUOTE_STATUS, REPAIR_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 
 interface RepairItemRowProps {
@@ -49,30 +50,30 @@ export default function RepairItemRow({
     'ไม่ระบุอาการเสีย';
 
   const isCancelledItem =
-    statusId === 9 ||
-    item.status_id === 9 ||
+    statusId === REPAIR_STATUS.CANCELLED ||
+    item.status_id === REPAIR_STATUS.CANCELLED ||
     String(item.status || '').includes('ยกเลิก') ||
     Boolean(item.is_cancelled) ||
-    Number(item.quote_status_id) === 3;
+    Number(item.quote_status_id) === QUOTE_STATUS.CANCELLED;
 
   const effectiveStatusId = Number(statusId || item.status_id);
   // Badge text needs legible tone for contrast on light tints
   const badgeTextColor =
     isCancelledItem
       ? '#B91C1C'
-      : effectiveStatusId === 1
+      : effectiveStatusId === REPAIR_STATUS.PENDING_CHECK
       ? '#0369A1'
-      : effectiveStatusId === 2
+      : effectiveStatusId === REPAIR_STATUS.CHECKING
       ? '#1D4ED8'
-      : effectiveStatusId === 3
+      : effectiveStatusId === REPAIR_STATUS.MAKING_QUOTE
       ? '#3730A3'
-      : effectiveStatusId === 4
+      : effectiveStatusId === REPAIR_STATUS.PENDING_APPROVAL
       ? '#C2410C'
-      : effectiveStatusId === 6
+      : effectiveStatusId === REPAIR_STATUS.READY_FOR_PICKUP
       ? '#854D0E'
-      : effectiveStatusId === 7
+      : effectiveStatusId === REPAIR_STATUS.WAITING_PAYMENT
       ? '#B45309'
-      : effectiveStatusId === 8
+      : effectiveStatusId === REPAIR_STATUS.COMPLETED
       ? '#15803D'
       : statusColor;
 

@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, Modal, TextInput, ActivityIndicator } fro
 
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
+import { REPAIR_STATUS } from '@/constants/status';
 
 interface CustomerActionButtonsProps {
   status: string;
@@ -40,7 +41,7 @@ export default function CustomerActionButtons({
     }
   };
 
-  const isWaitingApproval = status === 'รออนุมัติ' || status === 'รอการอนุมัติ' || statusId === 4;
+  const isWaitingApproval = status === 'รออนุมัติ' || status === 'รอการอนุมัติ' || statusId === REPAIR_STATUS.PENDING_APPROVAL;
 
   return (
     <View className="my-4">

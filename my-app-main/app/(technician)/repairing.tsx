@@ -32,6 +32,7 @@ import { canEditOrDeleteQuote } from '@/components/Technician_quotation/Quotatio
 // Types
 import type { QuotationFilter, QuotationItem } from '@/types/quotation';
 
+import { QUOTE_STATUS, REPAIR_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 
 export default function TechnicianQuotationScreen() {
@@ -88,24 +89,24 @@ export default function TechnicianQuotationScreen() {
 
   // Filter count calculations
   const countRejected = quotations.filter(
-    (q) => (q.quote_status_id === 5 || q.quote_status_id === 4 || (q.customer_remark && q.repair_status_id === 3))
+    (q) => (q.quote_status_id === QUOTE_STATUS.CHANGE_REQUEST || q.quote_status_id === QUOTE_STATUS.REVISING || (q.customer_remark && q.repair_status_id === REPAIR_STATUS.MAKING_QUOTE))
   ).length;
 
-  const countPending = quotations.filter((q) => q.quote_status_id === 1).length;
-  const countApproved = quotations.filter((q) => q.quote_status_id === 2).length;
-  const countCancelled = quotations.filter((q) => q.quote_status_id === 3).length;
+  const countPending = quotations.filter((q) => q.quote_status_id === QUOTE_STATUS.PENDING).length;
+  const countApproved = quotations.filter((q) => q.quote_status_id === QUOTE_STATUS.APPROVED).length;
+  const countCancelled = quotations.filter((q) => q.quote_status_id === QUOTE_STATUS.CANCELLED).length;
 
   // Filter & Search logic
   const filteredQuotations = quotations.filter((item) => {
     if (activeFilter === 'rejected') {
-      const isRejected = item.quote_status_id === 5 || item.quote_status_id === 4 || (item.customer_remark && item.repair_status_id === 3);
+      const isRejected = item.quote_status_id === QUOTE_STATUS.CHANGE_REQUEST || item.quote_status_id === QUOTE_STATUS.REVISING || (item.customer_remark && item.repair_status_id === REPAIR_STATUS.MAKING_QUOTE);
       if (!isRejected) return false;
     } else if (activeFilter === 'pending') {
-      if (item.quote_status_id !== 1) return false;
+      if (item.quote_status_id !== QUOTE_STATUS.PENDING) return false;
     } else if (activeFilter === 'approved') {
-      if (item.quote_status_id !== 2) return false;
+      if (item.quote_status_id !== QUOTE_STATUS.APPROVED) return false;
     } else if (activeFilter === 'cancelled') {
-      if (item.quote_status_id !== 3) return false;
+      if (item.quote_status_id !== QUOTE_STATUS.CANCELLED) return false;
     }
 
     if (!searchQuery.trim()) return true;

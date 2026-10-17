@@ -3,6 +3,7 @@ import { Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { QuotationLineItem } from '@/types/quotation';
 import type { RepairQuotationSummary } from '@/types/repair';
+import { QUOTE_STATUS } from '@/constants/status';
 
 export type QuotationItem = QuotationLineItem;
 
@@ -47,7 +48,7 @@ export default function QuotationInfoCard({
     const sId = quotation.quote_status_id;
     const sName = quotation.quote_status_name || '';
 
-    if (sId === 2 || sName.includes('อนุมัติแล้ว')) {
+    if (sId === QUOTE_STATUS.APPROVED || sName.includes('อนุมัติแล้ว')) {
       return {
         bg: 'bg-emerald-50',
         border: 'border-emerald-200',
@@ -56,7 +57,7 @@ export default function QuotationInfoCard({
         icon: 'checkmark-circle-outline' as const,
       };
     }
-    if (sId === 3 || sName.includes('ยกเลิก') || sName.includes('ไม่อนุมัติ')) {
+    if (sId === QUOTE_STATUS.CANCELLED || sName.includes('ยกเลิก') || sName.includes('ไม่อนุมัติ')) {
       return {
         bg: 'bg-rose-50',
         border: 'border-rose-200',
@@ -65,7 +66,7 @@ export default function QuotationInfoCard({
         icon: 'close-circle-outline' as const,
       };
     }
-    if (sId === 4 || sId === 5 || quotation.customer_remark) {
+    if (sId === QUOTE_STATUS.REVISING || sId === QUOTE_STATUS.CHANGE_REQUEST || quotation.customer_remark) {
       return {
         bg: 'bg-amber-50',
         border: 'border-amber-300',
@@ -211,7 +212,7 @@ export default function QuotationInfoCard({
         <View className="flex-row justify-between items-center pt-3">
           <View>
             <Text className="text-xs text-slate-500 font-medium">ยอดรวมเสนอราคา</Text>
-            {quotation.quote_status_id === 3 ? (
+            {quotation.quote_status_id === QUOTE_STATUS.CANCELLED ? (
               <Text className="text-[11px] text-rose-600 font-medium">
                 (ลูกค้ายกเลิก ชำระค่าตรวจเช็ค 300 บ.)
               </Text>

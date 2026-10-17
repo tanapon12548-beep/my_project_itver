@@ -28,6 +28,7 @@ import SignaturesCard from '@/components/Technician_detail/SignaturesCard';
 import FloatingActionButton from '@/components/ui/FloatingActionButton';
 import { useAlert } from '@/hooks/use-alert';
 
+import { REPAIR_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 
 // ── สถานะที่ช่างสามารถเปลี่ยนไปได้ (เฉพาะขอบเขตของช่าง) ──
@@ -178,7 +179,7 @@ export default function TechnicianDetailScreen() {
             technician_name: dataJob.inspector_name || dataJob.technician_name || 'ช่างเทคนิค',
             inspector_name: dataJob.inspector_name || '-',
             repairer_name: dataJob.repairer_name || '-',
-            status: STATUS_MAP[dataJob.status_id || 1] || dataJob.status_name || 'รอตรวจเช็ค',
+            status: STATUS_MAP[dataJob.status_id || REPAIR_STATUS.PENDING_CHECK] || dataJob.status_name || 'รอตรวจเช็ค',
             status_id: dataJob.status_id,
             created_at: dataJob.created_at || new Date().toISOString(),
             received_by: dataJob.received_by || '-',
@@ -258,7 +259,7 @@ export default function TechnicianDetailScreen() {
         let actionTypeId = ACTION_TYPE_MAP[statusId] || 2;
         let actionRemark: string | undefined = undefined;
 
-        if (statusId === 7) {
+        if (statusId === REPAIR_STATUS.WAITING_PAYMENT) {
           if (job.status === 'ยกเลิกซ่อม') {
             actionTypeId = 6;
             actionRemark = 'พนักงานปรับสถานะรอชำระค่าตรวจเช็ค (ยกเลิกซ่อม)';
@@ -266,13 +267,13 @@ export default function TechnicianDetailScreen() {
             actionTypeId = 5;
             actionRemark = 'ช่างซ่อมเสร็จสิ้น / ทดสอบเครื่อง เปลี่ยนสถานะเป็นรอชำระ';
           }
-        } else if (statusId === 6) {
+        } else if (statusId === REPAIR_STATUS.READY_FOR_PICKUP) {
           actionTypeId = 6;
           actionRemark = 'ตรวจสอบการชำระเงินเรียบร้อยแล้ว เครื่องพร้อมให้ลูกค้ามารับ';
-        } else if (statusId === 8) {
+        } else if (statusId === REPAIR_STATUS.COMPLETED) {
           actionTypeId = 7;
           actionRemark = 'พนักงานส่งมอบเครื่องและลูกค้าเซ็นรับเรียบร้อยแล้ว';
-        } else if (statusId === 2) {
+        } else if (statusId === REPAIR_STATUS.CHECKING) {
           actionTypeId = 2;
           actionRemark = 'ช่างเริ่มดำเนินการตรวจเช็คสภาพเครื่อง';
         }
@@ -363,8 +364,8 @@ export default function TechnicianDetailScreen() {
     );
   }
 
-  const isIntakeStatus = job?.status_id === 1 || job?.status === 'รอตรวจเช็ค' || job?.status === 'รอตรวจสอบ';
-  const isCompletedStatus = job?.status_id === 8 || job?.status === 'เสร็จสิ้น';
+  const isIntakeStatus = job?.status_id === REPAIR_STATUS.PENDING_CHECK || job?.status === 'รอตรวจเช็ค' || job?.status === 'รอตรวจสอบ';
+  const isCompletedStatus = job?.status_id === REPAIR_STATUS.COMPLETED || job?.status === 'เสร็จสิ้น';
   const canPrintDocument = isIntakeStatus || isCompletedStatus;
 
   const handleViewPdf = () => {

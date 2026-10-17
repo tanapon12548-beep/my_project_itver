@@ -22,6 +22,7 @@ import RepairSummaryCard from '@/components/Staff_handover/RepairSummaryCard';
 import { useAlert } from '@/hooks/use-alert';
 import SignaturePad from '@/components/ui/SignaturePad';
 
+import { REPAIR_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 
 export default function DeliverHandoverScreen() {
@@ -121,7 +122,7 @@ export default function DeliverHandoverScreen() {
         }
 
         await updateRepairStatus(numericId, {
-          status_id: 8, // เสร็จสิ้น
+          status_id: REPAIR_STATUS.COMPLETED, // เสร็จสิ้น
         });
       }
 

@@ -28,6 +28,7 @@ import RepairTrendChart from '@/components/Shared_Dashboard/RepairTrendChart';
 import RevenueTrendChart from '@/components/Shared_Dashboard/RevenueTrendChart';
 import WorkActivityChart, { type WorkActivityMember } from '@/components/Shared_Dashboard/WorkActivityChart';
 
+import { REPAIR_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 
 interface DashboardScreenProps {
@@ -253,7 +254,7 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
               <Text className="text-xs text-slate-400 font-body text-center py-4">ยังไม่มีข้อมูลงานซ่อม</Text>
             ) : (
               recentRepairs.map((job) => {
-                const sId = Number(job.status_id || 1);
+                const sId = Number(job.status_id || REPAIR_STATUS.PENDING_CHECK);
                 const sCfg = STATUS_CONFIG[sId] || { label: job.status || 'รอตรวจเช็ค', color: '#64748B', bg: '#F1F5F9' };
                 const deviceStr = `${job.brand || ''} ${job.model || ''}`.trim() || job.device_type || 'อุปกรณ์';
 

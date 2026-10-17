@@ -23,6 +23,7 @@ import { useAlert } from '@/hooks/use-alert';
 import { getRepair, verifyPayment } from '@/lib/api';
 import type { RepairJob } from '@/types/repair';
 
+import { QUOTE_STATUS, REPAIR_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 
 export default function ReceiptScreen() {
@@ -71,9 +72,9 @@ export default function ReceiptScreen() {
 
         const isCancelledJob =
           Boolean(data.is_cancelled) ||
-          Number(data.status_id) === 9 ||
-          Number(data.quote_status_id) === 3 ||
-          Number(data.quotation?.quote_status_id) === 3 ||
+          Number(data.status_id) === REPAIR_STATUS.CANCELLED ||
+          Number(data.quote_status_id) === QUOTE_STATUS.CANCELLED ||
+          Number(data.quotation?.quote_status_id) === QUOTE_STATUS.CANCELLED ||
           String(data.status || data.status_name || '').includes('ยกเลิก');
 
         const cancelFee = Number(data.total_cancel_price) || Number(data.quotation?.total_cancel_price) || 300;
@@ -102,7 +103,7 @@ export default function ReceiptScreen() {
           actual_symptom: data.actual_symptom || '-',
           items: data.quotation?.items || data.items || [],
           quotation: data.quotation || null,
-          status: data.status_name || data.status || (data.status_id === 8 ? 'เสร็จสิ้น' : 'กำลังดำเนินการ'),
+          status: data.status_name || data.status || (data.status_id === REPAIR_STATUS.COMPLETED ? 'เสร็จสิ้น' : 'กำลังดำเนินการ'),
           status_id: data.status_id,
           total_amount: computedTotal,
           total_cancel_price: cancelFee,
@@ -126,13 +127,13 @@ export default function ReceiptScreen() {
     }
   }
 
-  const isIntake = job?.status_id === 1 || job?.status === 'รอตรวจเช็ค' || job?.status === 'รอตรวจสอบ';
-  const isCompleted = job?.status_id === 8 || job?.status === 'เสร็จสิ้น' || job?.status === 'ชำระแล้ว' || job?.status === 'ส่งมอบแล้ว';
+  const isIntake = job?.status_id === REPAIR_STATUS.PENDING_CHECK || job?.status === 'รอตรวจเช็ค' || job?.status === 'รอตรวจสอบ';
+  const isCompleted = job?.status_id === REPAIR_STATUS.COMPLETED || job?.status === 'เสร็จสิ้น' || job?.status === 'ชำระแล้ว' || job?.status === 'ส่งมอบแล้ว';
   const isCancelled =
     Boolean(job?.is_cancelled) ||
-    Number(job?.status_id) === 9 ||
-    Number(job?.quote_status_id) === 3 ||
-    Number(job?.quotation?.quote_status_id) === 3 ||
+    Number(job?.status_id) === REPAIR_STATUS.CANCELLED ||
+    Number(job?.quote_status_id) === QUOTE_STATUS.CANCELLED ||
+    Number(job?.quotation?.quote_status_id) === QUOTE_STATUS.CANCELLED ||
     String(job?.status || '').includes('ยกเลิก');
   const isSupportedDocument = isIntake || isCompleted || (isCancelled && Boolean(job?.payment_verified));
 
@@ -193,7 +194,7 @@ export default function ReceiptScreen() {
     if (!job) return;
     try {
       await verifyPayment(job.id || job.job_id || targetId);
-      setJob({ ...job, status: 'เสร็จสิ้น', status_id: 8, payment_verified: true });
+      setJob({ ...job, status: 'เสร็จสิ้น', status_id: REPAIR_STATUS.COMPLETED, payment_verified: true });
       showAlert('สำเร็จ', 'ยืนยันการชำระเงินเรียบร้อยแล้ว', 'success');
     } catch (err: any) {
       showAlert('ล้มเหลว', err.message || 'ไม่สามารถยืนยันการชำระเงินได้', 'danger');
@@ -465,9 +466,9 @@ export default function ReceiptScreen() {
   const generateReceiptHtml = (j: any, sub: number, v: number, grand: number) => {
     const isCancelledDoc =
       Boolean(j.is_cancelled) ||
-      Number(j.status_id) === 9 ||
-      Number(j.quote_status_id) === 3 ||
-      Number(j.quotation?.quote_status_id) === 3 ||
+      Number(j.status_id) === REPAIR_STATUS.CANCELLED ||
+      Number(j.quote_status_id) === QUOTE_STATUS.CANCELLED ||
+      Number(j.quotation?.quote_status_id) === QUOTE_STATUS.CANCELLED ||
       String(j.status || '').includes('ยกเลิก');
 
     const itms = isCancelledDoc

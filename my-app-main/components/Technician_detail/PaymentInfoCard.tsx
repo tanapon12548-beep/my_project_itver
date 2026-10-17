@@ -4,6 +4,7 @@ import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { getImageUrl } from '@/lib/api';
+import { REPAIR_STATUS } from '@/constants/status';
 
 interface PaymentInfoCardProps {
   paymentMethodId?: number | null;
@@ -50,8 +51,8 @@ export default function PaymentInfoCard({
   // สถานะการชำระ (จ่ายรึยัง?)
   // ถ้าสถานะเป็นเสร็จสิ้น (8) หรือมี payment_date ถือว่าจ่ายแล้ว
   // ถ้าสถานะเป็นรอชำระ (7) ถือว่ารอชำระ
-  const isPaid = statusId === 8 || statusName === 'เสร็จสิ้น' || (statusId === 7 && Boolean(paymentDate));
-  const isPending = statusId === 7 || statusName === 'รอชำระ';
+  const isPaid = statusId === REPAIR_STATUS.COMPLETED || statusName === 'เสร็จสิ้น' || (statusId === REPAIR_STATUS.WAITING_PAYMENT && Boolean(paymentDate));
+  const isPending = statusId === REPAIR_STATUS.WAITING_PAYMENT || statusName === 'รอชำระ';
 
   return (
     <View className="mb-4">

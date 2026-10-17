@@ -1,12 +1,13 @@
 import React from 'react';
 import { View, Text } from 'react-native';
+import { QUOTE_STATUS, REPAIR_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 import type { QuotationItem } from '@/types/quotation';
 
 export const isModificationQuote = (item: QuotationItem) =>
-  item.quote_status_id === 5 ||
-  item.quote_status_id === 4 ||
-  (Boolean(item.customer_remark) && item.repair_status_id === 3);
+  item.quote_status_id === QUOTE_STATUS.CHANGE_REQUEST ||
+  item.quote_status_id === QUOTE_STATUS.REVISING ||
+  (Boolean(item.customer_remark) && item.repair_status_id === REPAIR_STATUS.MAKING_QUOTE);
 
 /**
  * อนุญาตให้แก้ไขหรือลบได้เฉพาะสถานะที่รอดำเนินการ (รอการอนุมัติ หรือขอแก้ไขรายการ) เท่านั้น
@@ -15,8 +16,8 @@ export const isModificationQuote = (item: QuotationItem) =>
 export const canEditOrDeleteQuote = (item: QuotationItem | null | undefined): boolean => {
   if (!item) return false;
   // อนุมัติแล้ว (2) หรือลูกค้ายกเลิก (3) ห้ามแก้ไขหรือลบ
-  if (item.quote_status_id === 2 || item.quote_status_id === 3) return false;
-  return item.quote_status_id === 1 || isModificationQuote(item);
+  if (item.quote_status_id === QUOTE_STATUS.APPROVED || item.quote_status_id === QUOTE_STATUS.CANCELLED) return false;
+  return item.quote_status_id === QUOTE_STATUS.PENDING || isModificationQuote(item);
 };
 
 interface QuotationStatusBadgeProps {
@@ -32,13 +33,13 @@ export default function QuotationStatusBadge({ item }: QuotationStatusBadgeProps
   if (isModification) {
     statusColor = Colors.warning || '#D97706';
     label = 'ขอแก้ไข';
-  } else if (item.quote_status_id === 1) {
+  } else if (item.quote_status_id === QUOTE_STATUS.PENDING) {
     statusColor = Colors.status.status4 || '#A855F7';
     label = 'รอลูกค้าอนุมัติ';
-  } else if (item.quote_status_id === 2) {
+  } else if (item.quote_status_id === QUOTE_STATUS.APPROVED) {
     statusColor = Colors.status.status5 || '#3B82F6';
     label = 'อนุมัติแล้ว';
-  } else if (item.quote_status_id === 3) {
+  } else if (item.quote_status_id === QUOTE_STATUS.CANCELLED) {
     statusColor = Colors.status.status9 || '#EF4444';
     label = 'ลูกค้ายกเลิก';
   } else if (item.quote_status_name) {

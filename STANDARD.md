@@ -307,7 +307,7 @@
 | ISS-09 | SQL อยู่inline ใน 8 controller แต่แยก `queries/` แค่ 4 | งานยาว/ซ้ำ → ย้ายเข้า `queries/` | ⏳ รอพิจารณา |
 | ISS-10 | `AGENTS.md` บอกว่าแอปใช้ Supabase query ตรง + route group `(tabs)` + realtime tab badge + `.env` แบบ Supabase (ไม่มีจริงในโค้ด) และ `eas.json` ยังฝังตัวแปร `EXPO_PUBLIC_SUPABASE_*` ที่ไม่มีใครใช้ | ตัดออก/แก้ให้ตรงจริง | ✅ **แก้แล้ว (Phase 4)** — เขียน `AGENTS.md` ใหม่ทั้งไฟล์ + ลบตัวแปรใน `eas.json`; `handoff.md` ติดป้าย "เอกสารรุ่นเก่า" |
 | ISS-11 | `quotation_status` มี id 5 ในฐานข้อมูล แต่ `constants.QUOTE_STATUS` ไม่มี → ทำให้ controller ต้อง **ฝังเลข `5` ดิบ 2 จุด** (`quotation.controller.js:608, 672`) | เพิ่มให้ครบ + ตรงชื่อกับตารางจริง | ✅ **แก้แล้ว (Follow-up)** — กำหนดตรงกับตาราง `quotation_status`: 4 = `REVISING` (ปรับปรุงใบเสนอราคา), 5 = `CHANGE_REQUEST` (ขอแก้ไข/เพิ่มเติมรายการ) ทั้งฝั่งแอปและ API + ลบเลขดิบและคงรายการที่ลูกค้าแก้ได้เป็น `[2,3,4,5]` เท่าเดิม |
-| ISS-12 | ฝั่งแอปเทียบสถานะด้วยเลขดิบปนกับค่าคงที่ (`quote_status_id === 5`, `repair_status_id === 3`) ใน `QuotationStatusBadge.tsx`, `(technician)/repairing.tsx`, `job-detail.tsx` | ใช้ `QUOTE_STATUS.*` / `REPAIR_STATUS.*` | ⏳ รอพิจารณา — ค่าตรงกันอยู่ จึงไม่กระทบพฤติกรรม (แก้เฉพาะจุดที่ *เขียน* สถานะแล้ว) |
+| ISS-12 | ฝั่งแอปเปรียบเทียบสถานะด้วยเลขดิบ **ทั้งผ่านชื่อฟิลด์และผ่านตัวแปร** (`quote_status_id === 5`, `statusId === 9`, `quoteStatusId === 4`, `stId === 9`) กระจายหลายไฟล์ | ใช้ `QUOTE_STATUS.*` / `REPAIR_STATUS.*` | ✅ **แก้แล้ว (Follow-up)** — **146 จุด ใน 22 ไฟล์** (ค่าคงที่ให้ค่าเท่าเดิมทุกจุด) · *วิธีทำ:* codemod ที่คงชื่อฟิลด์/ตัวดำเนินการเดิมไว้ 100% + dry-run ตรวจก่อนเขียน · *จุดที่ตั้งใจไม่แตะ:* `response.status === 401` (HTTP status), `item_type_id` (ชนิดอะไหล่ ไม่ใช่สถานะ) |
 | ISS-13 | `constants/status.ts` ฝั่งแอป มี `ROLES` **สลับ 2/3** (STAFF 2 / TECHNICIAN 3) เหมือนบั๊กเดิมของฝั่ง API | ต้องตรงกับตาราง `roles` | ✅ **แก้แล้ว (Follow-up)** — ตรวจแล้วไม่มีโค้ดใดอ้างถึง `ROLES` ฝั่งแอป จึงไม่กระทบพฤติกรรม แต่ปิดกับดักไว้ |
 
 ---
@@ -354,7 +354,7 @@
 2. `constants/status.ts` + `back-end/constants/index.js` — `QUOTE_STATUS` ขาด id 5 และตั้งชื่อ 4 ไม่ตรงความหมาย → ทำตรงกับตาราง `quotation_status`: 4 = `REVISING` (ปรับปรุงใบเสนอราคา), 5 = `CHANGE_REQUEST` (ขอแก้ไข/เพิ่มเติมรายการ) = **ISS-11**
 3. `back-end/controllers/quotation.controller.js` — ลบ **magic number `5`** ที่ฝังไว้ 2 จุด (มีเพราะค่าคงที่ขาด) → ใช้ `QUOTE_STATUS.CHANGE_REQUEST`; และเพิ่ม `REVISING` เข้ารายการที่ลูกค้าเปลี่ยนสถานะได้ เพื่อคงพฤติกรรมเดิมครบ `[2,3,4,5]`
 4. `app/job-detail.tsx` — จุดที่ *เขียน* สถานะเปลี่ยนจาก `5` / `3` ดิบ → `QUOTE_STATUS.CHANGE_REQUEST` / `REPAIR_STATUS.MAKING_QUOTE`
-5. ยังเหลือ: การ *เปรียบเทียบ* สถานะด้วยเลขดิบใน `QuotationStatusBadge.tsx`, `(technician)/repairing.tsx`, `job-detail.tsx` (= **ISS-12** — ค่าตรงกันอยู่ จึงไม่กระทบพฤติกรรม) และการย้าย SQL ที่ฝังใน controller เข้า `queries/` (= **ISS-09**)
+5. ยังเหลือ: การย้าย SQL ที่ฝังใน controller เข้า `queries/` (= **ISS-09**)
 6. `app/(staff)/_layout.tsx` — ลบแท็บ `signing` ที่ประกาศไว้แต่ **ไม่มีไฟล์จริง** (`href: null` จึงไม่เคยแสดงและไม่เคยเข้าได้ — ของค้างจาก flow ที่ถูกลบไปแล้ว)
 
 ---

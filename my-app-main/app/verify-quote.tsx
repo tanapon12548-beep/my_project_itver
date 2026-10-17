@@ -16,6 +16,7 @@ import { useAlert } from '@/hooks/use-alert';
 import type { RepairJob } from '@/types/repair';
 import type { QuoteItem } from '@/types/quotation';
 
+import { REPAIR_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 
 export default function VerifyQuoteScreen() {
@@ -135,7 +136,7 @@ export default function VerifyQuoteScreen() {
     try {
       if (jobNumericId) {
         // 4 = รอการอนุมัติ (ส่งใบเสนอราคาให้ลูกค้าพิจารณาแล้ว)
-        const res = await updateRepairStatus(jobNumericId, { status_id: 4 });
+        const res = await updateRepairStatus(jobNumericId, { status_id: REPAIR_STATUS.PENDING_APPROVAL });
         if (!res.success) throw new Error(res.message);
 
         // Action 3 = ออกใบเสนอราคา

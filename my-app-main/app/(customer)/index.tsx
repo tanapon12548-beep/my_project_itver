@@ -26,6 +26,7 @@ import CustomerJobCard from '@/components/Customer/CustomerJobCard';
 import CustomerFilterBar from '@/components/Customer/CustomerFilterBar';
 import CustomerEmptyState from '@/components/Customer/CustomerEmptyState';
 
+import { REPAIR_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 
 interface CustomerSegmentCardProps {
@@ -142,20 +143,20 @@ export default function CustomerDashboard() {
       const stId = Number(item.status_id);
 
       if (activeTab === 'pending_approval') {
-        return stId === 4 || st.includes('รอการอนุมัติ') || st.includes('รออนุมัติ') || st.includes('เสนอราคา');
+        return stId === REPAIR_STATUS.PENDING_APPROVAL || st.includes('รอการอนุมัติ') || st.includes('รออนุมัติ') || st.includes('เสนอราคา');
       }
       if (activeTab === 'in_progress') {
         return (
-          stId !== 8 &&
-          stId !== 9 &&
-          stId !== 4 &&
+          stId !== REPAIR_STATUS.COMPLETED &&
+          stId !== REPAIR_STATUS.CANCELLED &&
+          stId !== REPAIR_STATUS.PENDING_APPROVAL &&
           !st.includes('เสร็จสิ้น') &&
           !st.includes('ยกเลิก') &&
           !st.includes('รออนุมัติ')
         );
       }
       if (activeTab === 'completed') {
-        return stId === 8 || st.includes('เสร็จสิ้น') || st.includes('ชำระแล้ว');
+        return stId === REPAIR_STATUS.COMPLETED || st.includes('เสร็จสิ้น') || st.includes('ชำระแล้ว');
       }
 
       return true;

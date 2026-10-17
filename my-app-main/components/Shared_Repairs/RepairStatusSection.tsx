@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 // 3. Components & Types
 import RepairItemRow from './RepairItemRow';
 import type { RepairItem } from './types';
+import { REPAIR_STATUS } from '@/constants/status';
 
 interface RepairStatusSectionProps {
   id?: string;
@@ -61,17 +62,17 @@ export default function RepairStatusSection({
   const isActive = count > 0 && isExpanded;
 
   // Button visibility driven by statusId only (labels may change, IDs are stable)
-  const isTechnicianQuoting = Boolean(onPressMakeQuote) && (statusId === 2);
+  const isTechnicianQuoting = Boolean(onPressMakeQuote) && (statusId === REPAIR_STATUS.CHECKING);
 
   // 2. พนักงาน: แสดงปุ่มตรวจสอบและส่งต่อใบเสนอราคา ในสถานะ 3
-  const isStaffVerifying = Boolean(onPressVerifyQuote) && statusId === 3;
+  const isStaffVerifying = Boolean(onPressVerifyQuote) && statusId === REPAIR_STATUS.MAKING_QUOTE;
 
   const showQuoteBtn = isTechnicianQuoting || isStaffVerifying;
   const quoteHandler = isTechnicianQuoting ? onPressMakeQuote : onPressVerifyQuote;
 
   // 3-4. พนักงาน: ส่งมอบ (สถานะ 6: รอลูกค้ามารับเครื่อง), ตรวจชำระ (สถานะ 7: รอชำระ), ยกเลิก (สถานะ 9: ตรวจชำระ/ส่งมอบ)
-  const showHandoverBtn = Boolean(onPressHandover) && (statusId === 6 || statusId === 9 || !statusId);
-  const showPaymentCheckBtn = Boolean(onPressPaymentCheck) && (statusId === 7 || statusId === 9 || !statusId);
+  const showHandoverBtn = Boolean(onPressHandover) && (statusId === REPAIR_STATUS.READY_FOR_PICKUP || statusId === REPAIR_STATUS.CANCELLED || !statusId);
+  const showPaymentCheckBtn = Boolean(onPressPaymentCheck) && (statusId === REPAIR_STATUS.WAITING_PAYMENT || statusId === REPAIR_STATUS.CANCELLED || !statusId);
 
 
   return (

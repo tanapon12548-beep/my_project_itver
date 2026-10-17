@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 3. API helpers
 import { createQuotation, getQuotation, getRepair, logRepairJobDetail, updateQuotation } from '@/lib/api';
-import { CANCEL_INSPECTION_FEE } from '@/constants/status';
+import { CANCEL_INSPECTION_FEE, QUOTE_STATUS } from '@/constants/status';
 
 // 4. Components
 import PartsCostCard from '@/components/Technician_make_quote/PartsCostCard';
@@ -125,10 +125,10 @@ export default function MakeQuoteScreen() {
             setQuoteStatusId(quoteData.quote_status_id || null);
 
             // หากเป็นสถานะที่อนุมัติแล้ว (2) หรือยกเลิก (3) จะไม่อนุญาตให้แก้ไข
-            if (quoteData.quote_status_id === 2 || quoteData.quote_status_id === 3) {
+            if (quoteData.quote_status_id === QUOTE_STATUS.APPROVED || quoteData.quote_status_id === QUOTE_STATUS.CANCELLED) {
               const statusName =
                 quoteData.quote_status_name ||
-                (quoteData.quote_status_id === 2 ? 'อนุมัติแล้ว' : 'ลูกค้ายกเลิก');
+                (quoteData.quote_status_id === QUOTE_STATUS.APPROVED ? 'อนุมัติแล้ว' : 'ลูกค้ายกเลิก');
               showConfirm({
                 title: 'ไม่สามารถแก้ไขใบเสนอราคานี้ได้',
                 message: `ใบเสนอราคานี้อยู่ในสถานะ "${statusName}" แล้ว จึงไม่สามารถทำการแก้ไขหรือเปลี่ยนแปลงรายการได้`,
@@ -406,7 +406,7 @@ export default function MakeQuoteScreen() {
       confirmText: 'ยืนยัน',
       cancelText: 'ยกเลิก',
       onConfirm: async () => {
-        if (quoteStatusId === 2 || quoteStatusId === 3) {
+        if (quoteStatusId === QUOTE_STATUS.APPROVED || quoteStatusId === QUOTE_STATUS.CANCELLED) {
           showAlert('ไม่สามารถแก้ไขได้', 'ใบเสนอราคานี้ได้รับการอนุมัติหรือลูกค้ายกเลิกแล้ว จึงไม่สามารถบันทึกการแก้ไขได้', 'warning');
           return;
         }

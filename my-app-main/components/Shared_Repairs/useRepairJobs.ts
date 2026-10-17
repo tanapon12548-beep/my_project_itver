@@ -3,6 +3,7 @@ import { useFocusEffect } from 'expo-router';
 import { getRepairs } from '@/lib/api';
 import { getStatusDefinitions } from './statusConfig';
 import type { RepairItem, StatusGroup } from './types';
+import { QUOTE_STATUS, REPAIR_STATUS } from '@/constants/status';
 
 interface UseRepairJobsOptions {
   /** Only include these status IDs. If empty/undefined, includes all. */
@@ -65,8 +66,8 @@ export function useRepairJobs(options: UseRepairJobsOptions = {}) {
 
         const isCancelledRow = Boolean(
           row.is_cancelled ||
-          stId === 9 ||
-          Number(row.quote_status_id) === 3 ||
+          stId === REPAIR_STATUS.CANCELLED ||
+          Number(row.quote_status_id) === QUOTE_STATUS.CANCELLED ||
           String(row.status_name || '').includes('ยกเลิก')
         );
 

@@ -66,9 +66,9 @@ export default function JobDetailScreen() {
 
         const isJobCancelled = Boolean(
           data.is_cancelled ||
-          Number(data.status_id) === 9 ||
-          Number(q?.quote_status_id) === 3 ||
-          Number(data.quote_status_id) === 3 ||
+          Number(data.status_id) === REPAIR_STATUS.CANCELLED ||
+          Number(q?.quote_status_id) === QUOTE_STATUS.CANCELLED ||
+          Number(data.quote_status_id) === QUOTE_STATUS.CANCELLED ||
           data.status_name?.includes('ยกเลิก')
         );
 
@@ -81,14 +81,14 @@ export default function JobDetailScreen() {
           symptoms: data.symptoms || data.symptom_details || data.symptom || '-',
           actual_symptom: data.actual_symptom || '',
           total_amount: Number(data.total_amount) || 0,
-          status: data.status_name || (data.status_id === 8 ? 'เสร็จสิ้น' : 'กำลังดำเนินการ'),
-          status_id: data.status_id || 1,
+          status: data.status_name || (data.status_id === REPAIR_STATUS.COMPLETED ? 'เสร็จสิ้น' : 'กำลังดำเนินการ'),
+          status_id: data.status_id || REPAIR_STATUS.PENDING_CHECK,
           is_cancelled: isJobCancelled,
           items: q?.items || [],
           quotation_id: data.quotation_id || (q ? q.quotation_id : null),
           total_repair_price: repPrice,
           total_cancel_price: canPrice,
-          quotation_status_id: q?.quote_status_id || data.quote_status_id || (isJobCancelled ? 3 : 1),
+          quotation_status_id: q?.quote_status_id || data.quote_status_id || (isJobCancelled ? QUOTE_STATUS.CANCELLED : QUOTE_STATUS.PENDING),
           customer_remark: q?.customer_remark || data.customer_remark || null,
           created_at: data.created_at || new Date().toISOString(),
           payment_method_id: data.payment_method_id || null,
@@ -138,14 +138,14 @@ export default function JobDetailScreen() {
     setActionLoading(true);
     try {
       const numericJobId = parseInt(String(job.id || job.job_id || ''), 10);
-      const res = await updateQuotationStatus(job.quotation_id as number, { quote_status_id: 2 });
+      const res = await updateQuotationStatus(job.quotation_id as number, { quote_status_id: QUOTE_STATUS.APPROVED });
       if (!res.success) throw new Error(res.message);
 
       if (!isNaN(numericJobId)) {
-        await updateRepairStatus(numericJobId, { status_id: 5 });
+        await updateRepairStatus(numericJobId, { status_id: REPAIR_STATUS.APPROVED_WAIT_REPAIR });
       }
 
-      setJob((prev) => (prev ? { ...prev, status_id: 5, status: 'อนุมัติแล้ว/รอซ่อม', quotation_status_id: 2 } : null));
+      setJob((prev) => (prev ? { ...prev, status_id: REPAIR_STATUS.APPROVED_WAIT_REPAIR, status: 'อนุมัติแล้ว/รอซ่อม', quotation_status_id: QUOTE_STATUS.APPROVED } : null));
       showToast('สำเร็จ', 'อนุมัติการซ่อมเรียบร้อยแล้ว');
       fetchJob(true);
     } catch (err: any) {
@@ -172,7 +172,7 @@ export default function JobDetailScreen() {
     setActionLoading(true);
     try {
       const numericJobId = parseInt(String(job.id || job.job_id || ''), 10);
-      const res = await updateQuotationStatus(job.quotation_id as number, { quote_status_id: 3 });
+      const res = await updateQuotationStatus(job.quotation_id as number, { quote_status_id: QUOTE_STATUS.CANCELLED });
       if (!res.success) throw new Error(res.message);
 
       if (!isNaN(numericJobId)) {
@@ -250,16 +250,16 @@ export default function JobDetailScreen() {
   }
 
   const isCancelled =
-    job.status_id === 9 ||
+    job.status_id === REPAIR_STATUS.CANCELLED ||
     job.status === 'ยกเลิกซ่อม' ||
     job.status === 'ยกเลิก' ||
     Boolean(job.status?.includes('ยกเลิก')) ||
-    job.quotation_status_id === 3 ||
+    job.quotation_status_id === QUOTE_STATUS.CANCELLED ||
     Boolean(job.is_cancelled);
-  const isCompleted = (job.status_id === 8 || job.status === 'เสร็จสิ้น') && !isCancelled;
-  const isReadyForPickup = (job.status_id === 6 || job.status === 'รอลูกค้ามารับเครื่อง') && !isCancelled;
-  const isReadyForPayment = (job.status_id === 7 || job.status === 'รอชำระ') && !isCancelled;
-  const isWaitingRepair = (job.status_id === 5 || job.status === 'อนุมัติแล้ว/รอซ่อม') && !isCancelled;
+  const isCompleted = (job.status_id === REPAIR_STATUS.COMPLETED || job.status === 'เสร็จสิ้น') && !isCancelled;
+  const isReadyForPickup = (job.status_id === REPAIR_STATUS.READY_FOR_PICKUP || job.status === 'รอลูกค้ามารับเครื่อง') && !isCancelled;
+  const isReadyForPayment = (job.status_id === REPAIR_STATUS.WAITING_PAYMENT || job.status === 'รอชำระ') && !isCancelled;
+  const isWaitingRepair = (job.status_id === REPAIR_STATUS.APPROVED_WAIT_REPAIR || job.status === 'อนุมัติแล้ว/รอซ่อม') && !isCancelled;
 
   const formatThaiDate = (dateStr?: string | null) => {
     if (!dateStr || dateStr === 'undefined' || dateStr === 'null') return null;
@@ -351,7 +351,7 @@ export default function JobDetailScreen() {
     ? (job.total_cancel_price || CANCEL_INSPECTION_FEE)
     : (job.total_repair_price || job.total_amount || (job.items || []).reduce((sum, item) => sum + Number(item.price || item.unit_price || 0), 0));
 
-  const isIntakeStatus = job.status_id === 1 || job.status === 'รอตรวจเช็ค' || job.status === 'รอตรวจสอบ';
+  const isIntakeStatus = job.status_id === REPAIR_STATUS.PENDING_CHECK || job.status === 'รอตรวจเช็ค' || job.status === 'รอตรวจสอบ';
   const canShowDocumentButton = isIntakeStatus || isCompleted;
 
   return (
@@ -466,7 +466,7 @@ export default function JobDetailScreen() {
         </View>
 
         {/* Progress Timeline */}
-        <CustomerProgressBar status={job.status || 'รอตรวจเช็ค'} statusId={job.status_id || 1} isCancelled={isCancelled} />
+        <CustomerProgressBar status={job.status || 'รอตรวจเช็ค'} statusId={job.status_id || REPAIR_STATUS.PENDING_CHECK} isCancelled={isCancelled} />
 
         {/* Status Alert Banners */}
         {isWaitingRepair && (
@@ -570,7 +570,7 @@ export default function JobDetailScreen() {
         </View>
 
         {/* Quotation Card (Dual Option: อนุมัติการซ่อม & ยกเลิกซ่อม) */}
-        {(job.quotation_id || job.status_id === 3 || job.status_id === 4 || job.status?.includes('เสนอราคา') || isWaitingRepair || isReadyForPayment || isCancelled) && (
+        {(job.quotation_id || job.status_id === REPAIR_STATUS.MAKING_QUOTE || job.status_id === REPAIR_STATUS.PENDING_APPROVAL || job.status?.includes('เสนอราคา') || isWaitingRepair || isReadyForPayment || isCancelled) && (
           <CustomerQuotationCard
             items={job.items}
             actualSymptom={job.actual_symptom}

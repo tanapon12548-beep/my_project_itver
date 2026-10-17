@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
+import { REPAIR_STATUS } from '@/constants/status';
 
 const NORMAL_STEPS = [
   'รับเครื่อง',
@@ -57,11 +58,11 @@ interface CustomerProgressBarProps {
 const getStatusColor = (statusId: number, statusText: string, isJobCancelled: boolean, isCompletedJob: boolean) => {
   if (isJobCancelled) return '#EF4444';
   if (isCompletedJob) return '#10B981';
-  if (statusId === 6 || statusText.includes('มารับ') || statusText.includes('พร้อมรับ')) return '#0EA5E9';
-  if (statusId === 7 || statusText.includes('รอชำระ')) return '#EAB308';
-  if (statusId === 4 || statusText.includes('รออนุมัติ') || statusText.includes('รอการอนุมัติ')) return '#A855F7';
-  if (statusId === 5 || statusText.includes('อนุมัติแล้ว') || statusText.includes('กำลังซ่อม') || statusText.includes('รอซ่อม') || statusText.includes('ซ่อม')) return '#6366F1';
-  if (statusId === 2 || statusId === 3 || statusText.includes('เช็ค') || statusText.includes('เสนอราคา')) return '#D97706';
+  if (statusId === REPAIR_STATUS.READY_FOR_PICKUP || statusText.includes('มารับ') || statusText.includes('พร้อมรับ')) return '#0EA5E9';
+  if (statusId === REPAIR_STATUS.WAITING_PAYMENT || statusText.includes('รอชำระ')) return '#EAB308';
+  if (statusId === REPAIR_STATUS.PENDING_APPROVAL || statusText.includes('รออนุมัติ') || statusText.includes('รอการอนุมัติ')) return '#A855F7';
+  if (statusId === REPAIR_STATUS.APPROVED_WAIT_REPAIR || statusText.includes('อนุมัติแล้ว') || statusText.includes('กำลังซ่อม') || statusText.includes('รอซ่อม') || statusText.includes('ซ่อม')) return '#6366F1';
+  if (statusId === REPAIR_STATUS.CHECKING || statusId === REPAIR_STATUS.MAKING_QUOTE || statusText.includes('เช็ค') || statusText.includes('เสนอราคา')) return '#D97706';
   return '#10B981';
 };
 
@@ -153,10 +154,10 @@ const getStatusExplanation = (statusId: number, statusText: string, isJobCancell
 export default function CustomerProgressBar({ status, statusId, isCancelled }: CustomerProgressBarProps) {
   const numStatusId = Number(statusId);
   const statusStr = status || '';
-  const isCompletedJob = numStatusId === 8 || statusStr.includes('เสร็จ') || statusStr.includes('ส่งมอบ');
+  const isCompletedJob = numStatusId === REPAIR_STATUS.COMPLETED || statusStr.includes('เสร็จ') || statusStr.includes('ส่งมอบ');
   const isJobCancelled = Boolean(
     isCancelled || 
-    numStatusId === 9 || 
+    numStatusId === REPAIR_STATUS.CANCELLED || 
     statusStr.includes('ยกเลิก')
   );
 

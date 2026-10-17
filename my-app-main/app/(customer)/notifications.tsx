@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRepairs } from '@/lib/api';
 
+import { REPAIR_STATUS } from '@/constants/status';
 import { Colors } from '@/constants/theme';
 
 interface AppNotification {
@@ -76,7 +77,7 @@ export default function NotificationsScreen() {
         }
 
         // 1. Quoting / Awaiting Approval
-        if (statusId === 4 || status.includes('รอการอนุมัติ') || status.includes('รออนุมัติ')) {
+        if (statusId === REPAIR_STATUS.PENDING_APPROVAL || status.includes('รอการอนุมัติ') || status.includes('รออนุมัติ')) {
           notifs.push({
             id: `quote-${jobId}`,
             jobId,
@@ -92,7 +93,7 @@ export default function NotificationsScreen() {
         }
 
         // 2. Repair in progress (สถานะ 5: อนุมัติแล้ว/รอซ่อม)
-        if (statusId === 5 || status.includes('อนุมัติแล้ว') || status.includes('รอซ่อม')) {
+        if (statusId === REPAIR_STATUS.APPROVED_WAIT_REPAIR || status.includes('อนุมัติแล้ว') || status.includes('รอซ่อม')) {
           notifs.push({
             id: `repair-${jobId}`,
             jobId,
@@ -108,7 +109,7 @@ export default function NotificationsScreen() {
         }
 
         // 3. Waiting payment (สถานะ 7: รอชำระ)
-        if (statusId === 7 || status.includes('รอชำระ')) {
+        if (statusId === REPAIR_STATUS.WAITING_PAYMENT || status.includes('รอชำระ')) {
           if (!isRejected) {
             notifs.push({
               id: `payment-${jobId}`,
@@ -126,7 +127,7 @@ export default function NotificationsScreen() {
         }
 
         // 4. Ready for pickup (สถานะ 6: รอลูกค้ามารับเครื่อง)
-        if (statusId === 6 || status.includes('มารับเครื่อง')) {
+        if (statusId === REPAIR_STATUS.READY_FOR_PICKUP || status.includes('มารับเครื่อง')) {
           notifs.push({
             id: `pickup-${jobId}`,
             jobId,
@@ -142,7 +143,7 @@ export default function NotificationsScreen() {
         }
 
         // 5. Delivered / Completed (สถานะ 8: เสร็จสิ้น)
-        if (statusId === 8 || status.includes('เสร็จสิ้น')) {
+        if (statusId === REPAIR_STATUS.COMPLETED || status.includes('เสร็จสิ้น')) {
           notifs.push({
             id: `completed-${jobId}`,
             jobId,
@@ -158,7 +159,7 @@ export default function NotificationsScreen() {
         }
 
         // 4. Checking
-        if (statusId === 1 || statusId === 2 || status.includes('ตรวจเช็ค')) {
+        if (statusId === REPAIR_STATUS.PENDING_CHECK || statusId === REPAIR_STATUS.CHECKING || status.includes('ตรวจเช็ค')) {
           notifs.push({
             id: `check-${jobId}`,
             jobId,

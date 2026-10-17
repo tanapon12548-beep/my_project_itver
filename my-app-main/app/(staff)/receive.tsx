@@ -15,6 +15,7 @@ import CustomerFormCard from '@/components/Staff_receive/CustomerFormCard';
 import DeviceFormCard from '@/components/Staff_receive/DeviceFormCard';
 import ReceiptPreviewModal from '@/components/Staff_receive/ReceiptPreviewModal';
 import { useAlert } from '@/hooks/use-alert';
+import { REPAIR_STATUS } from '@/constants/status';
 
 export default function StaffReceiveScreen() {
   const router = useRouter();
@@ -153,7 +154,7 @@ export default function StaffReceiveScreen() {
         device_id: createdDeviceId,
         symptom_id: null,
         symptom_details: symptomDetails.trim() || 'รับซ่อมเครื่อง',
-        status_id: 1, // 1 = รอตรวจเช็ค
+        status_id: REPAIR_STATUS.PENDING_CHECK, // 1 = รอตรวจเช็ค
       };
 
       const jobRes = await createRepairJob(repairPayload);
