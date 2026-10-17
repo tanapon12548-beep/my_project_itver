@@ -4,6 +4,10 @@
 > **แอปพลิเคชัน:** ITVertex (Mobile Application สำหรับบริหารจัดการร้านซ่อมคอมพิวเตอร์และอุปกรณ์ไอที)
 > **ปรับปรุงล่าสุด:** 6 สิงหาคม 2026
 
+> ⚠️ **เอกสารนี้เป็นบันทึกส่งมอบรุ่นเก่า (historical snapshot)** — เขียนไว้ก่อนที่ระบบจะย้ายมาใช้ REST API
+> ข้อมูลบางส่วนจึง **ไม่ตรงกับโค้ดปัจจุบัน** เช่น Supabase (`lib/supabase.ts`, `supabase/migrations`), โฟลเดอร์ `(tabs)`, `Meneger_*`, `Signin_out_toast`, และบัญชีทดสอบ `test@gmail.com` (ทดสอบแล้วล็อกอินไม่ได้)
+> เอกสารที่ใช้อ้างอิงจริงตอนนี้: [`../README.md`](../README.md) · [`../STANDARD.md`](../STANDARD.md) · [`AGENTS.md`](./AGENTS.md)
+
 ---
 
 ## 📌 1. ภาพรวมโปรเจกต์ (Project Overview)

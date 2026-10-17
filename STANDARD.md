@@ -15,7 +15,7 @@
 | **Phase 2a** | Front-end — รวมระบบแจ้งเตือนเป็น hook กลาง `useAlert()` ตัวเดียวทั้งโปรเจกต์ | ✅ ทำแล้ว |
 | **Phase 2b** | Front-end — ย้ายสีที่ hardcode (`#DC2626`/`#D32F2F`/`#D62828`) ให้มาจาก `theme.ts` + โทเคน Tailwind | ✅ ทำแล้ว |
 | **Phase 3** | Front-end — แก้ชื่อโฟลเดอร์/กลุ่มเส้นทางที่สะกดผิด (`Meneger_*`/`(meneger)` → `Manager_*`/`(manager)`, `Technicain_*`/`(technicain)` → `Technician_*`/`(technician)`) | ✅ ทำแล้ว |
-| **Phase 4** | เอกสาร — ซิงก์ `README.md` / `AGENTS.md` ให้ตรงความจริง | ⏳ รอทำ |
+| **Phase 4** | เอกสาร — ซิงก์ `README.md` / `AGENTS.md` / `handoff.md` / `eas.json` ให้ตรงความจริง | ✅ ทำแล้ว |
 
 **หลักการสำคัญ:** การปรับทุกเฟส **ห้ามเปลี่ยนพฤติกรรมที่ผู้ใช้เห็น** ยกเว้นรายการที่ระบุว่าเป็น "แก้บั๊ก/ปิดช่องโหว่" ไว้ชัดเจน
 
@@ -305,7 +305,7 @@
 | ISS-07 | สีแดง hardcode ปนกัน **3 เฉด** (`#DC2626`, `#D32F2F`, `#D62828`) ทั้งที่ `theme.ts` มี `Colors.primary` | อ้างจาก theme | ✅ **แก้แล้ว (Phase 2b)** — 279 จุดใน 84 ไฟล์ เหลือต้นทางที่ `theme.ts` + `tailwind.config.js` |
 | ISS-08 | โฟลเดอร์ + กลุ่มเส้นทางสะกดผิด `Meneger_*`, `Technicain_*`, `(meneger)`, `(technicain)` | `Manager_*`, `Technician_*`, `(manager)`, `(technician)` | ✅ **แก้แล้ว (Phase 3)** — 8 โฟลเดอร์ + 64 จุดอ้างอิงใน 13 ไฟล์ |
 | ISS-09 | SQL อยู่inline ใน 8 controller แต่แยก `queries/` แค่ 4 | งานยาว/ซ้ำ → ย้ายเข้า `queries/` | ⏳ รอพิจารณา |
-| ISS-10 | `AGENTS.md` ยังบอกว่าแอปใช้ Supabase query ตรง | ตัดออก/แก้ให้ตรงจริง | ⏳ Phase 4 |
+| ISS-10 | `AGENTS.md` บอกว่าแอปใช้ Supabase query ตรง + route group `(tabs)` + realtime tab badge + `.env` แบบ Supabase (ไม่มีจริงในโค้ด) และ `eas.json` ยังฝังตัวแปร `EXPO_PUBLIC_SUPABASE_*` ที่ไม่มีใครใช้ | ตัดออก/แก้ให้ตรงจริง | ✅ **แก้แล้ว (Phase 4)** — เขียน `AGENTS.md` ใหม่ทั้งไฟล์ + ลบตัวแปรใน `eas.json`; `handoff.md` ติดป้าย "เอกสารรุ่นเก่า" |
 | ISS-11 | `quotation_status` มี id 5 ในฐานข้อมูล แต่ `constants.QUOTE_STATUS` ไม่มี | เพิ่มให้ครบ | ⏳ Phase 1.1 |
 
 ---
@@ -339,7 +339,13 @@
 3. ตรวจผล: `tsc --noEmit` = exit 0 · `eslint` = 4 error / 30 warning เท่าเดิม · grep ไม่เหลือคำสะกดผิดในโค้ด
    *หมายเหตุ:* `.expo/types/router.d.ts` เป็นไฟล์ generate (gitignored) ที่ค้างสถานะระหว่างการ rename จึงลบทิ้ง — `expo start` ครั้งถัดไปจะสร้างใหม่ให้ตรง route ปัจจุบัน (ไม่มีผลต่อการรัน)
 
-**Phase 4 — Docs:** ซิงก์ `README.md`/`AGENTS.md` (`devices` tab, ไม่มี Supabase)
+**Phase 4 — เอกสาร (ทำแล้วรอบนี้)**
+1. `my-app-main/AGENTS.md` — เขียนใหม่ทั้งไฟล์: ตัดสิ่งที่ไม่มีจริง (Supabase, `lib/supabase.ts`, `supabase/migrations`, realtime tab badge, route group `(tabs)`, `react-native-url-polyfill`, `lodash`) แล้วระบุ 5 กลุ่มเส้นทาง + tab จริงของแต่ละบทบาท, auth gate/role guard ผ่าน `lib/api.ts` + SecureStore, แหล่งสีเดียว และรายการ dependency ตาม `package.json` จริง
+2. `README.md` (root) — แก้ชื่อกลุ่มเส้นทางในผังโปรเจกต์ (`(meneger)`/`(technicain)` → `(manager)`/`(technician)`), แก้ชื่อโฟลเดอร์ `Technicain_detail`, แก้ลิงก์บัญชี Manager ใน Simulation Guide และเพิ่ม What's New ข้อ 6 (มาตรฐานโค้ด + สีแบรนด์เหลือเฉดเดียว)
+3. `my-app-main/README.md` — แก้ชื่อกลุ่มเส้นทาง + เพิ่มหมายเหตุอีเมล Manager ที่พิมพ์คลาดเคลื่อน (ยืนยันด้วยการล็อกอินจริงทั้ง 4 บทบาท → `200` ทุกบัญชี)
+4. `my-app-main/handoff.md` — ติดป้าย "เอกสารส่งมอบรุ่นเก่า" พร้อมชี้ไปเอกสารปัจจุบัน (คงเนื้อหาเดิมไว้เป็นบันทึกประวัติศาสตร์)
+5. `my-app-main/eas.json` — ลบตัวแปร `EXPO_PUBLIC_SUPABASE_*` ที่ไม่มีโค้ดใช้งานแล้ว
+6. ตรวจผล: ไม่เหลือคำว่า `supabase` ในโค้ด/config (เหลือเฉพาะในเอกสารที่ระบุว่าเป็นของเก่าหรือเป็นข้อห้าม) · `tsc --noEmit` = exit 0 · `eslint` = 4 error / 30 warning เท่าเดิม
 
 ---
 

@@ -39,21 +39,25 @@ npx expo start -c
 
 | บทบาท (Role) | อีเมล (Email) | รหัสผ่าน (Password) |
 |---|---|---|
-| **Manager (ผู้จัดการ)** | `Manager1234@gmai.com` | `Manager1234@gmai.comZ` |
+| **Manager (ผู้จัดการ)** | `Manager1234@gmail.com` | `Manager1234@gmai.comZ` |
 | **Technician (ช่างซ่อม)** | `technician1@gmail.com` | `technician1@gmail.comZ` |
 | **Staff (พนักงานหน้าร้าน)** | `staff1@gmail.com` | `staff1@gmail.comZ` |
 | **Customer (ลูกค้า)** | `cus1@gmail.com` | `cus1@gmail.comZ` |
 
 *(ทุกรหัสผ่านลงท้ายด้วยตัวอักษร `Z` ตัวใหญ่)*
 
+> ℹ️ **หมายเหตุจากฐานข้อมูลจริง:** อีเมล Manager คือ `Manager1234@gmail.com` (เอกสารเดิมพิมพ์คลาดเคลื่อนเป็น `gmai.com`)
+> แต่ **รหัสผ่าน** ของ Manager สะกดเป็น `Manager1234@gmai.comZ` (ขาด `l`) ตามที่บันทึกไว้จริงในฐานข้อมูล — ห้ามแก้เป็น `gmail` จะทำให้ล็อกอินไม่ได้
+> บัญชีทั้ง 4 บทบาทนี้ถูกทดสอบล็อกอินผ่าน `POST /api/auth/login` แล้วได้ `200` ทุกบัญชี
+
 ---
 
 ## 📂 โครงสร้างหน้าจอ (App Routes)
 
 - `app/(auth)/` — หน้าล็อกอิน, ลงทะเบียน, ลืมรหัสผ่าน
-- `app/(staff)/` — พนักงานหน้าร้าน (รับเครื่อง `/receive`, ส่งมอบ `/deliver`, รายการซ่อม `/repairs`)
-- `app/(technicain)/` — ช่างซ่อม (รายการซ่อม, ตารางใบเสนอราคา `/repairing`)
-- `app/(meneger)/` — ผู้จัดการร้าน (แดชบอร์ด, จัดการอะไหล่ `/item`, จัดการพนักงาน `/staff`)
+- `app/(staff)/` — พนักงานหน้าร้าน (ภาพรวม `/`, รับเครื่อง `/receive`, ส่งมอบ `/deliver`, รายการซ่อม `/repairs`)
+- `app/(technician)/` — ช่างซ่อม (รายการซ่อม, ตรวจเช็ค `/checking`, ใบเสนอราคา `/repairing`)
+- `app/(manager)/` — ผู้จัดการร้าน (ภาพรวม/แดชบอร์ด, รายการซ่อม, อะไหล่ `/item`, อุปกรณ์ `/devices`, พนักงาน `/staff`)
 - `app/(customer)/` — ลูกค้า (ดูประวัติซ่อม, ตรวจสอบและอนุมัติใบเสนอราคา)
 - `app/make-quote.tsx` — หน้าออกใบเสนอราคาของช่าง
 - `app/deliver-handover.tsx` — หน้าส่งมอบเครื่องพร้อมเซ็นชื่อรับเครื่องแบบดิจิทัล
