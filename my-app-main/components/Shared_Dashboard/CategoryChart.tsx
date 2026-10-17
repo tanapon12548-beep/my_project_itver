@@ -10,126 +10,77 @@ import { getDeviceTypeSuffix } from '@/lib/deviceTypeLabel';
 
 import { Colors } from '@/constants/theme';
 
-interface CategoryChartProps {
-  pcCount?: number;
-  laptopCount?: number;
-  printerCount?: number;
-  otherCount?: number;
-  total?: number;
-  isLoading?: boolean;
-  pcPercent?: number;
-  laptopPercent?: number;
-  printerPercent?: number;
-  deviceType?: string;
-  timeFilter?: string;
+/** หนึ่งหมวดอุปกรณ์ที่ได้จาก API (ชื่อมาจากตาราง device_types จริง) */
+export interface CategoryDatum {
+  name: string;
+  count: number;
 }
 
+interface CategoryChartProps {
+  /** หมวดอุปกรณ์จากฐานข้อมูล (GET /api/dashboard/category) */
+  types?: CategoryDatum[];
+  total?: number;
+  isLoading?: boolean;
+  deviceType?: string;
+}
+
+/**
+ * หน้าตาของแต่ละหมวด (ไอคอน + สี) — จับคู่จาก "ชื่อประเภทอุปกรณ์" ที่อยู่ในฐานข้อมูล
+ * ถ้าชื่อไหนยังไม่ตรงกับตารางนี้ จะใช้ไอคอนกลาง + สีสำรองตามลำดับ (ไม่ทำให้กราฟพัง)
+ */
+const TYPE_VISUALS: { test: RegExp; icon: string; color: string }[] = [
+  { test: /notebook|laptop/i, icon: 'laptop-outline', color: '#F97316' }, // ส้ม
+  { test: /all-in-one|desktop|computer|\bpc\b/i, icon: 'desktop-outline', color: Colors.primary }, // แดงแบรนด์
+  { test: /printer|scanner|print|scan/i, icon: 'print-outline', color: '#0284C7' }, // ฟ้า
+  { test: /monitor|display|screen/i, icon: 'tv-outline', color: '#0D9488' }, // เขียวน้ำทะเล
+  { test: /tablet|ipad/i, icon: 'tablet-portrait-outline', color: '#7C3AED' }, // ม่วง
+  { test: /phone|mobile|มือถือ/i, icon: 'phone-portrait-outline', color: '#DB2777' }, // ชมพู
+];
+
+const FALLBACK_COLORS = ['#64748B', '#0EA5E9', '#65A30D', '#D97706', '#9333EA'];
+
+const visualFor = (name: string, index: number) =>
+  TYPE_VISUALS.find((v) => v.test.test(name)) ?? {
+    icon: 'hardware-chip-outline',
+    color: FALLBACK_COLORS[index % FALLBACK_COLORS.length],
+  };
+
 export default function CategoryChart({
-  pcCount,
-  laptopCount,
-  printerCount,
-  otherCount = 0,
+  types,
   total,
   isLoading = false,
-  pcPercent,
-  laptopPercent,
-  printerPercent,
   deviceType,
-  timeFilter,
 }: CategoryChartProps) {
   const { width } = useWindowDimensions();
   const isWide = width >= 640;
 
-  const actualPc = pcCount ?? pcPercent ?? 0;
-  const actualLaptop = laptopCount ?? laptopPercent ?? 0;
-  const actualPrinter = printerCount ?? printerPercent ?? 0;
+  const data = types ?? [];
+  const calculatedTotal = total ?? data.reduce((sum, t) => sum + t.count, 0);
 
-  const chartColors = {
-    laptop: '#F97316',   // Orange
-    pc: Colors.primary,       // Red
-    printer: '#0284C7',  // Sky
-    other: '#64748B',    // Slate
-  };
+  // เฉพาะหมวดที่มีงานจริง เรียงตามที่ API ส่งมา (มาก -> น้อย)
+  const activeTypes = data.filter((t) => t.count > 0);
 
-  const calculatedTotal = total ?? (actualPc + actualLaptop + actualPrinter + otherCount);
-
-  // Build PieChart data with clean slices without cramped overlapping text
-  const pieData: { value: number; color: string }[] = [];
-
-  if (calculatedTotal > 0) {
-    if (actualLaptop > 0) {
-      pieData.push({
-        value: actualLaptop,
-        color: chartColors.laptop,
-      });
-    }
-    if (actualPc > 0) {
-      pieData.push({
-        value: actualPc,
-        color: chartColors.pc,
-      });
-    }
-    if (actualPrinter > 0) {
-      pieData.push({
-        value: actualPrinter,
-        color: chartColors.printer,
-      });
-    }
-    if (otherCount > 0) {
-      pieData.push({
-        value: otherCount,
-        color: chartColors.other,
-      });
-    }
-  } else {
-    // Empty state placeholder ring
-    pieData.push({ value: 1, color: '#F1F5F9' });
-  }
+  const pieData =
+    calculatedTotal > 0
+      ? activeTypes.map((t, index) => ({
+          value: t.count,
+          color: visualFor(t.name, index).color,
+        }))
+      : // วงแหวนสีอ่อนตอนยังไม่มีข้อมูล
+        [{ value: 1, color: '#F1F5F9' }];
 
   const getPercent = (count: number) => {
     if (calculatedTotal === 0) return 0;
     return Math.round((count / calculatedTotal) * 100);
   };
 
-  const allCategories = [
-    {
-      id: 'laptop',
-      label: 'โน๊ตบุ๊ค (Laptop)',
-      color: chartColors.laptop,
-      count: actualLaptop,
-      percent: getPercent(actualLaptop),
-      icon: 'laptop-outline',
-    },
-    {
-      id: 'pc',
-      label: 'คอมพิวเตอร์ (PC)',
-      color: chartColors.pc,
-      count: actualPc,
-      percent: getPercent(actualPc),
-      icon: 'desktop-outline',
-    },
-    {
-      id: 'printer',
-      label: 'ปริ้นเตอร์ (Printer)',
-      color: chartColors.printer,
-      count: actualPrinter,
-      percent: getPercent(actualPrinter),
-      icon: 'print-outline',
-    },
-    {
-      id: 'other',
-      label: 'อุปกรณ์อื่นๆ',
-      color: chartColors.other,
-      count: otherCount,
-      percent: getPercent(otherCount),
-      icon: 'hardware-chip-outline',
-    },
-  ];
-
-  // Show categories with active counts, or all if empty
-  const displayCategories = calculatedTotal > 0
-    ? allCategories.filter((item) => item.count > 0)
-    : allCategories.slice(0, 3);
+  const displayCategories = activeTypes.map((t, index) => ({
+    id: `${t.name}-${index}`,
+    label: t.name,
+    count: t.count,
+    percent: getPercent(t.count),
+    ...visualFor(t.name, index),
+  }));
 
   return (
     <View className="bg-white p-4 mx-4 mb-4 rounded-2xl border border-slate-200 shadow-sm">
@@ -191,40 +142,46 @@ export default function CategoryChart({
 
           {/* Clean Category Breakdown Cards */}
           <View className={`${isWide ? 'flex-1' : 'w-full'}`}>
-            {displayCategories.map((item) => (
-              <View
-                key={item.id}
-                className="bg-slate-50/80 border border-slate-100 rounded-xl p-2.5 mb-2"
-              >
-                <View className="flex-row items-center justify-between">
-                  {/* Left: Icon & Label */}
-                  <View className="flex-row items-center gap-2 flex-1 mr-2">
-                    <View
-                      className="w-6 h-6 rounded-lg items-center justify-center"
-                      style={{ backgroundColor: `${item.color}18` }}
-                    >
-                      <Ionicons name={item.icon as any} size={13} color={item.color} />
+            {displayCategories.length === 0 ? (
+              <Text className="text-xs text-slate-400 font-body text-center py-4">
+                ยังไม่มีงานซ่อมในช่วงที่เลือก
+              </Text>
+            ) : (
+              displayCategories.map((item) => (
+                <View
+                  key={item.id}
+                  className="bg-slate-50/80 border border-slate-100 rounded-xl p-2.5 mb-2"
+                >
+                  <View className="flex-row items-center justify-between">
+                    {/* Left: Icon & Label */}
+                    <View className="flex-row items-center gap-2 flex-1 mr-2">
+                      <View
+                        className="w-6 h-6 rounded-lg items-center justify-center"
+                        style={{ backgroundColor: `${item.color}18` }}
+                      >
+                        <Ionicons name={item.icon as any} size={13} color={item.color} />
+                      </View>
+                      <Text
+                        className="text-xs font-bold text-slate-800 font-heading"
+                        numberOfLines={1}
+                      >
+                        {item.label}
+                      </Text>
                     </View>
-                    <Text
-                      className="text-xs font-bold text-slate-800 font-heading"
-                      numberOfLines={1}
-                    >
-                      {item.label}
-                    </Text>
-                  </View>
 
-                  {/* Right: Count & Percentage */}
-                  <View className="flex-row items-baseline gap-1.5">
-                    <Text className="text-xs font-bold text-slate-900 font-heading">
-                      {item.count} เครื่อง
-                    </Text>
-                    <Text className="text-[11px] font-semibold text-slate-400 font-body min-w-[32px] text-right">
-                      {item.percent}%
-                    </Text>
+                    {/* Right: Count & Percentage */}
+                    <View className="flex-row items-baseline gap-1.5">
+                      <Text className="text-xs font-bold text-slate-900 font-heading">
+                        {item.count} เครื่อง
+                      </Text>
+                      <Text className="text-[11px] font-semibold text-slate-400 font-body min-w-[32px] text-right">
+                        {item.percent}%
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
+              ))
+            )}
           </View>
         </View>
       )}

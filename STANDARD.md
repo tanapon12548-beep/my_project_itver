@@ -268,7 +268,7 @@
 |---|---|---|---|---|---|---|
 | การ์ดสรุป | `Shared_Dashboard/MetricCards.tsx` | `getDashboardMetrics()` | `GET /api/dashboard/metrics` | `dashboard.getMetrics` | `repair_job`, `quotation_details` | Manager เห็นเงิน / Staff เห็นแค่จำนวนงาน |
 | แนวโน้ม | `RepairTrendChart`, `RevenueTrendChart` | `getDashboardTrend()` | `GET /api/dashboard/trend` | `dashboard.getTrend` | `repair_job` | `metric_type=revenue` + Staff → **403** |
-| สัดส่วนประเภทเครื่อง | `CategoryChart` | `getDashboardCategory()` | `GET /api/dashboard/category` | `dashboard.getCategory` | `repair_jobs_view` | ตัวกรองดึงจาก DB |
+| สัดส่วนประเภทเครื่อง | `CategoryChart` | `getDashboardCategory()` | `GET /api/dashboard/category` | `dashboard.getCategory` | `repair_jobs_view` | **หมวดจริงจาก DB** (ไม่ยุบเป็น 4 หมวดตายตัว) + ตัวกรองดึงจาก DB |
 | การใช้อะไหล่ | `PartsUsageChart` | `getDashboardPartsUsage()` | `GET /api/dashboard/parts-usage` | `dashboard.getPartsUsage` | `quotation_details`, `item` | Staff ได้ `total_cost = 0` |
 | ผลงานช่าง/กิจกรรม | `WorkActivityChart` | `getDashboardWorkActivity()` | `GET /api/dashboard/work-activity` | `dashboard.getWorkActivity` | `repair_job_detail` | |
 | อาการเสียที่พบบ่อย | `SymptomsChart` | `getDashboardSymptoms()` | `GET /api/dashboard/symptoms` | `dashboard.getSymptoms` | `repair_job` | |
@@ -356,6 +356,13 @@
 4. `app/job-detail.tsx` — จุดที่ *เขียน* สถานะเปลี่ยนจาก `5` / `3` ดิบ → `QUOTE_STATUS.CHANGE_REQUEST` / `REPAIR_STATUS.MAKING_QUOTE`
 5. ยังเหลือ: การย้าย SQL ที่ฝังใน controller เข้า `queries/` (= **ISS-09**)
 6. `app/(staff)/_layout.tsx` — ลบแท็บ `signing` ที่ประกาศไว้แต่ **ไม่มีไฟล์จริง** (`href: null` จึงไม่เคยแสดงและไม่เคยเข้าได้ — ของค้างจาก flow ที่ถูกลบไปแล้ว)
+
+**Follow-up — กราฟสัดส่วนอุปกรณ์ดึงหมวดจากฐานข้อมูลจริง (ทำแล้วรอบนี้)**
+1. เดิม `dashboard.getCategory` ยุบหมวดจากตาราง `device_types` เหลือ **4 หมวดตายตัว** (`pc`/`laptop`/`printer`/`other`) ด้วยการจับคำในชื่อ → ประเภทที่มีจริงแต่ไม่ตรงคำ (เช่น `Monitor`, `Tablet / iPad`) จะถูกนับเป็น "อื่นๆ" เงียบ ๆ
+2. เปลี่ยนเป็นส่งหมวดจริงทั้งชุด: `data: { total, types: [{ name, count }] }` เรียงมาก→น้อย (จำนวนเท่ากันเรียงตามชื่อ)
+3. `CategoryChart` รับ `types`/`total` แล้ววาดตามข้อมูลจริง — ไอคอน/สีจับคู่จาก **ชื่อประเภท** ถ้าชื่อใหม่ยังไม่รู้จักจะใช้ไอคอนกลาง + สีสำรองตามลำดับ → **เพิ่มประเภทอุปกรณ์ใหม่ในฐานข้อมูลได้โดยไม่ต้องแก้โค้ดกราฟ**
+4. ลบ prop ที่ไม่ได้ใช้ (`pcPercent`/`laptopPercent`/`printerPercent`/`otherCount`/`timeFilter`) และตัด 4 หมวดตายตัวออกจาก `DashboardScreen`
+5. ตรวจผลจริงผ่าน HTTP: `total 9 = Desktop PC 4 + Notebook / Laptops 4 + Printer / Scanner 1` (ตรงกับ DB) · กรอง `device_type="Notebook / Laptops"` → เหลือ 1 หมวด 4 เครื่อง · Staff ยังดูได้ (ไม่ใช่ข้อมูลการเงิน) · ไม่เหลือฟิลด์เก่า
 
 ---
 

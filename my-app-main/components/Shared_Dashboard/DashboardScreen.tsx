@@ -73,12 +73,9 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
   const [trendData, setTrendData] = useState<{ value: number; label: string }[]>([]);
   const [revenueTrendData, setRevenueTrendData] = useState<{ value: number; label: string }[]>([]);
   const [categoryData, setCategoryData] = useState<{
-    pc: number;
-    laptop: number;
-    printer: number;
-    other?: number;
-    total?: number;
-  }>({ pc: 0, laptop: 0, printer: 0, other: 0, total: 0 });
+    total: number;
+    types: { name: string; count: number }[];
+  }>({ total: 0, types: [] });
   const [workActivityData, setWorkActivityData] = useState<WorkActivityMember[]>([]);
   const [symptomsData, setSymptomsData] = useState<SymptomItem[]>([]);
   const [partsUsageData, setPartsUsageData] = useState<PartUsageItem[]>([]);
@@ -162,7 +159,10 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
       }
 
       if (categoryRes?.success && categoryRes.data) {
-        setCategoryData(categoryRes.data);
+        setCategoryData({
+          total: Number(categoryRes.data.total) || 0,
+          types: Array.isArray(categoryRes.data.types) ? categoryRes.data.types : [],
+        });
       }
 
       if (workRes?.success && Array.isArray(workRes.data)) {
@@ -322,15 +322,11 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
           />
         )}
 
-        {/* Category Distribution Chart */}
+        {/* Category Distribution Chart — หมวดมาจากฐานข้อมูล (device_types) */}
         <CategoryChart
-          pcPercent={categoryData.pc}
-          laptopPercent={categoryData.laptop}
-          printerPercent={categoryData.printer}
-          otherCount={categoryData.other}
+          types={categoryData.types}
           total={categoryData.total}
           deviceType={deviceType}
-          timeFilter={timeFilter}
           isLoading={isLoading}
         />
 

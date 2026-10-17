@@ -464,37 +464,20 @@ exports.getCategory = async (req, res, next) => {
     const query = dashboardQueries.BUILD_CATEGORY_QUERY(whereConditions);
     const { rows } = await pool.query(query, params);
 
-    // Summarize into pc / laptop / printer / other
-    let pcCount = 0;
-    let laptopCount = 0;
-    let printerCount = 0;
-    let otherCount = 0;
+    // ส่ง "หมวดจริง" จากตาราง device_types ตรง ๆ (ไม่ยุบเหลือ 4 หมวดตายตัวอีกต่อไป)
+    // เรียงจากมากไปน้อยเพื่อให้อ่านง่าย; จำนวนเท่ากันให้เรียงตามชื่อ
+    const types = rows
+      .map((r) => ({ name: r.device_type || 'ไม่ระบุ', count: Number(r.count) || 0 }))
+      .filter((t) => t.count > 0)
+      .sort((a, b) => b.count - a.count || String(a.name).localeCompare(String(b.name), 'th'));
 
-    rows.forEach(row => {
-      const typeString = row.device_type.toLowerCase();
-      const count = parseInt(row.count, 10);
-
-      if (typeString.includes('desktop') || typeString.includes('pc')) {
-        pcCount += count;
-      } else if (typeString.includes('notebook') || typeString.includes('laptop')) {
-        laptopCount += count;
-      } else if (typeString.includes('printer') || typeString.includes('print')) {
-        printerCount += count;
-      } else {
-        otherCount += count;
-      }
-    });
-
-    const total = pcCount + laptopCount + printerCount + otherCount;
+    const total = types.reduce((sum, t) => sum + t.count, 0);
 
     res.json({
       success: true,
       data: {
         total,
-        pc: pcCount,
-        laptop: laptopCount,
-        printer: printerCount,
-        other: otherCount,
+        types,
       }
     });
   } catch (err) {

@@ -51,10 +51,22 @@ router.get('/trend', auth, role('Manager', 'Staff'), ctrl.getTrend);
  * /api/dashboard/category:
  *   get:
  *     tags: [Dashboard]
- *     summary: ข้อมูลแยกตามประเภทอุปกรณ์
+ *     summary: สัดส่วนงานซ่อมแยกตามประเภทอุปกรณ์ (หมวดจริงจากตาราง device_types)
  *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: query
+ *         name: date_start
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: date_end
+ *         schema: { type: string, format: date }
+ *       - in: query
+ *         name: device_type
+ *         description: ใส่ชื่อประเภทอุปกรณ์จากตาราง device_types (เช่น "Notebook / Laptops") หรือคีย์เดิม pc/laptop/printer/all
+ *         schema: { type: string, example: "Notebook / Laptops" }
  *     responses:
- *       200: { description: category data }
+ *       200:
+ *         description: "{ success, data: { total, types: [{ name, count }] } } — types เรียงจากมากไปน้อย"
  */
 router.get('/category', auth, role('Manager', 'Staff'), ctrl.getCategory);
 
