@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const catalogQueries = require('../queries/catalog.queries');
 
 // ============================================================
 // 1. DEVICE TYPES (ประเภทอุปกรณ์)
@@ -10,20 +11,7 @@ const pool = require('../config/db');
  */
 exports.getAllDeviceTypes = async (req, res, next) => {
   try {
-    const { rows } = await pool.query(`
-      SELECT 
-        dt.device_type_id,
-        dt.device_type_name,
-        COUNT(DISTINCT bdt.brand_id)::int AS brand_count,
-        COUNT(DISTINCT dm.model_id)::int AS model_count,
-        COUNT(DISTINCT d.device_id)::int AS device_count
-      FROM device_types dt
-      LEFT JOIN brand_device_types bdt ON dt.device_type_id = bdt.device_type_id
-      LEFT JOIN device_models dm ON dt.device_type_id = dm.device_type_id
-      LEFT JOIN device d ON dt.device_type_id = d.device_type_id
-      GROUP BY dt.device_type_id, dt.device_type_name
-      ORDER BY dt.device_type_id ASC
-    `);
+    const { rows } = await pool.query(catalogQueries.BUILD_GET_ALL_DEVICE_TYPES);
     res.json({ success: true, data: rows });
   } catch (err) {
     next(err);
@@ -43,7 +31,7 @@ exports.createDeviceType = async (req, res, next) => {
     }
 
     const dupCheck = await pool.query(
-      'SELECT device_type_id FROM device_types WHERE LOWER(device_type_name) = LOWER($1)',
+      catalogQueries.FIND_DEVICE_TYPE_BY_NAME,
       [name]
     );
     if (dupCheck.rows.length > 0) {
@@ -51,7 +39,7 @@ exports.createDeviceType = async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      'INSERT INTO device_types (device_type_name) VALUES ($1) RETURNING *',
+      catalogQueries.INSERT_DEVICE_TYPE,
       [name]
     );
     res.status(201).json({ success: true, data: rows[0], message: 'เพิ่มประเภทอุปกรณ์สำเร็จ' });
@@ -78,7 +66,7 @@ exports.updateDeviceType = async (req, res, next) => {
     }
 
     const dupCheck = await pool.query(
-      'SELECT device_type_id FROM device_types WHERE LOWER(device_type_name) = LOWER($1) AND device_type_id != $2',
+      catalogQueries.FIND_DEVICE_TYPE_BY_NAME_EXCEPT_ID,
       [name, id]
     );
     if (dupCheck.rows.length > 0) {
@@ -86,7 +74,7 @@ exports.updateDeviceType = async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      'UPDATE device_types SET device_type_name = $1 WHERE device_type_id = $2 RETURNING *',
+      catalogQueries.UPDATE_DEVICE_TYPE,
       [name, id]
     );
 
@@ -114,7 +102,7 @@ exports.deleteDeviceType = async (req, res, next) => {
 
     // 1. ตรวจสอบว่ามีการนำไปใช้ในข้อมูลงานซ่อม (device) หรือไม่
     const deviceCheck = await client.query(
-      'SELECT COUNT(*)::int AS count FROM device WHERE device_type_id = $1',
+      catalogQueries.COUNT_DEVICES_BY_DEVICE_TYPE,
       [id]
     );
     if (deviceCheck.rows[0].count > 0) {
@@ -126,7 +114,7 @@ exports.deleteDeviceType = async (req, res, next) => {
 
     // 2. ตรวจสอบรุ่นที่ผูกอยู่
     const modelCheck = await client.query(
-      'SELECT COUNT(*)::int AS count FROM device_models WHERE device_type_id = $1',
+      catalogQueries.COUNT_MODELS_BY_DEVICE_TYPE,
       [id]
     );
     if (modelCheck.rows[0].count > 0) {
@@ -137,8 +125,8 @@ exports.deleteDeviceType = async (req, res, next) => {
     }
 
     await client.query('BEGIN');
-    await client.query('DELETE FROM brand_device_types WHERE device_type_id = $1', [id]);
-    const { rowCount } = await client.query('DELETE FROM device_types WHERE device_type_id = $1', [id]);
+    await client.query(catalogQueries.DELETE_BRAND_DEVICE_TYPES_BY_DEVICE_TYPE, [id]);
+    const { rowCount } = await client.query(catalogQueries.DELETE_DEVICE_TYPE, [id]);
     await client.query('COMMIT');
 
     if (rowCount === 0) {
@@ -165,36 +153,14 @@ exports.deleteDeviceType = async (req, res, next) => {
 exports.getAllBrands = async (req, res, next) => {
   try {
     const { device_type_id, search } = req.query;
-    let query = `
-      SELECT 
-        b.brand_id,
-        b.brand_name,
-        COALESCE(
-          json_agg(
-            DISTINCT jsonb_build_object(
-              'device_type_id', dt.device_type_id,
-              'device_type_name', dt.device_type_name
-            )
-          ) FILTER (WHERE dt.device_type_id IS NOT NULL),
-          '[]'
-        ) AS device_types,
-        COUNT(DISTINCT dm.model_id)::int AS model_count
-      FROM brands b
-      LEFT JOIN brand_device_types bdt ON b.brand_id = bdt.brand_id
-      LEFT JOIN device_types dt ON bdt.device_type_id = dt.device_type_id
-      LEFT JOIN device_models dm ON b.brand_id = dm.brand_id
-    `;
+    let query = catalogQueries.BUILD_GET_ALL_BRANDS;
 
     const conditions = [];
     const params = [];
 
     if (device_type_id && !isNaN(parseInt(device_type_id, 10))) {
       params.push(parseInt(device_type_id, 10));
-      conditions.push(`b.brand_id IN (
-        SELECT brand_id FROM brand_device_types WHERE device_type_id = $${params.length}
-        UNION
-        SELECT brand_id FROM device_models WHERE device_type_id = $${params.length}
-      )`);
+      conditions.push(catalogQueries.BUILD_BRAND_IN_DEVICE_TYPE_CONDITION(params.length));
     }
 
     if (search && String(search).trim()) {
@@ -229,7 +195,7 @@ exports.createBrand = async (req, res, next) => {
     }
 
     const dupCheck = await client.query(
-      'SELECT brand_id FROM brands WHERE LOWER(brand_name) = LOWER($1)',
+      catalogQueries.FIND_BRAND_BY_NAME,
       [name]
     );
     if (dupCheck.rows.length > 0) {
@@ -238,7 +204,7 @@ exports.createBrand = async (req, res, next) => {
 
     await client.query('BEGIN');
     const { rows } = await client.query(
-      'INSERT INTO brands (brand_name) VALUES ($1) RETURNING *',
+      catalogQueries.INSERT_BRAND,
       [name]
     );
     const brand = rows[0];
@@ -249,7 +215,7 @@ exports.createBrand = async (req, res, next) => {
 
     for (const dtId of typeIds) {
       await client.query(
-        'INSERT INTO brand_device_types (brand_id, device_type_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        catalogQueries.INSERT_BRAND_DEVICE_TYPE,
         [brand.brand_id, dtId]
       );
     }
@@ -283,7 +249,7 @@ exports.updateBrand = async (req, res, next) => {
     }
 
     const dupCheck = await client.query(
-      'SELECT brand_id FROM brands WHERE LOWER(brand_name) = LOWER($1) AND brand_id != $2',
+      catalogQueries.FIND_BRAND_BY_NAME_EXCEPT_ID,
       [name, id]
     );
     if (dupCheck.rows.length > 0) {
@@ -292,7 +258,7 @@ exports.updateBrand = async (req, res, next) => {
 
     await client.query('BEGIN');
     const { rows } = await client.query(
-      'UPDATE brands SET brand_name = $1 WHERE brand_id = $2 RETURNING *',
+      catalogQueries.UPDATE_BRAND,
       [name, id]
     );
 
@@ -302,11 +268,11 @@ exports.updateBrand = async (req, res, next) => {
     }
 
     if (Array.isArray(device_type_ids)) {
-      await client.query('DELETE FROM brand_device_types WHERE brand_id = $1', [id]);
+      await client.query(catalogQueries.DELETE_BRAND_DEVICE_TYPES_BY_BRAND, [id]);
       const typeIds = device_type_ids.map(Number).filter((tId) => !isNaN(tId) && tId > 0);
       for (const dtId of typeIds) {
         await client.query(
-          'INSERT INTO brand_device_types (brand_id, device_type_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          catalogQueries.INSERT_BRAND_DEVICE_TYPE,
           [id, dtId]
         );
       }
@@ -336,7 +302,7 @@ exports.deleteBrand = async (req, res, next) => {
 
     // 1. ตรวจสอบว่ามีอุปกรณ์ในระบบใช้งานหรือไม่
     const devCheck = await client.query(
-      'SELECT COUNT(*)::int AS count FROM device WHERE brand_id = $1',
+      catalogQueries.COUNT_DEVICES_BY_BRAND,
       [id]
     );
     if (devCheck.rows[0].count > 0) {
@@ -348,7 +314,7 @@ exports.deleteBrand = async (req, res, next) => {
 
     // 2. ตรวจสอบรุ่นที่ผูกอยู่
     const modelCheck = await client.query(
-      'SELECT COUNT(*)::int AS count FROM device_models WHERE brand_id = $1',
+      catalogQueries.COUNT_MODELS_BY_BRAND,
       [id]
     );
     if (modelCheck.rows[0].count > 0) {
@@ -359,8 +325,8 @@ exports.deleteBrand = async (req, res, next) => {
     }
 
     await client.query('BEGIN');
-    await client.query('DELETE FROM brand_device_types WHERE brand_id = $1', [id]);
-    const { rowCount } = await client.query('DELETE FROM brands WHERE brand_id = $1', [id]);
+    await client.query(catalogQueries.DELETE_BRAND_DEVICE_TYPES_BY_BRAND, [id]);
+    const { rowCount } = await client.query(catalogQueries.DELETE_BRAND, [id]);
     await client.query('COMMIT');
 
     if (rowCount === 0) {
@@ -387,18 +353,7 @@ exports.deleteBrand = async (req, res, next) => {
 exports.getAllModels = async (req, res, next) => {
   try {
     const { brand_id, device_type_id, search } = req.query;
-    let query = `
-      SELECT 
-        dm.model_id,
-        dm.model_name,
-        dm.brand_id,
-        COALESCE(b.brand_name, '-') AS brand_name,
-        dm.device_type_id,
-        COALESCE(dt.device_type_name, '-') AS device_type_name
-      FROM device_models dm
-      LEFT JOIN brands b ON dm.brand_id = b.brand_id
-      LEFT JOIN device_types dt ON dm.device_type_id = dt.device_type_id
-    `;
+    let query = catalogQueries.BUILD_GET_ALL_MODELS;
 
     const conditions = [];
     const params = [];
@@ -455,8 +410,7 @@ exports.createModel = async (req, res, next) => {
 
     // ตรวจสอบชื่อรุ่นซ้ำในยี่ห้อและประเภทเดียวกัน
     const dupCheck = await client.query(
-      `SELECT model_id FROM device_models 
-       WHERE brand_id = $1 AND device_type_id = $2 AND LOWER(model_name) = LOWER($3)`,
+      catalogQueries.FIND_MODEL_BY_NAME_IN_BRAND_TYPE,
       [bId, dtId, name]
     );
     if (dupCheck.rows.length > 0) {
@@ -467,16 +421,12 @@ exports.createModel = async (req, res, next) => {
 
     // ตรวจสอบและเชื่อมโยง brand_device_types อัตโนมัติถ้ายังไม่ผูก
     await client.query(
-      `INSERT INTO brand_device_types (brand_id, device_type_id)
-       VALUES ($1, $2)
-       ON CONFLICT (brand_id, device_type_id) DO NOTHING`,
+      catalogQueries.INSERT_BRAND_DEVICE_TYPE_STRICT,
       [bId, dtId]
     );
 
     const { rows } = await client.query(
-      `INSERT INTO device_models (model_name, brand_id, device_type_id)
-       VALUES ($1, $2, $3)
-       RETURNING *`,
+      catalogQueries.INSERT_MODEL,
       [name, bId, dtId]
     );
 
@@ -518,8 +468,7 @@ exports.updateModel = async (req, res, next) => {
     }
 
     const dupCheck = await client.query(
-      `SELECT model_id FROM device_models 
-       WHERE brand_id = $1 AND device_type_id = $2 AND LOWER(model_name) = LOWER($3) AND model_id != $4`,
+      catalogQueries.FIND_MODEL_BY_NAME_EXCEPT_ID,
       [bId, dtId, name, id]
     );
     if (dupCheck.rows.length > 0) {
@@ -530,16 +479,12 @@ exports.updateModel = async (req, res, next) => {
 
     // ตรวจสอบและเชื่อมโยง brand_device_types อัตโนมัติ
     await client.query(
-      `INSERT INTO brand_device_types (brand_id, device_type_id)
-       VALUES ($1, $2)
-       ON CONFLICT (brand_id, device_type_id) DO NOTHING`,
+      catalogQueries.INSERT_BRAND_DEVICE_TYPE_STRICT,
       [bId, dtId]
     );
 
     const { rows } = await client.query(
-      `UPDATE device_models SET model_name = $1, brand_id = $2, device_type_id = $3
-       WHERE model_id = $4
-       RETURNING *`,
+      catalogQueries.UPDATE_MODEL,
       [name, bId, dtId, id]
     );
 
@@ -569,7 +514,7 @@ exports.deleteModel = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'ID รุ่นอุปกรณ์ไม่ถูกต้อง' });
     }
 
-    const { rowCount } = await pool.query('DELETE FROM device_models WHERE model_id = $1', [id]);
+    const { rowCount } = await pool.query(catalogQueries.DELETE_MODEL, [id]);
     if (rowCount === 0) {
       return res.status(404).json({ success: false, message: 'ไม่พบรุ่นอุปกรณ์ที่ต้องการลบ' });
     }

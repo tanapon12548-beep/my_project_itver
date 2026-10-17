@@ -16,6 +16,7 @@
 | **Phase 2b** | Front-end — ย้ายสีที่ hardcode (`#DC2626`/`#D32F2F`/`#D62828`) ให้มาจาก `theme.ts` + โทเคน Tailwind | ✅ ทำแล้ว |
 | **Phase 3** | Front-end — แก้ชื่อโฟลเดอร์/กลุ่มเส้นทางที่สะกดผิด (`Meneger_*`/`(meneger)` → `Manager_*`/`(manager)`, `Technicain_*`/`(technicain)` → `Technician_*`/`(technician)`) | ✅ ทำแล้ว |
 | **Phase 4** | เอกสาร — ซิงก์ `README.md` / `AGENTS.md` / `handoff.md` / `eas.json` ให้ตรงความจริง | ✅ ทำแล้ว |
+| **Phase 5** | Back-end — ย้าย SQL ที่ฝังใน controller **ทั้งหมด** เข้า `queries/*.queries.js` (ISS-09) | ✅ ทำแล้ว |
 
 **หลักการสำคัญ:** การปรับทุกเฟส **ห้ามเปลี่ยนพฤติกรรมที่ผู้ใช้เห็น** ยกเว้นรายการที่ระบุว่าเป็น "แก้บั๊ก/ปิดช่องโหว่" ไว้ชัดเจน
 
@@ -42,7 +43,7 @@
 - **FR-API-01**: แอปต้องคุยกับ Backend ผ่าน `lib/api.ts` **เท่านั้น** — ห้ามเรียก `fetch`/Supabase ตรงจากหน้าจอ
   *(ตรวจแล้ว: ปัจจุบันไม่มี `supabase.from(...)` ในโค้ดแอปเลย — ที่เขียนใน `AGENTS.md` เป็นข้อมูลเก่า)*
 - **FR-API-02**: ทุก endpoint (ยกเว้น login/register/forgot/reset) ต้องผ่าน `auth` ก่อนเสมอ
-- **BE-ARC-01**: ลำดับชั้น = `routes → controller → queries`. ถ้า SQL ยาว/ใช้ซ้ำ ให้ย้ายไป `queries/*.queries.js`
+- **BE-ARC-01**: ลำดับชั้น = `routes → controller → queries`. **SQL ทุกคำสั่งต้องอยู่ใน `queries/*.queries.js`** — controller ห้ามมีข้อความ SQL เต็มคำสั่ง (อนุญาตเฉพาะการต่อ *เศษเงื่อนไข* เช่น `' WHERE ' + ...` / `' ORDER BY ' + ...` และคำสั่งที่ต้องประกอบทีละส่วนโดยตั้งใจ เช่น `UPDATE_REPAIR_STATUS_BASE` ที่ต่อท้ายด้วยเงื่อนไขจริง)
 
 ---
 
@@ -304,11 +305,13 @@
 | ISS-06 | `showAlert` ถูกประกาศซ้ำ **14 ไฟล์** + `setAlertConfig` ตรง ๆ อีก 6 ไฟล์ + popup เขียนเองใน `slips.tsx` (รวม 20 ไฟล์, 4 signature, มี `'error'` ที่ไม่ใช่ค่ามาตรฐาน) | ใช้ hook กลาง `useAlert()` ตัวเดียว | ✅ **แก้แล้ว (Phase 2a)** — เหลือ `CustomAlert` ที่เดียวในระบบ (ใน hook) |
 | ISS-07 | สีแดง hardcode ปนกัน **3 เฉด** (`#DC2626`, `#D32F2F`, `#D62828`) ทั้งที่ `theme.ts` มี `Colors.primary` | อ้างจาก theme | ✅ **แก้แล้ว (Phase 2b)** — 279 จุดใน 84 ไฟล์ เหลือต้นทางที่ `theme.ts` + `tailwind.config.js` |
 | ISS-08 | โฟลเดอร์ + กลุ่มเส้นทางสะกดผิด `Meneger_*`, `Technicain_*`, `(meneger)`, `(technicain)` | `Manager_*`, `Technician_*`, `(manager)`, `(technician)` | ✅ **แก้แล้ว (Phase 3)** — 8 โฟลเดอร์ + 64 จุดอ้างอิงใน 13 ไฟล์ |
-| ISS-09 | SQL อยู่inline ใน 8 controller แต่แยก `queries/` แค่ 4 | งานยาว/ซ้ำ → ย้ายเข้า `queries/` | ⏳ รอพิจารณา |
+| ISS-09 | SQL อยู่ inline ใน 8 controller แต่แยก `queries/` แค่ 4 (payment/quotation/repair/dashboard) | งานยาว/ซ้ำ → ย้ายเข้า `queries/` | ✅ **แก้แล้ว (Phase 5)** — ย้าย **107 คำสั่ง (110 จุดเรียกใช้)** จาก 10 controller เข้า `queries/` ครบทั้ง 11 โมดูล · ข้อความ SQL **เหมือนเดิมทุกตัวอักษร** (พิสูจน์ด้วยตัวเทียบอัตโนมัติก่อน/หลัง) · ทดสอบ API จริง **82/0** และข้อมูลกลับมาเท่าเดิม |
 | ISS-10 | `AGENTS.md` บอกว่าแอปใช้ Supabase query ตรง + route group `(tabs)` + realtime tab badge + `.env` แบบ Supabase (ไม่มีจริงในโค้ด) และ `eas.json` ยังฝังตัวแปร `EXPO_PUBLIC_SUPABASE_*` ที่ไม่มีใครใช้ | ตัดออก/แก้ให้ตรงจริง | ✅ **แก้แล้ว (Phase 4)** — เขียน `AGENTS.md` ใหม่ทั้งไฟล์ + ลบตัวแปรใน `eas.json`; `handoff.md` ติดป้าย "เอกสารรุ่นเก่า" |
 | ISS-11 | `quotation_status` มี id 5 ในฐานข้อมูล แต่ `constants.QUOTE_STATUS` ไม่มี → ทำให้ controller ต้อง **ฝังเลข `5` ดิบ 2 จุด** (`quotation.controller.js:608, 672`) | เพิ่มให้ครบ + ตรงชื่อกับตารางจริง | ✅ **แก้แล้ว (Follow-up)** — กำหนดตรงกับตาราง `quotation_status`: 4 = `REVISING` (ปรับปรุงใบเสนอราคา), 5 = `CHANGE_REQUEST` (ขอแก้ไข/เพิ่มเติมรายการ) ทั้งฝั่งแอปและ API + ลบเลขดิบและคงรายการที่ลูกค้าแก้ได้เป็น `[2,3,4,5]` เท่าเดิม |
 | ISS-12 | ฝั่งแอปเปรียบเทียบสถานะด้วยเลขดิบ **ทั้งผ่านชื่อฟิลด์และผ่านตัวแปร** (`quote_status_id === 5`, `statusId === 9`, `quoteStatusId === 4`, `stId === 9`) กระจายหลายไฟล์ | ใช้ `QUOTE_STATUS.*` / `REPAIR_STATUS.*` | ✅ **แก้แล้ว (Follow-up)** — **146 จุด ใน 22 ไฟล์** (ค่าคงที่ให้ค่าเท่าเดิมทุกจุด) · *วิธีทำ:* codemod ที่คงชื่อฟิลด์/ตัวดำเนินการเดิมไว้ 100% + dry-run ตรวจก่อนเขียน · *จุดที่ตั้งใจไม่แตะ:* `response.status === 401` (HTTP status), `item_type_id` (ชนิดอะไหล่ ไม่ใช่สถานะ) |
 | ISS-13 | `constants/status.ts` ฝั่งแอป มี `ROLES` **สลับ 2/3** (STAFF 2 / TECHNICIAN 3) เหมือนบั๊กเดิมของฝั่ง API | ต้องตรงกับตาราง `roles` | ✅ **แก้แล้ว (Follow-up)** — ตรวจแล้วไม่มีโค้ดใดอ้างถึง `ROLES` ฝั่งแอป จึงไม่กระทบพฤติกรรม แต่ปิดกับดักไว้ |
+| ISS-14 | **บั๊ก**: `DELETE /api/slips/:id` (`slip.controller.js`) เรียก `pool.query(..., [slipId])` โดย **ไม่มีตัวแปร `slipId`** (มีแต่ `numId`) → โยน `ReferenceError` ทุกครั้ง → ตอบ `500` และลบสลิปไม่ได้เลย | ต้องอ้าง `numId` | ✅ **แก้แล้ว (Phase 5)** — เปลี่ยนเป็น `numId`; ทดสอบจริง `DELETE /slips/:id → 200` และไฟล์ภาพถูกลบออกจากดิสก์ด้วย |
+| ISS-15 | ยังเหลือ **เลขดิบที่ไม่ใช่สถานะ** ในฝั่ง Back-end: `item.controller.js` ใช้ `![1, 2]` (ชนิดรายการ), `dashboard` SQL ใช้ `i.item_type_id = 1` และ `p.role_id IN (2, 3)`, `repair/staff` ใช้ `DEFAULTS.CANCEL_INSPECTION_FEE` ถูกต้องแล้วแต่มี `\|\| 300` สำรอง | ใช้ `ITEM_TYPES.*` / `ROLES.*` จาก `constants/index.js` | ⏳ รอพิจารณา (ตั้งใจไม่แตะใน Phase 5 เพราะ ISS-09 เป็นการ "ย้าย SQL เฉย ๆ" ต้องคงข้อความ SQL เดิมไว้พิสูจน์ได้) |
 
 ---
 
@@ -354,7 +357,7 @@
 2. `constants/status.ts` + `back-end/constants/index.js` — `QUOTE_STATUS` ขาด id 5 และตั้งชื่อ 4 ไม่ตรงความหมาย → ทำตรงกับตาราง `quotation_status`: 4 = `REVISING` (ปรับปรุงใบเสนอราคา), 5 = `CHANGE_REQUEST` (ขอแก้ไข/เพิ่มเติมรายการ) = **ISS-11**
 3. `back-end/controllers/quotation.controller.js` — ลบ **magic number `5`** ที่ฝังไว้ 2 จุด (มีเพราะค่าคงที่ขาด) → ใช้ `QUOTE_STATUS.CHANGE_REQUEST`; และเพิ่ม `REVISING` เข้ารายการที่ลูกค้าเปลี่ยนสถานะได้ เพื่อคงพฤติกรรมเดิมครบ `[2,3,4,5]`
 4. `app/job-detail.tsx` — จุดที่ *เขียน* สถานะเปลี่ยนจาก `5` / `3` ดิบ → `QUOTE_STATUS.CHANGE_REQUEST` / `REPAIR_STATUS.MAKING_QUOTE`
-5. ยังเหลือ: การย้าย SQL ที่ฝังใน controller เข้า `queries/` (= **ISS-09**)
+5. ~~ยังเหลือ: การย้าย SQL ที่ฝังใน controller เข้า `queries/` (= **ISS-09**)~~ → **ปิดแล้วใน Phase 5 (ด้านล่าง)**
 6. `app/(staff)/_layout.tsx` — ลบแท็บ `signing` ที่ประกาศไว้แต่ **ไม่มีไฟล์จริง** (`href: null` จึงไม่เคยแสดงและไม่เคยเข้าได้ — ของค้างจาก flow ที่ถูกลบไปแล้ว)
 
 **Follow-up — กราฟสัดส่วนอุปกรณ์ดึงหมวดจากฐานข้อมูลจริง (ทำแล้วรอบนี้)**
@@ -363,6 +366,19 @@
 3. `CategoryChart` รับ `types`/`total` แล้ววาดตามข้อมูลจริง — ไอคอน/สีจับคู่จาก **ชื่อประเภท** ถ้าชื่อใหม่ยังไม่รู้จักจะใช้ไอคอนกลาง + สีสำรองตามลำดับ → **เพิ่มประเภทอุปกรณ์ใหม่ในฐานข้อมูลได้โดยไม่ต้องแก้โค้ดกราฟ**
 4. ลบ prop ที่ไม่ได้ใช้ (`pcPercent`/`laptopPercent`/`printerPercent`/`otherCount`/`timeFilter`) และตัด 4 หมวดตายตัวออกจาก `DashboardScreen`
 5. ตรวจผลจริงผ่าน HTTP: `total 9 = Desktop PC 4 + Notebook / Laptops 4 + Printer / Scanner 1` (ตรงกับ DB) · กรอง `device_type="Notebook / Laptops"` → เหลือ 1 หมวด 4 เครื่อง · Staff ยังดูได้ (ไม่ใช่ข้อมูลการเงิน) · ไม่เหลือฟิลด์เก่า
+
+**Phase 5 — ย้าย SQL ทั้งหมดเข้า `queries/` (ทำแล้วรอบนี้) = ISS-09**
+
+1. **ก่อนทำ:** SQL ฝังอยู่ใน 10 controller (**107 คำสั่ง / 110 จุดเรียกใช้**) ขณะที่แยกเป็น `queries/` แล้วแค่ 4 โมดูล (payment, quotation, repair, dashboard)
+2. **หลังทำ:** SQL เต็มคำสั่งอยู่ใน `queries/` **ครบทั้ง 11 โมดูล** — เพิ่มไฟล์ใหม่ 7 ไฟล์ (`auth`, `catalog`, `device`, `item`, `lookup`, `slip`, `staff`) + เติมของเดิม 3 ไฟล์ (`dashboard`, `quotation`, `repair`) · controller เหลือเพียง *เศษเงื่อนไข* ที่ต้องต่อสด ๆ (`' WHERE ' + conditions.join(' AND ')`, `' GROUP BY ...'`, `ILIKE $n`) ซึ่งเป็นรูปแบบที่ `queries/` เดิมใช้อยู่แล้ว (รับ `whereClause`/`{conditions}` เข้าไป)
+3. **กติกาที่ใช้คัดโค้ด:** ข้อความ SQL และการแทรกค่าคงที่ต้องเป็น **ตัวอักษรชุดเดิม** (`${REPAIR_STATUS.COMPLETED}`, `${ACTION_TYPES.CREATE_QUOTE}`, `${DEFAULTS.CANCEL_INSPECTION_FEE || 300}`, `${ROLES.CUSTOMER}`) ห้ามเปลี่ยนชื่อคอลัมน์/พารามิเตอร์/ตัวพิมพ์ — ไฟล์ `queries/` จึง `require('../constants')` เองเพื่อใช้ชื่อเดิม
+4. **พิสูจน์ว่า SQL ไม่เปลี่ยน (ชั้นที่ 1 — อัตโนมัติ):** เครื่องมือดึง "สตริง SQL" จากไฟล์เวอร์ชัน `git HEAD` (controller + `queries/`) เทียบกับไฟล์ปัจจุบัน โดย normalize ช่องว่าง → ผล **"เหมือนกันทุกคำ"** ทั้ง 11 โมดูล (auth 14, catalog 30, dashboard 9, device 5, item 4, lookup 14, payment 8, quotation 28, repair 18, slip 5, staff 13)
+5. **พิสูจน์ว่า SQL ยังทำงานจริง (ชั้นที่ 2 — ยิง API จริง 82 เคส):** ครอบทั้ง 4 บทบาท + lookup ทั้ง 9 + catalog CRUD (สร้าง/แก้/ลบ ประเภท-ยี่ห้อ-รุ่น) + รายการอะไหล่ CRUD + สมัคร/แก้โปรไฟล์/ลืมรหัส/รีเซ็ตรหัส/ลบบัญชี + วงจรงานซ่อม-ใบเสนอราคา (สร้าง → เปลี่ยนสถานะ → ลบใบ → ลบงาน) + **เส้นยกเลิกซ่อม** (ซิงค์ใบเสนอราคาเป็นยกเลิก + คิดค่าตรวจเช็ค) + สลิป → **PASS 82 / FAIL 0** และ **ข้อมูลกลับมาเท่าเดิมทุกตาราง (net zero)**
+6. **3 จุดที่เป็นการ "ใช้ซ้ำอย่างมีเจตนา"** (เดิมเขียนซ้ำ 2 ที่ → เหลือค่าคงที่เดียว): `INSERT_BRAND_DEVICE_TYPE`, `DELETE_BRAND_DEVICE_TYPES_BY_BRAND`, `INSERT_BRAND_DEVICE_TYPE_STRICT` (catalog) — ตรวจแล้วว่าจุดเรียกใช้ยัง **2 ครั้งเท่าเดิม** ทุกตัว
+7. **1 จุดที่ตั้งใจเปลี่ยนข้อความภายใน:** fragment ของ `getAllBrands` (`b.brand_id IN (SELECT ... UNION SELECT ...)`) ย้ายเป็น builder `BUILD_BRAND_IN_DEVICE_TYPE_CONDITION(placeholder)` — SQL ที่ประกอบออกมาเหมือนเดิม (เดิม interpolate ตัวเลข `params.length` ตรง ๆ)
+8. **ผลพลอยได้:** เขตเวลาไทยย้ายไปเป็นค่าคงที่กลาง `constants.TIMEZONE = 'Asia/Bangkok'` (เดิม `const TZ` ฝังอยู่ใน `dashboard.controller.js`) → `queries/dashboard.queries.js` และ controller อ้างค่าเดียวกัน ป้องกันการตัดวันเพี้ยน
+9. **บั๊กที่พบระหว่างทางและแก้แล้ว:** ISS-14 (`DELETE /api/slips/:id` อ้างตัวแปร `slipId` ที่ไม่มีจริง → `500` ทุกครั้ง)
+10. **ยังเหลือ (ตั้งใจไม่แตะรอบนี้):** ISS-15 เลขดิบที่ไม่ใช่สถานะ (`[1,2]`, `i.item_type_id = 1`, `p.role_id IN (2,3)`)
 
 ---
 

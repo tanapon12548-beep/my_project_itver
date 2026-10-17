@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const deviceQueries = require('../queries/device.queries');
 
 /**
  * GET /api/devices
@@ -6,16 +7,7 @@ const pool = require('../config/db');
 exports.getAll = async (req, res, next) => {
   try {
     const { customer_id } = req.query;
-    let query = `
-      SELECT d.*, 
-             COALESCE(dt.device_type_name, '-') AS device_type_name,
-             COALESCE(b.brand_name, '-') AS brand_name,
-             COALESCE(p.first_name || ' ' || p.last_name, '') AS customer_name 
-      FROM device d 
-      LEFT JOIN device_types dt ON d.device_type_id = dt.device_type_id
-      LEFT JOIN brands b ON d.brand_id = b.brand_id
-      LEFT JOIN profiles p ON d.customer_id = p.id
-    `;
+    let query = deviceQueries.BUILD_GET_ALL_DEVICES;
     const params = [];
 
     if (customer_id && String(customer_id).trim()) {
@@ -57,7 +49,7 @@ exports.create = async (req, res, next) => {
       const trimmedBrandName = String(brand_name).trim();
       // ค้นหาว่ามียี่ห้อนี้อยู่แล้วหรือไม่ (case-insensitive)
       const existing = await pool.query(
-        'SELECT brand_id FROM brands WHERE LOWER(brand_name) = LOWER($1) LIMIT 1',
+        deviceQueries.FIND_BRAND_BY_NAME,
         [trimmedBrandName]
       );
       if (existing.rows.length > 0) {
@@ -65,7 +57,7 @@ exports.create = async (req, res, next) => {
       } else {
         // สร้างยี่ห้อใหม่
         const inserted = await pool.query(
-          'INSERT INTO brands (brand_name) VALUES ($1) RETURNING brand_id',
+          deviceQueries.INSERT_BRAND,
           [trimmedBrandName]
         );
         parsedBrandId = inserted.rows[0].brand_id;
@@ -77,10 +69,7 @@ exports.create = async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO device (customer_id, device_type_id, brand_id, model, included_accessories,
-        warranty_year, warranty_end_date, serial_number, important_software, device_password)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-       RETURNING *`,
+      deviceQueries.INSERT_DEVICE,
       [
         parsedCustomerId,
         parsedDeviceTypeId,
@@ -125,19 +114,7 @@ exports.update = async (req, res, next) => {
     const parsedWarrantyEndDate = warranty_end_date && String(warranty_end_date).trim() !== '' ? String(warranty_end_date).trim() : null;
 
     const { rows } = await pool.query(
-      `UPDATE device SET
-        customer_id = COALESCE($1, customer_id), 
-        device_type_id = COALESCE($2, device_type_id), 
-        brand_id = COALESCE($3, brand_id), 
-        model = COALESCE($4, model), 
-        included_accessories = COALESCE($5, included_accessories),
-        warranty_year = COALESCE($6, warranty_year), 
-        warranty_end_date = COALESCE($7, warranty_end_date), 
-        serial_number = COALESCE($8, serial_number), 
-        important_software = COALESCE($9, important_software), 
-        device_password = COALESCE($10, device_password)
-       WHERE device_id = $11
-       RETURNING *`,
+      deviceQueries.UPDATE_DEVICE,
       [
         parsedCustomerId,
         parsedDeviceTypeId,

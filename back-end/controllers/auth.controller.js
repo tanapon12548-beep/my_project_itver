@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const pool = require('../config/db');
-const { ROLES } = require('../constants');
+const authQueries = require('../queries/auth.queries');
 
 function validatePassword(password) {
   if (!password || password.length < 8) {
@@ -48,7 +48,7 @@ exports.register = async (req, res, next) => {
     }
 
     // ตรวจสอบ email ซ้ำ
-    const existing = await pool.query('SELECT id FROM profiles WHERE LOWER(email) = LOWER($1)', [cleanEmail]);
+    const existing = await pool.query(authQueries.FIND_BY_EMAIL, [cleanEmail]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ success: false, message: 'อีเมลนี้ถูกใช้แล้ว' });
     }
@@ -61,7 +61,7 @@ exports.register = async (req, res, next) => {
       if (cleanPhone.length < 9 || cleanPhone.length > 10) {
         return res.status(400).json({ success: false, message: 'เบอร์โทรศัพท์ต้องมีความยาว 9-10 หลัก' });
       }
-      const dupPhone = await pool.query('SELECT id FROM profiles WHERE phone = $1 LIMIT 1', [cleanPhone]);
+      const dupPhone = await pool.query(authQueries.FIND_BY_PHONE, [cleanPhone]);
       if (dupPhone.rows.length > 0) {
         return res.status(409).json({ success: false, message: 'เบอร์โทรศัพท์นี้ถูกใช้งานในระบบแล้ว' });
       }
@@ -71,11 +71,9 @@ exports.register = async (req, res, next) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Insert new user (role_id = ROLES.CUSTOMER by default)
+    // Insert new user (role เริ่มต้น = Customer — กำหนดใน queries/auth.queries.js)
     const result = await pool.query(
-      `INSERT INTO profiles (email, password, first_name, last_name, phone, role_id)
-       VALUES ($1, $2, $3, $4, $5, ${ROLES.CUSTOMER})
-       RETURNING id, email, first_name, last_name, phone, role_id`,
+      authQueries.INSERT_PROFILE,
       [cleanEmail, hashedPassword, cleanFirstName, cleanLastName, cleanPhone]
     );
 
@@ -111,14 +109,8 @@ exports.login = async (req, res, next) => {
 
     const cleanIdentifier = String(email).trim();
 
-    // ค้นหา user ด้วย email หรือ เบอร์โทรศัพท์อย่างปลอดภัย (ตัด first_name ออกเพื่อความปลอดภัย)
-    const query = `
-      SELECT p.*, r.name AS role_name 
-      FROM profiles p 
-      LEFT JOIN roles r ON p.role_id = r.id 
-      WHERE LOWER(p.email) = LOWER($1) OR p.phone = $1
-    `;
-    const result = await pool.query(query, [cleanIdentifier]);
+    // ค้นหา user ด้วย email หรือ เบอร์โทรศัพท์อย่างปลอดภัย
+    const result = await pool.query(authQueries.FIND_PROFILE_FOR_LOGIN, [cleanIdentifier]);
 
     if (result.rows.length === 0) {
       return res.status(401).json({ success: false, message: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง' });
@@ -158,10 +150,7 @@ exports.login = async (req, res, next) => {
 exports.getMe = async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT p.id, p.email, p.first_name, p.last_name, p.phone, p.role_id, r.name AS role_name, p.created_at
-       FROM profiles p
-       LEFT JOIN roles r ON p.role_id = r.id
-       WHERE p.id = $1`,
+      authQueries.FIND_PROFILE_BY_ID,
       [req.user.id]
     );
 
@@ -192,7 +181,7 @@ exports.forgotPassword = async (req, res, next) => {
 
     // ตรวจสอบว่า email + phone ตรงกัน
     const result = await pool.query(
-      'SELECT id FROM profiles WHERE LOWER(email) = LOWER($1) AND phone = $2',
+      authQueries.FIND_BY_EMAIL_AND_PHONE,
       [cleanEmail, cleanPhone]
     );
 
@@ -204,7 +193,7 @@ exports.forgotPassword = async (req, res, next) => {
 
     // ลบ token เก่าที่ยังไม่ได้ใช้
     await pool.query(
-      'DELETE FROM password_reset_tokens WHERE user_id = $1 AND used = false',
+      authQueries.DELETE_UNUSED_RESET_TOKENS,
       [userId]
     );
 
@@ -213,7 +202,7 @@ exports.forgotPassword = async (req, res, next) => {
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
 
     await pool.query(
-      'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+      authQueries.INSERT_RESET_TOKEN,
       [userId, token, expiresAt]
     );
 
@@ -246,7 +235,7 @@ exports.resetPassword = async (req, res, next) => {
 
     // ตรวจสอบ token
     const result = await pool.query(
-      'SELECT * FROM password_reset_tokens WHERE token = $1 AND used = false AND expires_at > NOW()',
+      authQueries.FIND_VALID_RESET_TOKEN,
       [token]
     );
 
@@ -261,10 +250,10 @@ exports.resetPassword = async (req, res, next) => {
     const hashedPassword = await bcrypt.hash(new_password, salt);
 
     // อัปเดต password
-    await pool.query('UPDATE profiles SET password = $1 WHERE id = $2', [hashedPassword, resetToken.user_id]);
+    await pool.query(authQueries.UPDATE_PASSWORD, [hashedPassword, resetToken.user_id]);
 
     // Mark token as used
-    await pool.query('UPDATE password_reset_tokens SET used = true WHERE id = $1', [resetToken.id]);
+    await pool.query(authQueries.MARK_RESET_TOKEN_USED, [resetToken.id]);
 
     res.json({ success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จ' });
   } catch (err) {
@@ -288,7 +277,7 @@ exports.updateProfile = async (req, res, next) => {
         return res.status(400).json({ success: false, message: 'เบอร์โทรศัพท์ต้องมีความยาว 9-10 หลัก' });
       }
       const { rows: dupPhone } = await pool.query(
-        'SELECT id FROM profiles WHERE phone = $1 AND id != $2 LIMIT 1',
+        authQueries.FIND_PHONE_OWNED_BY_OTHER,
         [cleanPhone, req.user.id]
       );
       if (dupPhone.length > 0) {
@@ -297,12 +286,7 @@ exports.updateProfile = async (req, res, next) => {
     }
 
     const result = await pool.query(
-      `UPDATE profiles
-       SET first_name = COALESCE($1, first_name),
-           last_name = COALESCE($2, last_name),
-           phone = COALESCE($3, phone)
-       WHERE id = $4
-       RETURNING id, email, first_name, last_name, phone, role_id`,
+      authQueries.UPDATE_PROFILE,
       [cleanFirstName, cleanLastName, cleanPhone, req.user.id]
     );
 
@@ -311,7 +295,7 @@ exports.updateProfile = async (req, res, next) => {
     }
 
     const { rows: roleRows } = await pool.query(
-      `SELECT r.name AS role_name FROM roles r WHERE r.id = $1`,
+      authQueries.FIND_ROLE_NAME,
       [result.rows[0].role_id]
     );
 

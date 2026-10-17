@@ -65,3 +65,9 @@ exports.PAYMENT_METHODS = {
 exports.DEFAULTS = {
   CANCEL_INSPECTION_FEE: 300, // ค่าตรวจเช็คกรณีลูกค้ายกเลิกการซ่อม (บาท)
 };
+
+// 8. เขตเวลาของร้าน (Timezone)
+// ⚠️ สำคัญ: TIMEZONE ของ session ในฐานข้อมูลชุดนี้ไม่ใช่เวลาไทย (เป็น UTC-1)
+// ถ้าใช้ TO_CHAR()/CURRENT_DATE ตรง ๆ วันของงานที่ทำช่วง 00:00-07:00 น. จะถูกนับเป็นวันก่อนหน้า
+// จึงต้องผ่าน AT TIME ZONE ก่อนตัดวันทุกครั้ง (ดู queries/dashboard.queries.js)
+exports.TIMEZONE = 'Asia/Bangkok';

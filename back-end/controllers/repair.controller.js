@@ -305,9 +305,7 @@ exports.updateStatus = async (req, res, next) => {
     // ตรวจสอบสิทธิ์: ลูกค้าสามารถยกเลิกงานตนเองได้เท่านั้น (CANCELLED)
     if (req.user && (req.user.role_id === ROLES.CUSTOMER || req.user.role_name?.toLowerCase() === 'customer')) {
       const ownerCheck = await pool.query(
-        `SELECT rj.job_id FROM repair_job rj
-         JOIN device d ON rj.device_id = d.device_id
-         WHERE rj.job_id = $1 AND d.customer_id = $2`,
+        repairQueries.BUILD_CHECK_JOB_OWNER,
         [numId, req.user.id]
       );
       if (ownerCheck.rows.length === 0) {
@@ -319,18 +317,18 @@ exports.updateStatus = async (req, res, next) => {
     }
 
     // ตรวจสอบสถานะเดิมของงาน
-    const prevRes = await pool.query('SELECT status_id, quotation_id FROM repair_job WHERE job_id = $1', [numId]);
+    const prevRes = await pool.query(repairQueries.FIND_JOB_STATUS_BY_ID, [numId]);
     if (prevRes.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'ไม่พบงานซ่อม' });
     }
     const prevStatusId = prevRes.rows[0].status_id;
 
-    let updateSql = 'UPDATE repair_job SET status_id = $1';
+    let updateSql = repairQueries.UPDATE_REPAIR_STATUS_BASE;
     const updateParams = [numStatus, numId];
 
     if (numStatus === REPAIR_STATUS.CANCELLED) {
       const qRes = await pool.query(
-        'SELECT total_cancel_price FROM quotation WHERE job_id = $1 ORDER BY created_at DESC LIMIT 1',
+        repairQueries.FIND_LATEST_QUOTE_CANCEL_PRICE,
         [numId]
       );
       const cancelPrice = Number(qRes.rows[0]?.total_cancel_price) || DEFAULTS.CANCEL_INSPECTION_FEE;
@@ -340,7 +338,7 @@ exports.updateStatus = async (req, res, next) => {
       // ซิงค์สถานะใบเสนอราคาเป็นยกเลิก (3) ให้ตรงกับสถานะงานซ่อม
       try {
         await pool.query(
-          `UPDATE quotation SET quote_status_id = ${QUOTE_STATUS.CANCELLED} WHERE job_id = $1 OR quotation_id = (SELECT quotation_id FROM repair_job WHERE job_id = $1)`,
+          repairQueries.CANCEL_QUOTATION_BY_JOB,
           [numId]
         );
       } catch (qSyncErr) {
@@ -514,7 +512,7 @@ exports.remove = async (req, res, next) => {
     }
 
     const { rows: jobRows } = await pool.query(
-      'SELECT job_id, quotation_id, payment_method_id, slip_image FROM repair_job WHERE job_id = $1',
+      repairQueries.FIND_JOB_FOR_DELETE,
       [numId]
     );
     if (jobRows.length === 0) {
@@ -522,7 +520,7 @@ exports.remove = async (req, res, next) => {
     }
 
     const job = jobRows[0];
-    const qCheck = await pool.query('SELECT quotation_id FROM quotation WHERE job_id = $1', [numId]);
+    const qCheck = await pool.query(repairQueries.FIND_QUOTATION_ID_BY_JOB, [numId]);
     const hasTransactions = (qCheck.rows.length > 0) || (job.quotation_id !== null) || (job.payment_method_id !== null) || (job.slip_image !== null);
 
     if (hasTransactions) {

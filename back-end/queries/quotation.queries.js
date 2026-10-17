@@ -2,7 +2,7 @@
  * queries/quotation.queries.js
  * รวมคำสั่ง SQL Queries สำหรับโมดูลใบเสนอราคา (Quotation)
  */
-const { REPAIR_STATUS } = require('../constants');
+const { REPAIR_STATUS, ACTION_TYPES } = require('../constants');
 
 exports.INSERT_QUOTATION = `
   INSERT INTO quotation (job_id, total_repair_price, total_cancel_price, quote_status_id)
@@ -116,4 +116,64 @@ exports.RESET_REPAIR_ON_DELETE_QUOTATION = `
       total_amount = 0,
       status_id = ${REPAIR_STATUS.CHECKING}
   WHERE job_id = $1 OR quotation_id = $2
+`;
+
+// --- ใบเสนอราคาเดี่ยว ---
+exports.FIND_QUOTE_STATUS_BY_ID = 'SELECT quote_status_id FROM quotation WHERE quotation_id = $1';
+
+exports.FIND_QUOTATION_BY_ID = 'SELECT * FROM quotation WHERE quotation_id = $1';
+
+/** ใบเสนอราคา + เจ้าของเครื่อง (ใช้ตรวจสิทธิ์ลูกค้าก่อนเปลี่ยนสถานะ) */
+exports.FIND_QUOTATION_WITH_OWNER = `
+  SELECT q.*, rj.job_id, d.customer_id, p.phone, p.email
+  FROM quotation q
+  LEFT JOIN repair_job rj ON q.job_id = rj.job_id
+  LEFT JOIN device d ON rj.device_id = d.device_id
+  LEFT JOIN profiles p ON d.customer_id = p.id
+  WHERE q.quotation_id = $1
+`;
+
+/** ลูกค้าเปลี่ยนสถานะใบเสนอราคา (อนุมัติ/ยกเลิก/ขอแก้ไข) */
+exports.UPDATE_QUOTE_STATUS = 'UPDATE quotation SET quote_status_id = $1, customer_remark = COALESCE($2, customer_remark) WHERE quotation_id = $3 RETURNING *';
+
+exports.FIND_JOB_BY_QUOTATION_ID = 'SELECT job_id FROM repair_job WHERE quotation_id = $1';
+
+// --- ซิงค์สถานะงานซ่อมตามการตัดสินใจของลูกค้า ---
+exports.CANCEL_REPAIR_BY_QUOTATION = `
+  UPDATE repair_job SET status_id = ${REPAIR_STATUS.CANCELLED}, total_amount = $2 WHERE job_id = $1 OR quotation_id = $3
+`;
+
+exports.APPROVE_REPAIR_BY_QUOTATION = `
+  UPDATE repair_job SET status_id = ${REPAIR_STATUS.APPROVED_WAIT_REPAIR}, total_amount = CASE WHEN $2 > 0 THEN $2 ELSE total_amount END WHERE job_id = $1 OR quotation_id = $3
+`;
+
+exports.REQUEST_REVISION_REPAIR = `
+  UPDATE repair_job SET status_id = ${REPAIR_STATUS.MAKING_QUOTE} WHERE job_id = $1 OR quotation_id = $2
+`;
+
+exports.RESET_REPAIR_TO_PENDING_APPROVAL = `
+  UPDATE repair_job SET status_id = ${REPAIR_STATUS.PENDING_APPROVAL} WHERE job_id = $1 OR quotation_id = $2
+`;
+
+// --- บันทึกประวัติการกระทำ (repair_job_detail) ---
+exports.LOG_UPDATE_QUOTATION = `
+  INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark)
+  VALUES ($1, $2, ${ACTION_TYPES.CREATE_QUOTE}, CURRENT_DATE, 'ช่างปรับปรุงใบเสนอราคาใหม่ รอลูกค้าอนุมัติ')
+`;
+
+exports.LOG_DELETE_QUOTATION = `
+  INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark)
+  VALUES ($1, $2, ${ACTION_TYPES.START_INSPECT}, CURRENT_DATE, 'ช่างลบใบเสนอราคา ถอยสถานะกลับเป็นดำเนินการตรวจเช็ค')
+`;
+
+exports.LOG_CUSTOMER_CANCEL = `
+  INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark) VALUES ($1, $2, ${ACTION_TYPES.CUSTOMER_CANCEL}, CURRENT_DATE, $3)
+`;
+
+exports.LOG_CUSTOMER_APPROVE = `
+  INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark) VALUES ($1, $2, ${ACTION_TYPES.START_REPAIR}, CURRENT_DATE, $3)
+`;
+
+exports.LOG_CUSTOMER_REQUEST_REVISION = `
+  INSERT INTO repair_job_detail (job_id, user_id, action_type_id, action_date, remark) VALUES ($1, $2, ${ACTION_TYPES.CREATE_QUOTE}, CURRENT_DATE, $3)
 `;

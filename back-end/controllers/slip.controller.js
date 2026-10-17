@@ -2,7 +2,8 @@ const pool = require('../config/db');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { ROLES, PAYMENT_METHODS } = require('../constants');
+const { ROLES } = require('../constants');
+const slipQueries = require('../queries/slip.queries');
 
 const slipsDir = path.join(__dirname, '..', 'public', 'slips');
 if (!fs.existsSync(slipsDir)) {
@@ -52,7 +53,7 @@ exports.create = async (req, res, next) => {
     const jobId = req.body?.job_id;
 
     const { rows } = await pool.query(
-      `INSERT INTO slips_records (user_id, image_url) VALUES ($1, $2) RETURNING *`,
+      slipQueries.INSERT_SLIP,
       [userId, filename]
     );
 
@@ -61,9 +62,7 @@ exports.create = async (req, res, next) => {
       const numJobId = parseInt(jobId, 10);
       if (!isNaN(numJobId)) {
         await pool.query(
-          `UPDATE repair_job 
-           SET slip_image = $1, payment_method_id = ${PAYMENT_METHODS.TRANSFER}, payment_date = CURRENT_DATE 
-           WHERE job_id = $2`,
+          slipQueries.UPDATE_JOB_SLIP,
           [filename, numJobId]
         );
       }
@@ -82,7 +81,7 @@ exports.getAll = async (req, res, next) => {
   try {
     const userId = req.user.id;
     const { rows } = await pool.query(
-      'SELECT * FROM slips_records WHERE user_id = $1 ORDER BY uploaded_at DESC',
+      slipQueries.GET_SLIPS_BY_USER,
       [userId]
     );
     res.json({ success: true, data: rows });
@@ -105,7 +104,7 @@ exports.remove = async (req, res, next) => {
     const userId = req.user?.id;
     const roleId = req.user?.role_id;
 
-    const { rows } = await pool.query('SELECT * FROM slips_records WHERE id = $1', [numId]);
+    const { rows } = await pool.query(slipQueries.GET_SLIP_BY_ID, [numId]);
     if (rows.length === 0) {
       return res.status(404).json({ success: false, message: 'ไม่พบสลิป' });
     }
@@ -127,7 +126,8 @@ exports.remove = async (req, res, next) => {
       }
     }
 
-    await pool.query('DELETE FROM slips_records WHERE id = $1', [slipId]);
+    // เดิมใช้ตัวแปร `slipId` ที่ไม่มีอยู่จริง ทำให้ endpoint นี้ throw ReferenceError (500) ทุกครั้ง
+    await pool.query(slipQueries.DELETE_SLIP, [numId]);
     res.json({ success: true, message: 'ลบสลิปสำเร็จ' });
   } catch (err) {
     next(err);

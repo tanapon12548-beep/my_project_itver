@@ -1,5 +1,6 @@
 const pool = require('../config/db');
-const { ROLES, REPAIR_STATUS, DEFAULTS } = require('../constants');
+const { ROLES, REPAIR_STATUS } = require('../constants');
+const staffQueries = require('../queries/staff.queries');
 
 /**
  * GET /api/staff
@@ -7,13 +8,7 @@ const { ROLES, REPAIR_STATUS, DEFAULTS } = require('../constants');
 exports.getAll = async (req, res, next) => {
   try {
     // ดึงรายชื่อผู้ใช้ระบบ (Staff, Technician, Customer) ยกเว้น Manager
-    const { rows } = await pool.query(
-      `SELECT p.id, p.email, p.first_name, p.last_name, p.phone, p.role_id, r.name AS role_name, p.created_at
-       FROM profiles p
-       LEFT JOIN roles r ON p.role_id = r.id
-       WHERE p.role_id IN (${ROLES.STAFF}, ${ROLES.TECHNICIAN}, ${ROLES.CUSTOMER})
-       ORDER BY p.created_at DESC`
-    );
+    const { rows } = await pool.query(staffQueries.GET_ALL_PROFILES);
     res.json({ success: true, data: rows });
   } catch (err) {
     next(err);
@@ -42,7 +37,7 @@ exports.update = async (req, res, next) => {
         return res.status(400).json({ success: false, message: 'เบอร์โทรศัพท์ต้องมีความยาว 9-10 หลัก' });
       }
       const { rows: dupPhone } = await pool.query(
-        'SELECT id FROM profiles WHERE phone = $1 AND id != $2 LIMIT 1',
+        staffQueries.FIND_PHONE_OWNED_BY_OTHER,
         [cleanPhone, numId]
       );
       if (dupPhone.length > 0) {
@@ -51,13 +46,7 @@ exports.update = async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      `UPDATE profiles 
-       SET first_name = COALESCE($1, first_name),
-           last_name = COALESCE($2, last_name),
-           phone = COALESCE($3, phone),
-           role_id = COALESCE($4, role_id)
-       WHERE id = $5
-       RETURNING id, email, first_name, last_name, phone, role_id`,
+      staffQueries.UPDATE_PROFILE,
       [cleanFirstName, cleanLastName, cleanPhone, isNaN(parsedRoleId) ? null : parsedRoleId, numId]
     );
 
@@ -85,7 +74,7 @@ exports.remove = async (req, res, next) => {
 
     // 1. ตรวจสอบว่าผู้ใช้งานนี้มีอยู่ในระบบหรือไม่
     const { rows } = await pool.query(
-      'SELECT id, email, first_name, last_name, role_id FROM profiles WHERE id = $1',
+      staffQueries.FIND_PROFILE_BY_ID,
       [numId]
     );
 
@@ -108,22 +97,7 @@ exports.remove = async (req, res, next) => {
     // 4. ตรวจสอบกรณีเป็นลูกค้า (Customer) หรือมีอุปกรณ์/งานซ่อมผูกอยู่กับผู้ใช้งานนี้
     // ตรวจสอบเงื่อนไขว่าลูกค้าคนนี้เป็นหนี้หรือเปล่า (ยอดค้างชำระ / รอชำระ / ยกเลิกซ่อมแต่ยังไม่จ่ายค่าตรวจเช็ค)
     const { rows: relatedJobs } = await pool.query(
-      `SELECT 
-         rj.job_id,
-         rj.status_id,
-         s.status_name,
-         rj.payment_verified,
-         COALESCE(rj.total_amount, 0) AS total_amount,
-         COALESCE(q.total_repair_price, 0) AS quote_repair_price,
-         COALESCE(q.total_cancel_price, ${DEFAULTS.CANCEL_INSPECTION_FEE || 300}) AS quote_cancel_price,
-         q.quote_status_id,
-         qs.quote_status_name
-       FROM repair_job rj
-       JOIN device d ON rj.device_id = d.device_id
-       LEFT JOIN status s ON rj.status_id = s.status_id
-       LEFT JOIN quotation q ON rj.quotation_id = q.quotation_id
-       LEFT JOIN quotation_status qs ON q.quote_status_id = qs.quote_status_id
-       WHERE d.customer_id = $1`,
+      staffQueries.GET_CUSTOMER_JOBS,
       [numId]
     );
 
@@ -210,11 +184,7 @@ exports.remove = async (req, res, next) => {
     // 5. ป้องกันไม่ให้ลบช่างซ่อมที่มีงานที่กำลังรับผิดชอบอยู่
     if (targetUser.role_id === ROLES.TECHNICIAN) {
       const { rows: techJobs } = await pool.query(
-        `SELECT rj.job_id, s.status_name 
-         FROM repair_job rj
-         LEFT JOIN status s ON rj.status_id = s.status_id
-         WHERE rj.repairer_id = $1 
-           AND rj.status_id NOT IN (${REPAIR_STATUS.COMPLETED}, ${REPAIR_STATUS.CANCELLED})`,
+        staffQueries.GET_TECHNICIAN_ACTIVE_JOBS,
         [numId]
       );
       if (techJobs.length > 0) {
@@ -230,13 +200,13 @@ exports.remove = async (req, res, next) => {
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [numId]);
-      await client.query('UPDATE repair_job SET repairer_id = NULL WHERE repairer_id = $1', [numId]);
-      await client.query('UPDATE repair_job SET payment_verified_by = NULL WHERE payment_verified_by = $1', [numId]);
-      await client.query('UPDATE repair_job_detail SET user_id = NULL WHERE user_id = $1', [numId]);
-      await client.query('UPDATE slips_records SET user_id = NULL WHERE user_id = $1', [numId]);
-      await client.query('UPDATE device SET customer_id = NULL WHERE customer_id = $1', [numId]);
-      await client.query('DELETE FROM profiles WHERE id = $1', [numId]);
+      await client.query(staffQueries.DELETE_USER_RESET_TOKENS, [numId]);
+      await client.query(staffQueries.CLEAR_REPAIRER, [numId]);
+      await client.query(staffQueries.CLEAR_PAYMENT_VERIFIER, [numId]);
+      await client.query(staffQueries.CLEAR_ACTION_LOG_USER, [numId]);
+      await client.query(staffQueries.CLEAR_SLIP_USER, [numId]);
+      await client.query(staffQueries.CLEAR_DEVICE_CUSTOMER, [numId]);
+      await client.query(staffQueries.DELETE_PROFILE, [numId]);
       await client.query('COMMIT');
     } catch (txErr) {
       await client.query('ROLLBACK');

@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const itemQueries = require('../queries/item.queries');
 
 /**
  * ตรวจสอบ "ราคาทุน" ของรายการ
@@ -36,16 +37,7 @@ function resolveCostPrice(itemTypeId, rawCost, sellingPrice) {
 exports.getAll = async (req, res, next) => {
   try {
     const { type, search, item_type_id } = req.query;
-    let query = `
-      SELECT 
-        i.*, 
-        it.item_type_name, 
-        COUNT(qd.details_id)::int AS used_count 
-      FROM item i 
-      LEFT JOIN item_type it ON i.item_type_id = it.item_type_id 
-      LEFT JOIN quotation_details qd ON i.item_id = qd.item_id 
-      WHERE 1=1
-    `;
+    let query = itemQueries.BUILD_GET_ALL_ITEMS;
     const params = [];
     let paramIdx = 1;
 
@@ -97,9 +89,7 @@ exports.create = async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      `INSERT INTO item (item_name, item_type_id, selling_price, cost_price)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
+      itemQueries.INSERT_ITEM,
       [cleanName, numTypeId, safePrice, safeCost]
     );
 
@@ -140,9 +130,7 @@ exports.update = async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      `UPDATE item SET item_name=$1, item_type_id=$2, selling_price=$3, cost_price=$4
-       WHERE item_id=$5
-       RETURNING *`,
+      itemQueries.UPDATE_ITEM,
       [cleanName, numTypeId, safePrice, safeCost, numId]
     );
 
@@ -167,7 +155,7 @@ exports.remove = async (req, res, next) => {
       return res.status(400).json({ success: false, message: 'ID รายการไม่ถูกต้อง' });
     }
 
-    const result = await pool.query('DELETE FROM item WHERE item_id = $1 RETURNING item_id', [numId]);
+    const result = await pool.query(itemQueries.DELETE_ITEM, [numId]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'ไม่พบรายการ' });

@@ -1,17 +1,9 @@
 const pool = require('../config/db');
 const dashboardQueries = require('../queries/dashboard.queries');
-const { REPAIR_STATUS, QUOTE_STATUS } = require('../constants');
+const { REPAIR_STATUS, TIMEZONE: TZ } = require('../constants');
 
-/**
- * เขตเวลาของร้าน (ไทย)
- * หมายเหตุสำคัญ: TIMEZONE ของ session ในฐานข้อมูลชุดนี้ไม่ใช่เวลาไทย (เป็น UTC-1)
- * ถ้าใช้ TO_CHAR()/CURRENT_DATE ตรง ๆ วันของงานที่ทำช่วง 00:00-07:00 น. จะถูกนับเป็นวันก่อนหน้า
- * จึงต้องผ่าน AT TIME ZONE 'Asia/Bangkok' ทุกครั้งก่อนตัดวัน
- */
-const TZ = 'Asia/Bangkok';
-
-/** วันปัจจุบันตามเวลาไทย (date) */
-const LOCAL_TODAY_SQL = `(now() AT TIME ZONE '${TZ}')::date`;
+/** วันปัจจุบันตามเวลาไทย (date) — นิยามไว้ที่ queries/dashboard.queries.js (ใช้ SQL ชุดเดียวกัน) */
+const { LOCAL_TODAY_SQL } = dashboardQueries;
 
 /**
  * คอลัมน์วันที่ที่ใช้รับรู้ "รายได้"
@@ -44,11 +36,7 @@ function parseISODate(value) {
 
 /** วันแรกของเดือน วันนี้ และวันสุดท้ายของเดือน ตามเวลาไทย (ใช้สร้างแกนกราฟรายวัน) */
 async function getLocalMonthRange() {
-  const { rows } = await pool.query(
-    `SELECT to_char(DATE_TRUNC('month', ${LOCAL_TODAY_SQL}), 'YYYY-MM-DD') AS first_day,
-            to_char(${LOCAL_TODAY_SQL}, 'YYYY-MM-DD') AS today,
-            to_char((DATE_TRUNC('month', ${LOCAL_TODAY_SQL}) + INTERVAL '1 month' - INTERVAL '1 day')::date, 'YYYY-MM-DD') AS last_day`
-  );
+  const { rows } = await pool.query(dashboardQueries.GET_LOCAL_MONTH_RANGE);
   return { firstDay: rows[0].first_day, today: rows[0].today, lastDay: rows[0].last_day };
 }
 
@@ -178,33 +166,7 @@ exports.getMetrics = async (req, res, next) => {
       // นับเฉพาะใบเสนอราคาที่ "ลูกค้าอนุมัติแล้ว" เพราะงานที่ถูกยกเลิกจะยังมีรายการอะไหล่ค้างในใบ
       // แต่ของจริงไม่ได้ถูกติดตั้ง (ยอดที่เก็บจากงานที่ยกเลิกคือค่าตรวจเช็คเท่านั้น)
       // หมายเหตุ: ต้องแยก CTE เพื่อกันแถวทวีคูณจากการ join repair_job กับ quotation_details ตรง ๆ
-      const revenueQuery = `
-        WITH revenue_jobs AS (
-          SELECT rj.job_id, rj.total_amount
-          FROM repair_job rj
-          LEFT JOIN device d ON rj.device_id = d.device_id
-          LEFT JOIN device_types dt ON d.device_type_id = dt.device_type_id
-          WHERE rj.status_id = ${REPAIR_STATUS.COMPLETED} ${revenueConditions}
-        ),
-        job_parts_cost AS (
-          SELECT q.job_id,
-                 SUM(
-                   COALESCE(qd.quantity, 1)
-                   -- ใช้ต้นทุนที่ snapshot ไว้ตอนเสนอราคา ถ้ามี; ถ้าใบเก่ายังไม่มี ให้ใช้ราคาทุนปัจจุบันจากคลังอะไหล่
-                   * COALESCE(NULLIF(qd.unit_cost, 0), i.cost_price, 0)
-                 ) AS cost
-          FROM quotation q
-          JOIN quotation_details qd ON qd.quote_id = q.quotation_id
-          LEFT JOIN item i ON i.item_id = qd.item_id
-          WHERE q.quote_status_id = ${QUOTE_STATUS.APPROVED}
-          GROUP BY q.job_id
-        )
-        SELECT
-          COALESCE(SUM(rj.total_amount), 0)::float AS revenue,
-          COALESCE(SUM(COALESCE(pc.cost, 0)), 0)::float AS parts_cost
-        FROM revenue_jobs rj
-        LEFT JOIN job_parts_cost pc ON pc.job_id = rj.job_id
-      `;
+      const revenueQuery = dashboardQueries.BUILD_REVENUE_QUERY(revenueConditions);
       const { rows: revenueRows } = await pool.query(revenueQuery, revenueParams);
       totalRevenue = Number(revenueRows[0]?.revenue) || 0;
       partsCost = Number(revenueRows[0]?.parts_cost) || 0;
@@ -412,25 +374,7 @@ exports.getPartsUsage = async (req, res, next) => {
   try {
     const { conditions: whereConditions, params } = buildDateAndDeviceConditions(req.query, 'rj.created_at', 'dt.device_type_name');
 
-    const query = `
-      SELECT 
-        i.item_id,
-        i.item_name,
-        SUM(COALESCE(qd.quantity, 1)::numeric)::int AS total_quantity,
-        COUNT(DISTINCT q.job_id)::int AS jobs_count,
-        SUM(COALESCE(qd.total_price, 0)::numeric)::float AS total_cost
-      FROM quotation_details qd
-      JOIN quotation q ON qd.quote_id = q.quotation_id
-      JOIN repair_job rj ON q.job_id = rj.job_id
-      LEFT JOIN device d ON rj.device_id = d.device_id
-      LEFT JOIN device_types dt ON d.device_type_id = dt.device_type_id
-      JOIN item i ON qd.item_id = i.item_id
-      WHERE i.item_type_id = 1
-        AND q.quote_status_id = ${QUOTE_STATUS.APPROVED} ${whereConditions}
-      GROUP BY i.item_id, i.item_name
-      ORDER BY total_quantity DESC, total_cost DESC
-      LIMIT 10;
-    `;
+    const query = dashboardQueries.BUILD_PARTS_USAGE_QUERY(whereConditions);
 
     const { rows } = await pool.query(query, params);
 
@@ -547,31 +491,7 @@ exports.getTeamPerformance = async (req, res, next) => {
   try {
     const { conditions: rjFilter, params } = buildDateAndDeviceConditions(req.query, 'rj_sub.created_at', 'dt_sub.device_type_name');
 
-    const query = `
-      SELECT 
-        p.id,
-        TRIM(p.first_name || ' ' || COALESCE(p.last_name, '')) AS name,
-        r.name AS role_name,
-        COUNT(DISTINCT rj.job_id)::int AS total_jobs,
-        COUNT(DISTINCT CASE WHEN rj.status_id = ${REPAIR_STATUS.COMPLETED} THEN rj.job_id END)::int AS completed_jobs
-      FROM profiles p
-      JOIN roles r ON p.role_id = r.id
-      LEFT JOIN (
-        SELECT DISTINCT rj_sub.job_id, rj_sub.status_id, rj_sub.device_id, rj_sub.created_at, sub_user.user_id
-        FROM repair_job rj_sub
-        LEFT JOIN device d_sub ON rj_sub.device_id = d_sub.device_id
-        LEFT JOIN device_types dt_sub ON d_sub.device_type_id = dt_sub.device_type_id
-        JOIN (
-          SELECT job_id, user_id FROM repair_job_detail
-          UNION
-          SELECT job_id, repairer_id AS user_id FROM repair_job WHERE repairer_id IS NOT NULL
-        ) sub_user ON rj_sub.job_id = sub_user.job_id
-        WHERE 1=1 ${rjFilter}
-      ) rj ON rj.user_id = p.id
-      WHERE p.role_id IN (2, 3)
-      GROUP BY p.id, p.first_name, p.last_name, r.name
-      ORDER BY completed_jobs DESC, total_jobs DESC, p.id ASC;
-    `;
+    const query = dashboardQueries.BUILD_TEAM_PERFORMANCE_QUERY(rjFilter);
 
     const { rows } = await pool.query(query, params);
 

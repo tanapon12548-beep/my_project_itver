@@ -3,6 +3,8 @@
  * รวมคำสั่ง SQL Queries สำหรับโมดูลงานซ่อม (Repair Job)
  */
 
+const { QUOTE_STATUS } = require('../constants');
+
 const SELECT_REPAIR_FIELDS = `
   SELECT 
     rj.*,
@@ -125,3 +127,31 @@ exports.DELETE_REPAIR_DETAILS = `
 exports.DELETE_REPAIR_JOB = `
   DELETE FROM repair_job WHERE job_id = $1
 `;
+
+// --- ตรวจสอบความเป็นเจ้าของ/สถานะก่อนเปลี่ยนสถานะงาน ---
+/** ลูกค้าเป็นเจ้าของเครื่องในงานนี้หรือไม่ (ใช้กับงานที่ลูกค้าขอยกเลิกเอง) */
+exports.BUILD_CHECK_JOB_OWNER = `
+  SELECT rj.job_id FROM repair_job rj
+  JOIN device d ON rj.device_id = d.device_id
+  WHERE rj.job_id = $1 AND d.customer_id = $2
+`;
+
+exports.FIND_JOB_STATUS_BY_ID = 'SELECT status_id, quotation_id FROM repair_job WHERE job_id = $1';
+
+/**
+ * ส่วนหัวของคำสั่งอัปเดตสถานะงาน
+ * หมายเหตุ: controller จะต่อท้ายด้วยเงื่อนไขที่ต้องใช้จริง (เช่น total_amount / repairer_id / return_date)
+ * แล้วปิดท้ายด้วย `WHERE job_id = $2 RETURNING *` — จึงเป็นค่าคงที่ "บางส่วน" โดยตั้งใจ
+ */
+exports.UPDATE_REPAIR_STATUS_BASE = 'UPDATE repair_job SET status_id = $1';
+
+exports.FIND_LATEST_QUOTE_CANCEL_PRICE = 'SELECT total_cancel_price FROM quotation WHERE job_id = $1 ORDER BY created_at DESC LIMIT 1';
+
+/** ซิงค์ใบเสนอราคาของงานนี้ให้เป็น "ยกเลิก" เมื่อลูกค้ายกเลิกซ่อม */
+exports.CANCEL_QUOTATION_BY_JOB = `
+  UPDATE quotation SET quote_status_id = ${QUOTE_STATUS.CANCELLED} WHERE job_id = $1 OR quotation_id = (SELECT quotation_id FROM repair_job WHERE job_id = $1)
+`;
+
+exports.FIND_JOB_FOR_DELETE = 'SELECT job_id, quotation_id, payment_method_id, slip_image FROM repair_job WHERE job_id = $1';
+
+exports.FIND_QUOTATION_ID_BY_JOB = 'SELECT quotation_id FROM quotation WHERE job_id = $1';

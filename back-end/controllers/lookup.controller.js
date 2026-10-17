@@ -1,12 +1,13 @@
 const pool = require('../config/db');
 const { ROLES } = require('../constants');
+const lookupQueries = require('../queries/lookup.queries');
 
 /**
  * GET /api/lookup/statuses
  */
 exports.getStatuses = async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM status ORDER BY status_id');
+    const { rows } = await pool.query(lookupQueries.GET_STATUSES);
     res.json({ success: true, data: rows });
   } catch (err) {
     next(err);
@@ -18,7 +19,7 @@ exports.getStatuses = async (req, res, next) => {
  */
 exports.getActionTypes = async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM action_type ORDER BY action_type_id');
+    const { rows } = await pool.query(lookupQueries.GET_ACTION_TYPES);
     res.json({ success: true, data: rows });
   } catch (err) {
     next(err);
@@ -30,7 +31,7 @@ exports.getActionTypes = async (req, res, next) => {
  */
 exports.getPaymentMethods = async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM payment_method ORDER BY payment_method_id');
+    const { rows } = await pool.query(lookupQueries.GET_PAYMENT_METHODS);
     res.json({ success: true, data: rows });
   } catch (err) {
     next(err);
@@ -42,7 +43,7 @@ exports.getPaymentMethods = async (req, res, next) => {
  */
 exports.getItemTypes = async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM item_type ORDER BY item_type_id');
+    const { rows } = await pool.query(lookupQueries.GET_ITEM_TYPES);
     res.json({ success: true, data: rows });
   } catch (err) {
     next(err);
@@ -54,7 +55,7 @@ exports.getItemTypes = async (req, res, next) => {
  */
 exports.getQuotationStatuses = async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM quotation_status ORDER BY quote_status_id');
+    const { rows } = await pool.query(lookupQueries.GET_QUOTATION_STATUSES);
     res.json({ success: true, data: rows });
   } catch (err) {
     next(err);
@@ -66,7 +67,7 @@ exports.getQuotationStatuses = async (req, res, next) => {
  */
 exports.getDeviceTypes = async (req, res, next) => {
   try {
-    const { rows } = await pool.query('SELECT * FROM device_types ORDER BY device_type_id');
+    const { rows } = await pool.query(lookupQueries.GET_DEVICE_TYPES);
     res.json({ success: true, data: rows });
   } catch (err) {
     next(err);
@@ -81,17 +82,10 @@ exports.getBrands = async (req, res, next) => {
     const { device_type_id } = req.query;
     if (device_type_id && !isNaN(parseInt(device_type_id, 10))) {
       const dtId = parseInt(device_type_id, 10);
-      const { rows } = await pool.query(`
-        SELECT DISTINCT b.brand_id, b.brand_name
-        FROM brands b
-        LEFT JOIN brand_device_types bdt ON b.brand_id = bdt.brand_id
-        LEFT JOIN device_models dm ON b.brand_id = dm.brand_id AND dm.device_type_id = $1
-        WHERE bdt.device_type_id = $1 OR dm.device_type_id = $1
-        ORDER BY b.brand_name ASC
-      `, [dtId]);
+      const { rows } = await pool.query(lookupQueries.BUILD_GET_BRANDS_BY_DEVICE_TYPE, [dtId]);
       return res.json({ success: true, data: rows });
     }
-    const { rows } = await pool.query('SELECT * FROM brands ORDER BY brand_name ASC');
+    const { rows } = await pool.query(lookupQueries.GET_BRANDS);
     res.json({ success: true, data: rows });
   } catch (err) {
     next(err);
@@ -105,7 +99,7 @@ exports.getBrands = async (req, res, next) => {
 exports.getModels = async (req, res, next) => {
   try {
     const { brand_id, device_type_id } = req.query;
-    let query = 'SELECT * FROM device_models';
+    let query = lookupQueries.GET_ALL_DEVICE_MODELS;
     const conditions = [];
     const params = [];
 
@@ -157,7 +151,7 @@ exports.searchProfiles = async (req, res, next) => {
         params.push(`%${advEmail}%`);
         conditions.push(`email ILIKE $${params.length}`);
       }
-      const query = `SELECT id, first_name, last_name, phone, email FROM profiles WHERE ${conditions.join(' AND ')} LIMIT 10`;
+      const query = lookupQueries.BUILD_SEARCH_PROFILES_ADVANCED(conditions);
       const { rows } = await pool.query(query, params);
       return res.json({ success: true, data: rows });
     }
@@ -170,20 +164,14 @@ exports.searchProfiles = async (req, res, next) => {
     let query;
     const params = [`%${trimmed}%`];
     if (type === 'phone') {
-      query = `SELECT id, first_name, last_name, phone, email FROM profiles WHERE phone ILIKE $1 AND role_id = ${ROLES.CUSTOMER} LIMIT 10`;
+      query = lookupQueries.SEARCH_PROFILES_BY_PHONE;
     } else if (type === 'name') {
-      query = `SELECT id, first_name, last_name, phone, email FROM profiles
-               WHERE CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) ILIKE $1 AND role_id = ${ROLES.CUSTOMER} LIMIT 10`;
+      query = lookupQueries.SEARCH_PROFILES_BY_NAME;
     } else if (type === 'email') {
-      query = `SELECT id, first_name, last_name, phone, email FROM profiles WHERE email ILIKE $1 AND role_id = ${ROLES.CUSTOMER} LIMIT 10`;
+      query = lookupQueries.SEARCH_PROFILES_BY_EMAIL;
     } else {
       // default 'all': single search box (name / phone / email)
-      query = `SELECT id, first_name, last_name, phone, email FROM profiles
-               WHERE role_id = ${ROLES.CUSTOMER} AND (
-                 CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, '')) ILIKE $1
-                 OR phone ILIKE $1
-                 OR email ILIKE $1
-               ) LIMIT 10`;
+      query = lookupQueries.SEARCH_PROFILES_ALL;
     }
 
     const { rows } = await pool.query(query, params);
