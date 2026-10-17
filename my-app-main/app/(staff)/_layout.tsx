@@ -103,7 +103,6 @@ export default function StaffLayout() {
           ),
         }}
       />
-      <Tabs.Screen name="signing" options={{ href: null }} />
     </Tabs>
   );
 }

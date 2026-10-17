@@ -355,6 +355,7 @@
 3. `back-end/controllers/quotation.controller.js` — ลบ **magic number `5`** ที่ฝังไว้ 2 จุด (มีเพราะค่าคงที่ขาด) → ใช้ `QUOTE_STATUS.CHANGE_REQUEST`; และเพิ่ม `REVISING` เข้ารายการที่ลูกค้าเปลี่ยนสถานะได้ เพื่อคงพฤติกรรมเดิมครบ `[2,3,4,5]`
 4. `app/job-detail.tsx` — จุดที่ *เขียน* สถานะเปลี่ยนจาก `5` / `3` ดิบ → `QUOTE_STATUS.CHANGE_REQUEST` / `REPAIR_STATUS.MAKING_QUOTE`
 5. ยังเหลือ: การ *เปรียบเทียบ* สถานะด้วยเลขดิบใน `QuotationStatusBadge.tsx`, `(technician)/repairing.tsx`, `job-detail.tsx` (= **ISS-12** — ค่าตรงกันอยู่ จึงไม่กระทบพฤติกรรม) และการย้าย SQL ที่ฝังใน controller เข้า `queries/` (= **ISS-09**)
+6. `app/(staff)/_layout.tsx` — ลบแท็บ `signing` ที่ประกาศไว้แต่ **ไม่มีไฟล์จริง** (`href: null` จึงไม่เคยแสดงและไม่เคยเข้าได้ — ของค้างจาก flow ที่ถูกลบไปแล้ว)
 
 ---
 
