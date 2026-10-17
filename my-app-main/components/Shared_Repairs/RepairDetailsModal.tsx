@@ -88,7 +88,7 @@ export default function RepairDetailsModal({
             {item.actual_symptom ? (
               <View className="flex-row justify-between items-start py-2 bg-amber-50/70 p-2 rounded-lg border border-amber-100 my-0.5">
                 <Text className="text-sm font-bold text-amber-800 flex-1">อาการจริงหลังตรวจ</Text>
-                <Text className="text-sm font-bold text-[#D32F2F] flex-[2] text-right">{item.actual_symptom}</Text>
+                <Text className="text-sm font-bold text-primary flex-[2] text-right">{item.actual_symptom}</Text>
               </View>
             ) : null}
 
@@ -116,7 +116,7 @@ export default function RepairDetailsModal({
           <View className="flex-row gap-2.5">
             {onOpenFullDocument && (
               <TouchableOpacity
-                className="flex-[1.5] bg-[#D32F2F] h-11 rounded-xl justify-center items-center shadow-sm active:opacity-90 flex-row gap-1.5"
+                className="flex-[1.5] bg-primary h-11 rounded-xl justify-center items-center shadow-sm active:opacity-90 flex-row gap-1.5"
                 onPress={() => {
                   onClose();
                   onOpenFullDocument(item);

@@ -12,6 +12,8 @@ import DatePickerModal from '@/components/ui/DatePickerModal';
 // 4. API helpers
 import { getCatalogDeviceTypes } from '@/lib/api';
 
+import { Colors } from '@/constants/theme';
+
 /**
  * ตัวเลือกเริ่มต้น (ใช้ก่อนโหลดเสร็จ หรือกรณีโหลดรายการประเภทอุปกรณ์ไม่สำเร็จ)
  * ตัวจริงจะถูกแทนที่ด้วยข้อมูลจากตาราง device_types หลัง fetch เสร็จ
@@ -121,7 +123,7 @@ export default function DashboardFilters({
       {/* Header & Time toggle */}
       <View className="flex-row justify-between items-center mb-2.5">
         <View className="flex-row items-center gap-1.5">
-          <Ionicons name="filter" size={16} color="#DC2626" />
+          <Ionicons name="filter" size={16} color={Colors.primary} />
           <Text className="text-sm font-bold text-text-dark font-heading">ตัวกรองกราฟและรายงานทั้งหมด</Text>
         </View>
 
@@ -133,7 +135,7 @@ export default function DashboardFilters({
               onPress={() => onChangeTimeFilter(btn.key)}
             >
               <Text
-                className={`text-xs font-body ${timeFilter === btn.key ? 'text-[#DC2626] font-bold font-heading' : 'text-text-light'}`}
+                className={`text-xs font-body ${timeFilter === btn.key ? 'text-primary font-bold font-heading' : 'text-text-light'}`}
               >
                 {btn.label}
               </Text>
@@ -161,8 +163,8 @@ export default function DashboardFilters({
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             className="flex-row items-center gap-0.5 pl-1.5"
           >
-            <Ionicons name="refresh" size={12} color="#DC2626" />
-            <Text className="text-[11px] text-[#DC2626] font-bold">รีเซ็ต</Text>
+            <Ionicons name="refresh" size={12} color={Colors.primary} />
+            <Text className="text-[11px] text-primary font-bold">รีเซ็ต</Text>
           </TouchableOpacity>
         )}
       </View> */}

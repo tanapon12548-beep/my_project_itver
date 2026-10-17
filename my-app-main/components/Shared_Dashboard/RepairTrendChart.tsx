@@ -9,6 +9,8 @@ import { LinearGradient, Stop } from 'react-native-svg';
 
 import { getDeviceTypeBullet } from '@/lib/deviceTypeLabel';
 
+import { Colors } from '@/constants/theme';
+
 export interface RepairTrendDataPoint {
   value: number;
   label: string;
@@ -37,7 +39,7 @@ export default function RepairTrendChart({
 }: RepairTrendChartProps) {
   const { width } = useWindowDimensions();
   const chartWidth = Math.max(280, width - 84);
-  const mainColor = '#DC2626'; // IT Vertex Crimson Red
+  const mainColor = Colors.primary; // IT Vertex Crimson Red
 
   // รวมจำนวนเครื่องทั้งหมด
   const totalRepairs = data.reduce((sum, d) => sum + (Number(d.value) || 0), 0);

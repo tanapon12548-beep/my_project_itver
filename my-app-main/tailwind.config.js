@@ -16,7 +16,7 @@ module.exports = {
         body: ["IBMPlexSansThai-Regular", "sans-serif"],
       },
       colors: {
-        primary: "#D62828",
+        primary: "#DC2626",
         secondary: "#F77F00",
         tertiary: "#FCBF49",
         quaternary: "#E9D8A6",

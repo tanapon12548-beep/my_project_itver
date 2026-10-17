@@ -8,6 +8,8 @@ import { PieChart } from 'react-native-gifted-charts';
 
 import { getDeviceTypeSuffix } from '@/lib/deviceTypeLabel';
 
+import { Colors } from '@/constants/theme';
+
 interface CategoryChartProps {
   pcCount?: number;
   laptopCount?: number;
@@ -44,7 +46,7 @@ export default function CategoryChart({
 
   const chartColors = {
     laptop: '#F97316',   // Orange
-    pc: '#DC2626',       // Red
+    pc: Colors.primary,       // Red
     printer: '#0284C7',  // Sky
     other: '#64748B',    // Slate
   };
@@ -135,7 +137,7 @@ export default function CategoryChart({
       <View className="flex-row items-center justify-between mb-4 pb-3 border-b border-slate-100">
         <View className="flex-row items-center gap-2">
           <View className="w-8 h-8 rounded-xl bg-red-50 border border-red-100 items-center justify-center">
-            <Ionicons name="pie-chart" size={16} color="#DC2626" />
+            <Ionicons name="pie-chart" size={16} color={Colors.primary} />
           </View>
           <View>
             <Text className="text-sm font-bold text-slate-800 font-heading">
@@ -156,7 +158,7 @@ export default function CategoryChart({
 
       {isLoading ? (
         <View className="h-[180px] justify-center items-center">
-          <ActivityIndicator size="large" color="#DC2626" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text className="mt-2.5 font-body text-xs text-slate-400">
             กำลังประมวลผลสัดส่วน...
           </Text>

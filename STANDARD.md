@@ -13,7 +13,7 @@
 |---|---|---|
 | **Phase 1** | Back-end — แก้ค่าคงที่/สิทธิ์/รหัสตอบกลับ/ชื่อฟังก์ชันให้ตรงมาตรฐาน | ✅ ทำแล้ว |
 | **Phase 2a** | Front-end — รวมระบบแจ้งเตือนเป็น hook กลาง `useAlert()` ตัวเดียวทั้งโปรเจกต์ | ✅ ทำแล้ว |
-| **Phase 2b** | Front-end — ย้ายสีที่ hardcode (`#DC2626`/`#D32F2F`) ให้มาจาก `theme.ts` | ⏳ รอทำ |
+| **Phase 2b** | Front-end — ย้ายสีที่ hardcode (`#DC2626`/`#D32F2F`/`#D62828`) ให้มาจาก `theme.ts` + โทเคน Tailwind | ✅ ทำแล้ว |
 | **Phase 3** | Front-end — เปลี่ยนชื่อโฟลเดอร์/ไฟล์ที่สะกดผิด (`Meneger_*`, `Technicain_*`) | ⏳ รอทำ |
 | **Phase 4** | เอกสาร — ซิงก์ `README.md` / `AGENTS.md` ให้ตรงความจริง | ⏳ รอทำ |
 
@@ -154,9 +154,9 @@
 - **FE-UI-02**: `type` มีแค่ 4 ค่า: `'success' | 'warning' | 'danger' | 'info'` — ค่า `'error'` (ที่ `slips.tsx` เคยใช้) ถือเป็น `'danger'` (แก้แล้ว)
 - **FE-UI-03**: ใช้ `ConfirmDeleteModal` / `ConfirmLogoutModal` / `ConfirmSendModal` เมื่อต้องมี UI ยืนยันเฉพาะทาง (มีปุ่ม/รายละเอียดของตัวเอง) — ส่วนการยืนยันทั่วไปใช้ `showConfirm`
 
-### 3.4 ธีมและสี — *Phase 2*
-- **FE-THM-01**: สีต้องมาจาก `constants/theme.ts` (`Colors.primary = '#DC2626'`, `Colors.status.*`)
-- **FE-THM-02**: ห้าม hardcode `#DC2626` หรือ `#D32F2F` ในหน้าจอ (ปัจจุบันใช้ปนกัน 2 เฉด: `#D32F2F` **ไม่มี** ใน theme)
+### 3.4 ธีมและสี — *ทำแล้ว (Phase 2b)*
+- **FE-THM-01**: สีต้องมาจากที่เดียว — ฝั่ง JS/TSX ใช้ `Colors` จาก `constants/theme.ts` (`Colors.primary = '#DC2626'`, `Colors.status.*`) ส่วนคลาส Tailwind ใช้โทเคน `primary` ที่ประกาศใน `tailwind.config.js` (ค่าเดียวกันคือ `#DC2626`)
+- **FE-THM-02**: ห้าม hardcode รหัสสีแบรนด์ (`#DC2626` / `#D32F2F` / `#D62828`) ในหน้าจอ/คอมโพเนนต์ → ใช้ `Colors.primary` หรือคลาส `bg-primary` / `text-primary` / `border-primary` แทน (ยกเว้น 2 ไฟล์ต้นทาง: `constants/theme.ts`, `tailwind.config.js`)
 - **FE-THM-03**: ฟอนต์ใช้คลาส `font-heading` / `font-body` เท่านั้น
 
 ### 3.5 โครงสร้างไฟล์/โฟลเดอร์
@@ -302,7 +302,7 @@
 | ISS-04 | `quotation.controller` ใช้ชื่อ `delete` แต่ `repair/item/staff/slip` ใช้ `remove` | ใช้ `remove` ทั้งหมด | ✅ **แก้แล้ว (Phase 1)** |
 | ISS-05 | `repair.controller` + `staff.controller` มี alias ตายตัว `exports.delete = exports.remove` (ไม่มีใครเรียก) | ห้ามมี alias — ใช้ `remove` ชื่อเดียว | ✅ **แก้แล้ว (Phase 1)** |
 | ISS-06 | `showAlert` ถูกประกาศซ้ำ **14 ไฟล์** + `setAlertConfig` ตรง ๆ อีก 6 ไฟล์ + popup เขียนเองใน `slips.tsx` (รวม 20 ไฟล์, 4 signature, มี `'error'` ที่ไม่ใช่ค่ามาตรฐาน) | ใช้ hook กลาง `useAlert()` ตัวเดียว | ✅ **แก้แล้ว (Phase 2a)** — เหลือ `CustomAlert` ที่เดียวในระบบ (ใน hook) |
-| ISS-07 | สีแดง hardcode 2 เฉด (`#DC2626`, `#D32F2F`) ทั้งที่ `theme.ts` มี `Colors.primary` | อ้างจาก theme | ⏳ Phase 2 |
+| ISS-07 | สีแดง hardcode ปนกัน **3 เฉด** (`#DC2626`, `#D32F2F`, `#D62828`) ทั้งที่ `theme.ts` มี `Colors.primary` | อ้างจาก theme | ✅ **แก้แล้ว (Phase 2b)** — 279 จุดใน 84 ไฟล์ เหลือต้นทางที่ `theme.ts` + `tailwind.config.js` |
 | ISS-08 | โฟลเดอร์สะกดผิด `Meneger_*`, `Technicain_*` | `Manager_*`, `Technician_*` | ⏳ Phase 3 |
 | ISS-09 | SQL อยู่inline ใน 8 controller แต่แยก `queries/` แค่ 4 | งานยาว/ซ้ำ → ย้ายเข้า `queries/` | ⏳ รอพิจารณา |
 | ISS-10 | `AGENTS.md` ยังบอกว่าแอปใช้ Supabase query ตรง | ตัดออก/แก้ให้ตรงจริง | ⏳ Phase 4 |
@@ -327,7 +327,11 @@
 4. จุดที่เดิมเช็ค `alertConfig.type` ใน JSX เพื่อตัดสินใจนำทาง (เช่น `verify-quote`, `deliver-handover`) → ย้าย logic นั้นไปเป็น `onConfirm` ของแต่ละจุดแทน (พฤติกรรมเหมือนเดิม ไม่มี `hideAlert()` แล้ว)
 5. ตรวจผล: `tsc --noEmit` ผ่าน (exit 0) + `eslint` ไม่เพิ่ม error (เหลือ 4 error เดิมใน `app/receipt.tsx` ที่ไม่เกี่ยวกับงานนี้)
 
-**Phase 2b — Front-end (ถัดไป):** ย้ายสี hardcode `#DC2626`/`#D32F2F` ให้มาจาก `constants/theme.ts` (ISS-07)
+**Phase 2b — Front-end: ธีมและสี (ทำแล้วรอบนี้)**
+1. รัน codemod **279 จุด ใน 84 ไฟล์**: คลาส Tailwind `bg-[#DC2626]` → `bg-primary` (137 จุด), JSX prop `color="#D32F2F"` → `color={Colors.primary}` (92 จุด), สตริง `'#DC2626'` → `Colors.primary` (37 จุด) + เติม `import { Colors } from '@/constants/theme'` ให้ครบทุกไฟล์ที่ต้องใช้
+2. `app/receipt.tsx` — สีใน HTML template (ใบรับซ่อม/ใบเสร็จ) 13 จุด → `${Colors.primary}` (พร้อมแก้สตริงที่เป็น `'...'` ให้เป็น backtick 1 จุด เพื่อให้ `${}` interpolate ได้ — ค่าที่ออกมาเท่าเดิม)
+3. `tailwind.config.js` — โทเคน `primary` จาก `#D62828` → `#DC2626` ให้ตรงกับ `Colors.primary` (เป็น "รวมเฉดแดง 3 → 1" ตามเจตนาของ ISS-07)
+4. ตรวจผล: `tsc --noEmit` = exit 0 · `eslint` = 4 error / 30 warning เท่าเดิม · grep ยืนยันไม่เหลือรหัสสีแบรนด์นอก `constants/theme.ts` และ `tailwind.config.js`
 
 **Phase 3 — Naming:** เปลี่ยนชื่อโฟลเดอร์/คอมโพเนนต์ `Meneger_*` → `Manager_*`, `Technicain_*` → `Technician_*` พร้อมแก้ import และทดสอบ `tsc`/`eslint`
 

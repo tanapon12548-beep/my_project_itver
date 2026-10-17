@@ -8,6 +8,8 @@ import { BarChart } from 'react-native-gifted-charts';
 
 import { getDeviceTypeBullet } from '@/lib/deviceTypeLabel';
 
+import { Colors } from '@/constants/theme';
+
 export interface WorkActivityMember {
   id: number | string;
   name: string;
@@ -38,14 +40,14 @@ export default function WorkActivityChart({
   const stepVal = Math.max(1, Math.round(maxVal / 4));
 
   const ROLE_COLORS: Record<string, string> = {
-    Technician: '#DC2626',
+    Technician: Colors.primary,
     Staff: '#0284C7',
     Manager: '#7C3AED',
   };
 
   const barData = data.map((item) => {
     const roleKey = item.role_name || '';
-    const color = ROLE_COLORS[roleKey] || '#DC2626';
+    const color = ROLE_COLORS[roleKey] || Colors.primary;
     const shortName = item.name.split(' ')[0] || item.name;
 
     return {

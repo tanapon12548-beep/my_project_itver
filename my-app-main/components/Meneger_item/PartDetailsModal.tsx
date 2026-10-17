@@ -51,7 +51,7 @@ export default function PartDetailsModal({ visible, item, onClose, onEdit }: Par
 
             <View className="flex-row justify-between items-start py-2.5">
               <Text className="text-sm text-slate-500 flex-1">ราคา</Text>
-              <Text className="text-base font-bold text-[#DC2626] flex-[2] text-right font-heading">
+              <Text className="text-base font-bold text-primary flex-[2] text-right font-heading">
                 {item.selling_price !== undefined && item.selling_price !== null
                   ? `${Number(item.selling_price).toLocaleString()} บาท`
                   : '-'}

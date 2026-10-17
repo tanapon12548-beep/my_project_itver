@@ -11,8 +11,8 @@ export default function CustomerInfoCard({ customerName, phone, email }: Custome
   return (
     <View className="mb-4">
       <View className="flex-row items-center mb-2 ml-1">
-        <View className="w-1 h-4 bg-[#D32F2F] mr-2 rounded-sm" />
-        <Text className="text-sm font-bold text-[#D32F2F]">ข้อมูลลูกค้า (CUSTOMER)</Text>
+        <View className="w-1 h-4 bg-primary mr-2 rounded-sm" />
+        <Text className="text-sm font-bold text-primary">ข้อมูลลูกค้า (CUSTOMER)</Text>
       </View>
 
       <View className="bg-white rounded-xl p-4 shadow-sm shadow-black/5 elevation-2">

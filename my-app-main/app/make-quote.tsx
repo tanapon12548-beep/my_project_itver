@@ -28,6 +28,8 @@ import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 
 import type { PartItem, ServiceItem } from '@/types/quotation';
 
+import { Colors } from '@/constants/theme';
+
 export default function MakeQuoteScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -479,7 +481,7 @@ export default function MakeQuoteScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       {/* Red Header */}
-      <View className="bg-[#DC2626] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
+      <View className="bg-primary px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
         <View className="flex-row items-center">
           <TouchableOpacity onPress={() => router.back()} className="mr-3">
             <Ionicons name="chevron-back" size={28} color="#ffffff" />
@@ -500,7 +502,7 @@ export default function MakeQuoteScreen() {
         <View className="w-full max-w-[600px]">
           {loading ? (
             <View className="flex-1 justify-center items-center py-20">
-              <ActivityIndicator size="large" color="#DC2626" />
+              <ActivityIndicator size="large" color={Colors.primary} />
               <Text className="mt-3 text-sm text-slate-500">กำลังโหลดข้อมูล...</Text>
             </View>
           ) : (
@@ -551,14 +553,14 @@ export default function MakeQuoteScreen() {
               {/* ยอดรวมทั้งหมด */}
               <View className="flex-row justify-between items-center py-4 px-1 border-t border-slate-200 mb-5">
                 <Text className="text-base font-bold text-slate-800">ยอดรวมค่าซ่อม</Text>
-                <Text className="text-2xl font-bold text-[#D32F2F]">
+                <Text className="text-2xl font-bold text-primary">
                   {grandTotal.toLocaleString()} <Text className="text-sm text-slate-800">บาท</Text>
                 </Text>
               </View>
 
               {/* Submit Button */}
               <TouchableOpacity
-                className={`bg-[#DC2626] h-[52px] rounded-xl flex-row justify-center items-center gap-2 shadow-lg shadow-[#DC2626]/20 elevation-3 active:opacity-90 ${saving ? 'opacity-70' : ''}`}
+                className={`bg-primary h-[52px] rounded-xl flex-row justify-center items-center gap-2 shadow-lg shadow-primary/20 elevation-3 active:opacity-90 ${saving ? 'opacity-70' : ''}`}
                 onPress={handleSubmitQuote}
                 disabled={saving}
               >

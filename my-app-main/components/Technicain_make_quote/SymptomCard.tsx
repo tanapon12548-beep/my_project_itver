@@ -4,6 +4,8 @@ import { Text, TextInput, View } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface SymptomCardProps {
   initialSymptom?: string;
   actualSymptom?: string;
@@ -28,11 +30,11 @@ export default function SymptomCard({
       {/* Header */}
       <View className="py-2.5 px-4 bg-slate-100 border-b border-slate-200 flex-row items-center justify-between">
         <View className="flex-row items-center gap-2">
-          <Ionicons name="medkit-outline" size={18} color="#D32F2F" />
+          <Ionicons name="medkit-outline" size={18} color={Colors.primary} />
           <Text className="text-[15px] font-bold text-slate-800">ผลการตรวจเช็คอาการเสีย</Text>
         </View>
         <View className="bg-red-50 px-2 py-0.5 rounded-full border border-red-100">
-          <Text className="text-[11px] font-bold text-[#D32F2F]">โดยช่างซ่อม</Text>
+          <Text className="text-[11px] font-bold text-primary">โดยช่างซ่อม</Text>
         </View>
       </View>
 
@@ -52,7 +54,7 @@ export default function SymptomCard({
         <View>
           <View className="flex-row items-center justify-between mb-1.5">
             <View className="flex-row items-center gap-1">
-              <Ionicons name="search-circle-outline" size={16} color="#D32F2F" />
+              <Ionicons name="search-circle-outline" size={16} color={Colors.primary} />
               <Text className="text-[13px] font-bold text-slate-800">
                 อาการเสียจริงหลังตรวจเช็ค <Text className="text-red-500">*</Text>
               </Text>

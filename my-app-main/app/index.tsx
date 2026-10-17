@@ -3,6 +3,8 @@ import { ActivityIndicator, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { getCurrentUser, getRoleRedirectPath } from '@/lib/auth';
 
+import { Colors } from '@/constants/theme';
+
 export default function Index() {
   const router = useRouter();
 
@@ -25,7 +27,7 @@ export default function Index() {
 
   return (
     <View className="flex-1 justify-center items-center bg-white">
-      <ActivityIndicator size="large" color="#D32F2F" />
+      <ActivityIndicator size="large" color={Colors.primary} />
     </View>
   );
 }

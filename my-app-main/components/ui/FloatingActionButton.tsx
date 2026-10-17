@@ -5,6 +5,8 @@ import { TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Colors } from '@/constants/theme';
+
 interface FloatingActionButtonProps {
   onPress: () => void;
   /** Ionicons icon name. Default: 'add' */
@@ -13,7 +15,7 @@ interface FloatingActionButtonProps {
   visible?: boolean;
   /** Bottom offset override. Uses safe area bottom + 24 by default. */
   bottomOffset?: number;
-  /** Background color. Default: '#DC2626' (brand) */
+  /** Background color. Default: Colors.primary (brand) */
   bgColor?: string;
   /** Accessibility label. Default: 'เพิ่มรายการใหม่' */
   label?: string;
@@ -28,7 +30,7 @@ export default function FloatingActionButton({
   icon = 'add',
   visible = true,
   bottomOffset,
-  bgColor = '#DC2626',
+  bgColor = Colors.primary,
   label = 'เพิ่มรายการใหม่',
 }: FloatingActionButtonProps) {
   const insets = useSafeAreaInsets();

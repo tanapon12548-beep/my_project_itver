@@ -25,7 +25,7 @@ export default function InvoiceSummaryCard({
             </View>
           )}
           <View className="px-2.5 py-0.5 bg-red-50 rounded-full border border-red-200">
-            <Text className="text-[#D32F2F] font-bold text-xs font-heading">{displayJobNo}</Text>
+            <Text className="text-primary font-bold text-xs font-heading">{displayJobNo}</Text>
           </View>
         </View>
       </View>

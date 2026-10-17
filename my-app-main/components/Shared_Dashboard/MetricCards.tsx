@@ -5,6 +5,8 @@ import { Text, View } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface MetricCardsProps {
   /** แสดงตัวเลขการเงิน (รายได้ / ต้นทุนอะไหล่ / กำไร) — ปิดสำหรับพนักงาน (Staff) */
   showRevenue?: boolean;
@@ -103,7 +105,7 @@ export default function MetricCards({
   const safeRevenue = Math.max(0, totalRevenue);
   const safePartsCost = Math.max(0, partsCost);
   const profitIsNegative = grossProfit < 0;
-  const profitColor = profitIsNegative ? '#DC2626' : '#059669';
+  const profitColor = profitIsNegative ? Colors.primary : '#059669';
   const profitBg = profitIsNegative ? '#FEF2F2' : '#ECFDF5';
   const profitBorder = profitIsNegative ? '#FEE2E2' : '#D1FAE5';
   const marginPct = safeRevenue > 0 ? Math.round((grossProfit / safeRevenue) * 100) : 0;
@@ -114,7 +116,7 @@ export default function MetricCards({
       title: 'รายได้รวม',
       value: formatCurrency(totalRevenue),
       icon: 'cash',
-      color: '#DC2626',
+      color: Colors.primary,
       bgColor: '#FEF2F2',
       borderColor: '#FEE2E2',
     },

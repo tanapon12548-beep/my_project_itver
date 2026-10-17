@@ -10,6 +10,8 @@ import {
   SERVICES_CATEGORIES,
 } from './ItemFilterSheet';
 
+import { Colors } from '@/constants/theme';
+
 interface PartTableProps {
   title: string;
   data: any[];
@@ -120,7 +122,7 @@ export default function PartTable({ title, data, headerColor = '#0F172A', onPres
                     </Text>
                   ) : (
                     <View className="flex-row items-center gap-0.5 mt-0.5">
-                      <Ionicons name="alert-circle" size={10} color="#DC2626" />
+                      <Ionicons name="alert-circle" size={10} color={Colors.primary} />
                       <Text className="text-[10px] font-bold text-red-600 font-heading">
                         ยังไม่ใส่ทุน
                       </Text>
@@ -152,7 +154,7 @@ export default function PartTable({ title, data, headerColor = '#0F172A', onPres
                       }}
                       className="w-7 h-7 rounded-lg bg-red-50 border border-red-200 items-center justify-center active:bg-red-100"
                     >
-                      <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                      <Ionicons name="trash-outline" size={15} color={Colors.primary} />
                     </TouchableOpacity>
                   )}
                 </View>

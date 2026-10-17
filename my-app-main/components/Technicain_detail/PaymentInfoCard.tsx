@@ -57,8 +57,8 @@ export default function PaymentInfoCard({
     <View className="mb-4">
       {/* Header Section Label */}
       <View className="flex-row items-center mb-2 ml-1">
-        <View className="w-1 h-4 bg-[#D32F2F] mr-2 rounded-sm" />
-        <Text className="text-sm font-bold text-[#D32F2F]">ข้อมูลการชำระเงิน (PAYMENT)</Text>
+        <View className="w-1 h-4 bg-primary mr-2 rounded-sm" />
+        <Text className="text-sm font-bold text-primary">ข้อมูลการชำระเงิน (PAYMENT)</Text>
       </View>
 
       <View className="bg-white rounded-xl p-4 shadow-sm shadow-black/5 elevation-2">
@@ -129,7 +129,7 @@ export default function PaymentInfoCard({
             <View className="h-px border-t-[0.5px] border-slate-200 border-dashed" />
             <View className="flex-row justify-between items-center py-2.5">
               <Text className="text-sm text-[#888888] flex-[1.2]">ยอดชำระทั้งหมด</Text>
-              <Text className="text-sm font-bold text-[#D32F2F] font-heading flex-[2] text-right">
+              <Text className="text-sm font-bold text-primary font-heading flex-[2] text-right">
                 {totalAmount.toLocaleString()} บาท
               </Text>
             </View>

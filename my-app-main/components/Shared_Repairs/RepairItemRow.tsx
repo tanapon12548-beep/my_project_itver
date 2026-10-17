@@ -8,6 +8,8 @@ import { Ionicons } from '@expo/vector-icons';
 // 3. Types
 import type { RepairItem } from './types';
 
+import { Colors } from '@/constants/theme';
+
 interface RepairItemRowProps {
   item: RepairItem;
   statusColor?: string;
@@ -23,7 +25,7 @@ interface RepairItemRowProps {
 
 export default function RepairItemRow({
   item,
-  statusColor = '#DC2626',
+  statusColor = Colors.primary,
   statusId,
   showQuoteBtn = false,
   showHandoverBtn = false,
@@ -98,7 +100,7 @@ export default function RepairItemRow({
           >
             <View
               className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: isCancelledItem ? '#DC2626' : statusColor }}
+              style={{ backgroundColor: isCancelledItem ? Colors.primary : statusColor }}
             />
             <Text
               className="text-[13px] font-bold"
@@ -168,7 +170,7 @@ export default function RepairItemRow({
               <Text className={`text-[13px] ${isCancelledItem ? 'text-amber-800 font-bold' : 'text-slate-500'}`}>
                 {isCancelledItem ? 'ค่าตรวจเช็ค:' : 'ยอดค่าซ่อม:'}
               </Text>
-              <Text className={`text-[17px] font-bold ${isCancelledItem ? 'text-amber-700' : 'text-[#DC2626]'}`}>
+              <Text className={`text-[17px] font-bold ${isCancelledItem ? 'text-amber-700' : 'text-primary'}`}>
                 ฿{Number(item.total_amount || item.price).toLocaleString()}
               </Text>
             </View>
@@ -231,8 +233,8 @@ export default function RepairItemRow({
             accessibilityLabel={`ดูรายละเอียด ${item.job_no}`}
             className="flex-row items-center gap-1 bg-red-50 border border-red-200 min-h-[44px] px-4 rounded-xl active:bg-red-100"
           >
-            <Text className="text-sm font-bold text-[#DC2626]">ดูรายละเอียด</Text>
-            <Ionicons name="chevron-forward" size={14} color="#DC2626" />
+            <Text className="text-sm font-bold text-primary">ดูรายละเอียด</Text>
+            <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
           </TouchableOpacity>
         </View>
       </View>

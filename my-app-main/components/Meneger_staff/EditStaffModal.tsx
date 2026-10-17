@@ -17,6 +17,8 @@ import { Dropdown } from 'react-native-element-dropdown';
 
 import type { StaffMember, StaffRoleThai } from '@/types/user';
 
+import { Colors } from '@/constants/theme';
+
 interface EditStaffModalProps {
   visible: boolean;
   item: StaffMember | null;
@@ -80,7 +82,7 @@ export default function EditStaffModal({ visible, item, isSaving, onClose, onSav
                   className="w-8 h-8 rounded-lg bg-red-50 border border-red-200 items-center justify-center active:bg-red-100"
                   disabled={isSaving}
                 >
-                  <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                  <Ionicons name="trash-outline" size={16} color={Colors.primary} />
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={onClose} className="p-1">
@@ -147,7 +149,7 @@ export default function EditStaffModal({ visible, item, isSaving, onClose, onSav
             </TouchableOpacity>
 
             <TouchableOpacity
-              className={`flex-[1.3] h-12 rounded-xl bg-[#DC2626] justify-center items-center shadow-sm active:opacity-90 ${isSaving ? 'opacity-70' : ''}`}
+              className={`flex-[1.3] h-12 rounded-xl bg-primary justify-center items-center shadow-sm active:opacity-90 ${isSaving ? 'opacity-70' : ''}`}
               onPress={handleSave}
               disabled={isSaving}
             >

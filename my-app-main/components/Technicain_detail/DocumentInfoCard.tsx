@@ -2,6 +2,8 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface DocumentInfoCardProps {
   jobNo: string;
   createdAt?: string | null;
@@ -97,8 +99,8 @@ export default function DocumentInfoCard({
             onPress={onViewPdf}
             className="mt-3 bg-red-50 border border-red-200 rounded-xl py-2.5 px-3 flex-row items-center justify-center active:bg-red-100"
           >
-            <Ionicons name="document-text-outline" size={18} color="#DC2626" style={{ marginRight: 6 }} />
-            <Text className="text-[#DC2626] font-bold text-xs font-heading">
+            <Ionicons name="document-text-outline" size={18} color={Colors.primary} style={{ marginRight: 6 }} />
+            <Text className="text-primary font-bold text-xs font-heading">
               {pdfButtonText || 'ดูใบรับซ่อม / ใบเสร็จ (PDF)'}
             </Text>
           </TouchableOpacity>

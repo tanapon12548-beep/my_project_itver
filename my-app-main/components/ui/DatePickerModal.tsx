@@ -10,6 +10,8 @@ import {
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface DatePickerModalProps {
   visible: boolean;
   selectedDate: Date | null;
@@ -132,7 +134,7 @@ export default function DatePickerModal({
           {/* Header */}
           <View className="flex-row items-center justify-between pb-3 border-b border-slate-100 mb-3">
             <View className="flex-row items-center gap-2">
-              <Ionicons name="calendar" size={20} color="#D32F2F" />
+              <Ionicons name="calendar" size={20} color={Colors.primary} />
               <Text className="text-base font-bold text-slate-800">{title}</Text>
             </View>
             <TouchableOpacity
@@ -194,7 +196,7 @@ export default function DatePickerModal({
                   <View
                     className={`w-9 h-9 rounded-xl items-center justify-center ${
                       selected
-                        ? 'bg-[#D32F2F] shadow-sm shadow-red-300'
+                        ? 'bg-primary shadow-sm shadow-red-300'
                         : today
                         ? 'bg-red-50 border border-red-300'
                         : 'bg-transparent'

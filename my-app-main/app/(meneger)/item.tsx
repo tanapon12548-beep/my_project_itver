@@ -33,6 +33,8 @@ import ItemFilterSheet, {
 } from '@/components/Meneger_item/ItemFilterSheet';
 import type { InventoryItem } from '@/types/item';
 
+import { Colors } from '@/constants/theme';
+
 export default function PartsScreen() {
   const router = useRouter();
   const [allItems, setAllItems] = useState<InventoryItem[]>([]);
@@ -231,7 +233,7 @@ export default function PartsScreen() {
         {activeFilterCount > 0 && (
           <View className="flex-row items-center flex-wrap gap-1.5 mb-3 bg-white p-2.5 rounded-xl border border-slate-200">
             <View className="flex-row items-center gap-1 mr-1">
-              <Ionicons name="funnel" size={13} color="#DC2626" />
+              <Ionicons name="funnel" size={13} color={Colors.primary} />
               <Text className="text-[11px] font-bold text-slate-700 font-heading">ตัวกรอง:</Text>
             </View>
 
@@ -254,7 +256,7 @@ export default function PartsScreen() {
                     {catObj?.label || catId}
                   </Text>
                   <TouchableOpacity onPress={() => setFilters((p) => ({ ...p, categories: p.categories.filter((c) => c !== catId) }))}>
-                    <Ionicons name="close" size={12} color="#DC2626" />
+                    <Ionicons name="close" size={12} color={Colors.primary} />
                   </TouchableOpacity>
                 </View>
               );
@@ -301,7 +303,7 @@ export default function PartsScreen() {
             onPress={() => handleTabChange('parts')}
             activeOpacity={0.8}
           >
-            <Text className={`font-body text-sm ${activeTab === 'parts' ? 'font-bold text-[#DC2626] font-heading' : 'text-slate-600'
+            <Text className={`font-body text-sm ${activeTab === 'parts' ? 'font-bold text-primary font-heading' : 'text-slate-600'
               }`}>
               อะไหล่ ({activeTab === 'parts' ? filteredDevices.length : partsList.length})
             </Text>
@@ -313,7 +315,7 @@ export default function PartsScreen() {
             onPress={() => handleTabChange('services')}
             activeOpacity={0.8}
           >
-            <Text className={`font-body text-sm ${activeTab === 'services' ? 'font-bold text-[#DC2626] font-heading' : 'text-slate-600'
+            <Text className={`font-body text-sm ${activeTab === 'services' ? 'font-bold text-primary font-heading' : 'text-slate-600'
               }`}>
               ค่าบริการ ({activeTab === 'services' ? filteredDevices.length : servicesList.length})
             </Text>
@@ -323,7 +325,7 @@ export default function PartsScreen() {
         {/* Table Content */}
         {isLoading ? (
           <View className="flex-1 justify-center items-center py-10">
-            <ActivityIndicator size="large" color="#DC2626" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text className="mt-3 font-body text-sm text-slate-500">กำลังโหลดข้อมูล...</Text>
           </View>
         ) : (

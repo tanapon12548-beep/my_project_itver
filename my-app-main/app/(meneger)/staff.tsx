@@ -25,6 +25,8 @@ import { useAlert } from '@/hooks/use-alert';
 
 import type { StaffMember, StaffRoleThai } from '@/types/user';
 
+import { Colors } from '@/constants/theme';
+
 const roleToThai = (role_id?: number | string | null): StaffRoleThai => {
   const r = Number(role_id);
   switch (r) {
@@ -201,7 +203,7 @@ export default function StaffScreen() {
         {/* Content */}
         {isLoading ? (
           <View className="flex-1 justify-center items-center py-10">
-            <ActivityIndicator size="large" color="#D62828" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text className="mt-3 font-body text-sm text-text-light">กำลังโหลดรายชื่อพนักงาน...</Text>
           </View>
         ) : filteredStaff.length === 0 ? (

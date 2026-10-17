@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { CANCEL_INSPECTION_FEE } from '@/constants/status';
 import type { QuotationLineItem } from '@/types/quotation';
 
+import { Colors } from '@/constants/theme';
+
 export type QuotationItem = QuotationLineItem;
 
 interface CustomerQuotationCardProps {
@@ -416,7 +418,7 @@ export default function CustomerQuotationCard({
           {/* กรณียกเลิกเรียบร้อย */}
           {isCancelled && (
             <View className="mt-1 bg-red-50 border border-red-200 py-3 px-4 rounded-xl flex-row items-center justify-center gap-2">
-              <Ionicons name="close-circle" size={18} color="#dc2626" />
+              <Ionicons name="close-circle" size={18} color={Colors.primary} />
               <Text className="text-red-800 font-bold font-heading text-sm">
                 ยกเลิกการซ่อมแล้ว (ยอดชำระ {totalCancelPrice.toLocaleString()} บาท)
               </Text>

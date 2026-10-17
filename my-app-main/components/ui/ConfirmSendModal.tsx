@@ -4,6 +4,8 @@ import { Modal, Text, TouchableOpacity, View } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface ConfirmSendModalProps {
   visible: boolean;
   onClose: () => void;
@@ -23,7 +25,7 @@ export default function ConfirmSendModal({
         <View className="w-full bg-white rounded-[20px] p-6 items-center gap-3 shadow-lg shadow-black/20 elevation-5">
           {/* Icon Header */}
           <View className="w-[60px] h-[60px] rounded-full bg-red-50 justify-center items-center mb-1">
-            <Ionicons name="paper-plane" size={28} color="#D32F2F" />
+            <Ionicons name="paper-plane" size={28} color={Colors.primary} />
           </View>
 
           {/* Title & Subtitle */}
@@ -44,7 +46,7 @@ export default function ConfirmSendModal({
 
             <TouchableOpacity 
               disabled={loading}
-              className={`flex-[1.4] h-11 rounded-full bg-[#D32F2F] justify-center items-center ${loading ? 'opacity-60' : 'active:opacity-90'}`} 
+              className={`flex-[1.4] h-11 rounded-full bg-primary justify-center items-center ${loading ? 'opacity-60' : 'active:opacity-90'}`} 
               onPress={onConfirm}
             >
               <Text className="text-sm font-bold text-white">

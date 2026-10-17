@@ -13,6 +13,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { getRepairs } from '@/lib/api';
 
+import { Colors } from '@/constants/theme';
+
 interface AppNotification {
   id: string;
   jobId: number | string;
@@ -68,7 +70,7 @@ export default function NotificationsScreen() {
             time: timeStr,
             type: 'rejected',
             icon: 'close-circle',
-            color: '#DC2626',
+            color: Colors.primary,
             bgColor: '#FEE2E2',
           });
         }
@@ -201,10 +203,10 @@ export default function NotificationsScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={['top', 'left', 'right']}>
-      <StatusBar style="light" backgroundColor="#DC2626" />
+      <StatusBar style="light" backgroundColor={Colors.primary} />
 
       {/* Header */}
-      <View className="bg-[#DC2626] px-5 pt-4 pb-6 rounded-b-[28px] shadow-sm">
+      <View className="bg-primary px-5 pt-4 pb-6 rounded-b-[28px] shadow-sm">
         <View className="flex-row items-center justify-between">
           <View>
             <Text className="text-white/80 text-xs font-bold tracking-wider font-heading uppercase">
@@ -226,7 +228,7 @@ export default function NotificationsScreen() {
       <View className="flex-1 px-4 pt-3">
         {loading ? (
           <View className="flex-1 justify-center items-center py-12">
-            <ActivityIndicator size="large" color="#DC2626" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text className="text-slate-400 text-xs font-body mt-2">กำลังโหลดการแจ้งเตือน...</Text>
           </View>
         ) : (
@@ -236,7 +238,7 @@ export default function NotificationsScreen() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 80 }}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#DC2626']} />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
             }
             renderItem={({ item }) => (
               <TouchableOpacity
@@ -264,10 +266,10 @@ export default function NotificationsScreen() {
                   </Text>
 
                   <View className="flex-row items-center gap-1">
-                    <Text className="text-[11px] font-bold text-[#DC2626] font-heading">
+                    <Text className="text-[11px] font-bold text-primary font-heading">
                       แตะเพื่อดูรายละเอียด
                     </Text>
-                    <Ionicons name="chevron-forward" size={12} color="#DC2626" />
+                    <Ionicons name="chevron-forward" size={12} color={Colors.primary} />
                   </View>
                 </View>
               </TouchableOpacity>

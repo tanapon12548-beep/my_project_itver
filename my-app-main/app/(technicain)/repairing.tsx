@@ -32,6 +32,8 @@ import { canEditOrDeleteQuote } from '@/components/Technicain_quotation/Quotatio
 // Types
 import type { QuotationFilter, QuotationItem } from '@/types/quotation';
 
+import { Colors } from '@/constants/theme';
+
 export default function TechnicianQuotationScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -215,7 +217,7 @@ export default function TechnicianQuotationScreen() {
         {/* ── Quotation Content: cards on phone, table on tablet/desktop ── */}
         {loading ? (
           <View className="flex-1 justify-center items-center py-20">
-            <ActivityIndicator size="large" color="#D32F2F" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text className="mt-3 text-sm text-slate-500 font-body">กำลังโหลดรายการใบเสนอราคา...</Text>
           </View>
         ) : (
@@ -224,7 +226,7 @@ export default function TechnicianQuotationScreen() {
             contentContainerStyle={{ paddingBottom: 110 }}
             showsVerticalScrollIndicator={false}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#D32F2F']} />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
             }
           >
             {/* Result count */}

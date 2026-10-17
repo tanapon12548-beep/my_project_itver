@@ -6,6 +6,8 @@ import { ActivityIndicator, Dimensions, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BarChart } from 'react-native-gifted-charts';
 
+import { Colors } from '@/constants/theme';
+
 export interface TeamMemberPerformance {
   id: number | string;
   name: string;
@@ -35,14 +37,14 @@ export default function TeamPerformanceChart({
   const stepVal = Math.max(1, Math.round(maxVal / 4));
 
   const ROLE_COLORS: Record<string, string> = {
-    Technician: '#DC2626',
+    Technician: Colors.primary,
     Staff: '#0284C7',
     Manager: '#7C3AED',
   };
 
   const barData = data.map((item) => {
     const roleKey = item.role_name || '';
-    const color = ROLE_COLORS[roleKey] || '#DC2626';
+    const color = ROLE_COLORS[roleKey] || Colors.primary;
     const shortName = item.name.split(' ')[0] || item.name;
 
     return {
@@ -63,7 +65,7 @@ export default function TeamPerformanceChart({
       <View className="flex-row items-center justify-between mb-4 pb-3 border-b border-slate-100">
         <View className="flex-row items-center gap-2">
           <View className="w-8 h-8 rounded-xl bg-red-50 border border-red-100 items-center justify-center">
-            <Ionicons name="bar-chart" size={16} color="#DC2626" />
+            <Ionicons name="bar-chart" size={16} color={Colors.primary} />
           </View>
           <View>
             <Text className="text-sm font-bold text-slate-800 font-heading">
@@ -86,7 +88,7 @@ export default function TeamPerformanceChart({
       <View className="-ml-2.5">
         {isLoading ? (
           <View className="h-[180px] justify-center items-center">
-            <ActivityIndicator size="large" color="#DC2626" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text className="mt-2.5 font-body text-xs text-slate-400">
               กำลังประมวลผลข้อมูลทีม...
             </Text>
@@ -117,7 +119,7 @@ export default function TeamPerformanceChart({
             {/* Member Details Breakdown List */}
             <View className="mt-4 pt-3 border-t border-slate-100 gap-2">
               {data.map((member) => {
-                const roleColor = ROLE_COLORS[member.role_name || ''] || '#DC2626';
+                const roleColor = ROLE_COLORS[member.role_name || ''] || Colors.primary;
                 const roleLabel =
                   member.role_name === 'Technician'
                     ? 'ช่างซ่อม'

@@ -5,6 +5,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface StaffTableProps {
   title: string;
   data: any[];
@@ -120,7 +122,7 @@ export default function StaffTable({ title, data, headerColor = '#0F172A', onPre
                       }}
                       className="w-7 h-7 rounded-lg bg-red-50 border border-red-200 items-center justify-center active:bg-red-100"
                     >
-                      <Ionicons name="trash-outline" size={15} color="#DC2626" />
+                      <Ionicons name="trash-outline" size={15} color={Colors.primary} />
                     </TouchableOpacity>
                   )}
                 </View>

@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface CalendarPickerProps {
   visible: boolean;
   initialDate?: string;
@@ -171,7 +173,7 @@ const styles = StyleSheet.create({
   },
   dowLabel: { fontSize: 12, fontWeight: '600', color: '#94A3B8' },
   dayText: { fontSize: 14, color: '#334155' },
-  selectedCell: { backgroundColor: '#DC2626', borderRadius: 999 },
+  selectedCell: { backgroundColor: Colors.primary, borderRadius: 999 },
   selectedDayText: { color: '#fff', fontWeight: '700' },
   footer: {
     flexDirection: 'row',
@@ -190,7 +192,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: '#DC2626',
+    backgroundColor: Colors.primary,
   },
   confirmText: { fontSize: 14, color: '#fff', fontWeight: '700' },
 });

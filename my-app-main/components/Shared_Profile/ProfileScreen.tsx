@@ -23,6 +23,8 @@ import { getCurrentUser, logout, updateProfile } from '@/lib/auth';
 import ConfirmLogoutModal from '@/components/ui/ConfirmLogoutModal';
 import SuccessToast from '@/components/ui/SuccessToast';
 
+import { Colors } from '@/constants/theme';
+
 // ── Role configuration type ──
 export interface RoleConfig {
   /** Badge text e.g. "Technician", "Staff" */
@@ -185,7 +187,7 @@ export default function SharedProfileScreen({ roleConfig }: SharedProfileScreenP
   if (loading) {
     return (
       <SafeAreaView className="flex-1 justify-center items-center bg-slate-50">
-        <ActivityIndicator size="large" color="#D32F2F" />
+        <ActivityIndicator size="large" color={Colors.primary} />
         <Text className="mt-3 text-slate-500 text-sm">กำลังโหลดข้อมูลโปรไฟล์...</Text>
       </SafeAreaView>
     );
@@ -194,11 +196,11 @@ export default function SharedProfileScreen({ roleConfig }: SharedProfileScreenP
   return (
     <View className="flex-1 bg-slate-50">
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar barStyle="light-content" backgroundColor="#D32F2F" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
       <ScrollView className="flex-1" bounces={false} contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Header Section */}
-        <View className="bg-[#D32F2F] pb-10 pt-2 px-5 rounded-b-3xl">
+        <View className="bg-primary pb-10 pt-2 px-5 rounded-b-3xl">
           <SafeAreaView edges={['top']}>
             <View className="flex-row items-center justify-between mb-4">
               {roleConfig.showBackButton ? (
@@ -226,7 +228,7 @@ export default function SharedProfileScreen({ roleConfig }: SharedProfileScreenP
 
             <View className="items-center mt-2">
               <View className="w-20 h-20 rounded-full bg-white justify-center items-center mb-3 shadow-md shadow-black/10">
-                <Text className="text-2xl font-bold text-[#D32F2F]">{getInitials()}</Text>
+                <Text className="text-2xl font-bold text-primary">{getInitials()}</Text>
               </View>
               <Text className="text-xl font-bold text-white mb-1">
                 {user?.first_name || roleConfig.fallbackName} {user?.last_name || ''}
@@ -246,8 +248,8 @@ export default function SharedProfileScreen({ roleConfig }: SharedProfileScreenP
                 className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-50 border border-red-200"
                 activeOpacity={0.7}
               >
-                <Ionicons name="pencil" size={13} color="#DC2626" />
-                <Text className="text-xs font-bold text-[#DC2626]">แก้ไขข้อมูล</Text>
+                <Ionicons name="pencil" size={13} color={Colors.primary} />
+                <Text className="text-xs font-bold text-primary">แก้ไขข้อมูล</Text>
               </TouchableOpacity>
             </View>
 
@@ -302,8 +304,8 @@ export default function SharedProfileScreen({ roleConfig }: SharedProfileScreenP
             onPress={handleLogout}
             activeOpacity={0.8}
           >
-            <Ionicons name="log-out-outline" size={20} color="#DC2626" style={{ marginRight: 8 }} />
-            <Text className="text-[#DC2626] font-bold text-base font-heading">ออกจากระบบ</Text>
+            <Ionicons name="log-out-outline" size={20} color={Colors.primary} style={{ marginRight: 8 }} />
+            <Text className="text-primary font-bold text-base font-heading">ออกจากระบบ</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -323,7 +325,7 @@ export default function SharedProfileScreen({ roleConfig }: SharedProfileScreenP
             <View className="flex-row items-center justify-between pb-3 border-b border-slate-100 mb-4">
               <View className="flex-row items-center gap-2">
                 <View className="w-8 h-8 rounded-full bg-red-50 items-center justify-center">
-                  <Ionicons name="person" size={16} color="#DC2626" />
+                  <Ionicons name="person" size={16} color={Colors.primary} />
                 </View>
                 <Text className="text-base font-bold text-slate-800">แก้ไขข้อมูลส่วนตัว</Text>
               </View>
@@ -337,7 +339,7 @@ export default function SharedProfileScreen({ roleConfig }: SharedProfileScreenP
 
             {editError ? (
               <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-3 flex-row items-center gap-2">
-                <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                <Ionicons name="alert-circle" size={16} color={Colors.primary} />
                 <Text className="text-xs text-red-600 flex-1">{editError}</Text>
               </View>
             ) : null}
@@ -391,7 +393,7 @@ export default function SharedProfileScreen({ roleConfig }: SharedProfileScreenP
               <TouchableOpacity
                 onPress={handleSaveProfile}
                 disabled={isSaving}
-                className="flex-1 py-3 rounded-xl bg-[#DC2626] items-center justify-center active:bg-red-700"
+                className="flex-1 py-3 rounded-xl bg-primary items-center justify-center active:bg-red-700"
               >
                 {isSaving ? (
                   <ActivityIndicator size="small" color="#fff" />

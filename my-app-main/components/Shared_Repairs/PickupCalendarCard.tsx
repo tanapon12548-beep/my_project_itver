@@ -5,6 +5,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 // ปฏิทินบอกวันเปิดร้าน (จ–ส) — เป็นข้อมูลทั่วไป ไม่ได้ระบุวันนัดของงานใดงานหนึ่ง
 interface PickupCalendarCardProps {
   defaultExpanded?: boolean;
@@ -194,7 +196,7 @@ export default function PickupCalendarCard({
             {/* Info Card */}
             <View className="bg-red-50/60 rounded-xl p-3 border border-red-100">
               <View className="flex-row items-start mb-1.5">
-                <Ionicons name="information-circle" size={16} color="#D32F2F" style={{ marginRight: 6, marginTop: 1 }} />
+                <Ionicons name="information-circle" size={16} color={Colors.primary} style={{ marginRight: 6, marginTop: 1 }} />
                 <View className="flex-1">
                   <Text className="text-xs font-bold text-red-950 font-heading">
                     มารับเครื่องได้วันจันทร์–เสาร์

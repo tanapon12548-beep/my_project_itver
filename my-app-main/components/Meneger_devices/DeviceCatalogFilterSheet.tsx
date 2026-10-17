@@ -14,6 +14,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import type { CatalogBrand, CatalogDeviceType } from '@/types/device';
 
+import { Colors } from '@/constants/theme';
+
 interface DeviceCatalogFilterSheetProps {
   visible: boolean;
   activeTab: 'types' | 'brands' | 'models';
@@ -92,7 +94,7 @@ export default function DeviceCatalogFilterSheet({
           <View className="flex-row items-center justify-between px-5 py-3.5 border-b border-slate-200">
             <View className="flex-row items-center gap-2">
               <View className="w-8 h-8 rounded-lg bg-red-50 items-center justify-center">
-                <Ionicons name="filter" size={18} color="#DC2626" />
+                <Ionicons name="filter" size={18} color={Colors.primary} />
               </View>
               <Text className="text-base font-bold text-slate-800 font-heading">
                 ตัวกรองแคตตาล็อกอุปกรณ์

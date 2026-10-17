@@ -4,6 +4,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface ProfileActionsProps {
   onPressLogout?: () => void;
 }
@@ -19,7 +21,7 @@ export default function ProfileActions({ onPressLogout }: ProfileActionsProps) {
       >
         <View className="flex-row items-center gap-3">
           <View className="w-10 h-10 rounded-full bg-red-50 justify-center items-center">
-            <Ionicons name="log-out-outline" size={22} color="#dc2626" />
+            <Ionicons name="log-out-outline" size={22} color={Colors.primary} />
           </View>
           <Text className="text-[15px] font-bold text-red-600">ออกจากระบบ</Text>
         </View>

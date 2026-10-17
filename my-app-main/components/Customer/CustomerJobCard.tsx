@@ -6,6 +6,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { RepairJob } from '@/types/repair';
 
+import { Colors } from '@/constants/theme';
+
 // Unified 7-stage progress indicator:
 // 1: รับเครื่อง, 2: ตรวจเช็ค, 3: รออนุมัติ, 4: กำลังซ่อม, 5: รอชำระ, 6: รอมารับ, 7: เสร็จสิ้น
 export const CUSTOMER_STEPS = [
@@ -36,7 +38,7 @@ export const getStatusConfig = (status: string, statusId?: number, isCancelledJo
 
   // ── ตรวจสอบการยกเลิกก่อนเป็นอันดับแรก ──
   if (isCancelledJob || id === 9 || s.includes('ยกเลิก')) {
-    return { color: '#DC2626', bg: '#FEE2E2', text: '#B91C1C', icon: 'close-circle' };
+    return { color: Colors.primary, bg: '#FEE2E2', text: '#B91C1C', icon: 'close-circle' };
   }
 
   // ── กลุ่มที่ 3: โทนสีเสร็จสิ้น & ปิดงาน ──
@@ -208,7 +210,7 @@ export default function CustomerJobCard({ item, onPressDetails }: CustomerJobCar
             <View className="flex-row items-center gap-1.5">
               <View
                 className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: isCancelled ? '#DC2626' : isCompleted ? '#10B981' : statusCfg.color }}
+                style={{ backgroundColor: isCancelled ? Colors.primary : isCompleted ? '#10B981' : statusCfg.color }}
               />
               <Text className="text-[12px] font-bold font-heading text-slate-800">
                 {isCancelled

@@ -84,7 +84,7 @@ export default function TechnicianQuoteCard({
         {/* Grand Total Row */}
         <View className="flex-row justify-between items-center pt-1 border-t border-slate-100">
           <Text className="text-sm font-bold text-slate-800">ยอดรวมทั้งสิ้น</Text>
-          <Text className="text-base font-bold text-[#D32F2F]">{grandTotal.toLocaleString()} บาท</Text>
+          <Text className="text-base font-bold text-primary">{grandTotal.toLocaleString()} บาท</Text>
         </View>
       </View>
 
@@ -97,7 +97,7 @@ export default function TechnicianQuoteCard({
           </View>
         ) : (
           <TouchableOpacity
-            className="w-full bg-[#DC2626] h-[52px] rounded-xl flex-row items-center justify-center gap-2 shadow-lg shadow-[#DC2626]/25 elevation-3 active:opacity-90"
+            className="w-full bg-primary h-[52px] rounded-xl flex-row items-center justify-center gap-2 shadow-lg shadow-primary/25 elevation-3 active:opacity-90"
             activeOpacity={0.85}
             onPress={onForwardToCustomer}
           >

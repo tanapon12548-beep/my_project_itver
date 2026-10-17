@@ -11,7 +11,8 @@ import { getLookupBrands, getLookupDeviceTypes, getLookupModels } from '@/lib/ap
 import type { DeviceTypeItem, BrandItem, DeviceModelItem } from '@/types/device';
 
 // 4. Constants & UI
-import { FONTS } from '@/constants/theme';
+import { Colors, FONTS } from '@/constants/theme';
+
 import SearchableDropdown from '@/components/ui/SearchableDropdown';
 import CalendarPicker from '@/components/ui/CalendarPicker';
 
@@ -322,7 +323,7 @@ export default function DeviceFormCard({
               accessibilityLabel="เลือกวันที่จากปฏิทิน"
               className="w-[42px] h-[42px] rounded-lg bg-red-50 border border-red-200 items-center justify-center"
             >
-              <Ionicons name="calendar-outline" size={20} color="#DC2626" />
+              <Ionicons name="calendar-outline" size={20} color={Colors.primary} />
             </TouchableOpacity>
           </View>
         </View>

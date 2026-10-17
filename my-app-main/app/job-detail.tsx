@@ -26,6 +26,8 @@ import { useAlert } from '@/hooks/use-alert';
 import SuccessToast from '@/components/ui/SuccessToast';
 import type { RepairJob } from '@/types/repair';
 
+import { Colors } from '@/constants/theme';
+
 interface ToastState {
   visible: boolean;
   message: string;
@@ -223,9 +225,9 @@ export default function JobDetailScreen() {
   if (loading) {
     return (
       <SafeAreaView className="flex-1 bg-slate-50">
-        <StatusBar style="light" backgroundColor="#DC2626" />
+        <StatusBar style="light" backgroundColor={Colors.primary} />
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#DC2626" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text className="mt-4 text-slate-500 font-body">กำลังโหลดข้อมูล...</Text>
         </View>
       </SafeAreaView>
@@ -235,7 +237,7 @@ export default function JobDetailScreen() {
   if (!job) {
     return (
       <SafeAreaView className="flex-1 bg-slate-50">
-        <StatusBar style="light" backgroundColor="#DC2626" />
+        <StatusBar style="light" backgroundColor={Colors.primary} />
         <View className="flex-1 justify-center items-center">
           <Ionicons name="alert-circle-outline" size={60} color="#cbd5e1" />
           <Text className="text-slate-500 font-body mt-4 mb-4">ไม่พบข้อมูลงานซ่อม</Text>
@@ -276,7 +278,7 @@ export default function JobDetailScreen() {
 
     // ── ตรวจสอบการยกเลิกก่อนเป็นอันดับแรก ──
     if (isCancelledJob || id === 9 || s.includes('ยกเลิก')) {
-      return { color: '#DC2626', bg: '#FEE2E2', text: '#B91C1C', icon: 'close-circle' };
+      return { color: Colors.primary, bg: '#FEE2E2', text: '#B91C1C', icon: 'close-circle' };
     }
 
     // ── กลุ่มที่ 3: โทนสีเสร็จสิ้น & ปิดงาน ──
@@ -354,10 +356,10 @@ export default function JobDetailScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
-      <StatusBar style="light" backgroundColor="#DC2626" />
+      <StatusBar style="light" backgroundColor={Colors.primary} />
 
       {/* Header Bar */}
-      <View className="bg-[#DC2626] pt-4 pb-6 px-4 flex-row items-center justify-between relative z-10 shadow-sm">
+      <View className="bg-primary pt-4 pb-6 px-4 flex-row items-center justify-between relative z-10 shadow-sm">
         <View className="flex-row items-center gap-3">
           <TouchableOpacity
             onPress={() => router.back()}
@@ -622,7 +624,7 @@ export default function JobDetailScreen() {
               </View>
             ) : (
               <TouchableOpacity
-                className="w-full bg-[#DC2626] h-[52px] rounded-xl items-center justify-center shadow-md shadow-red-700/20 flex-row gap-2 active:opacity-90"
+                className="w-full bg-primary h-[52px] rounded-xl items-center justify-center shadow-md shadow-red-700/20 flex-row gap-2 active:opacity-90"
                 activeOpacity={0.85}
                 onPress={() => router.push({ pathname: '/verify-payment', params: { jobId: job.id, amount: total } })}
               >

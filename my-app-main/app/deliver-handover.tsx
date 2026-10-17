@@ -22,6 +22,8 @@ import RepairSummaryCard from '@/components/Staff_handover/RepairSummaryCard';
 import { useAlert } from '@/hooks/use-alert';
 import SignaturePad from '@/components/ui/SignaturePad';
 
+import { Colors } from '@/constants/theme';
+
 export default function DeliverHandoverScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -162,7 +164,7 @@ export default function DeliverHandoverScreen() {
           className={`w-10 h-10 items-center justify-center rounded-full bg-red-50 ${!signatureImage ? 'opacity-30' : ''}`}
           disabled={!signatureImage}
         >
-          <Ionicons name="expand-outline" size={20} color="#D32F2F" />
+          <Ionicons name="expand-outline" size={20} color={Colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -188,8 +190,8 @@ export default function DeliverHandoverScreen() {
               onPress={() => setIsModalOpen(true)}
               className="flex-row items-center bg-red-50 px-2.5 py-1 rounded-lg border border-red-200"
             >
-              <Ionicons name="expand-outline" size={14} color="#D32F2F" style={{ marginRight: 4 }} />
-              <Text className="text-xs font-bold text-[#D32F2F]">เต็มจอ</Text>
+              <Ionicons name="expand-outline" size={14} color={Colors.primary} style={{ marginRight: 4 }} />
+              <Text className="text-xs font-bold text-primary">เต็มจอ</Text>
             </TouchableOpacity>
           </View>
           <Text className="text-xs text-slate-500 mb-3">
@@ -285,7 +287,7 @@ export default function DeliverHandoverScreen() {
             />
             <View className="mt-4">
               <TouchableOpacity
-                className="bg-[#D32F2F] py-3.5 rounded-xl items-center justify-center shadow-md"
+                className="bg-primary py-3.5 rounded-xl items-center justify-center shadow-md"
                 onPress={() => setIsModalOpen(false)}
               >
                 <Text className="text-white font-bold text-base">ยืนยันลายเซ็น</Text>

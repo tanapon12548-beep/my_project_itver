@@ -23,6 +23,8 @@ import { useAlert } from '@/hooks/use-alert';
 import { getRepair, verifyPayment } from '@/lib/api';
 import type { RepairJob } from '@/types/repair';
 
+import { Colors } from '@/constants/theme';
+
 export default function ReceiptScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ jobId?: string; job_id?: string; job_no?: string; id?: string }>();
@@ -231,14 +233,14 @@ export default function ReceiptScreen() {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            border-bottom: 3px solid #dc2626;
+            border-bottom: 3px solid ${Colors.primary};
             padding-bottom: 14px;
             margin-bottom: 18px;
           }
           .brand-name {
             font-size: 24px;
             font-weight: 800;
-            color: #dc2626;
+            color: ${Colors.primary};
             margin: 0 0 2px 0;
             letter-spacing: -0.5px;
           }
@@ -263,8 +265,8 @@ export default function ReceiptScreen() {
           }
           .status-badge {
             display: inline-block;
-            border: 1.5px solid #dc2626;
-            color: #dc2626;
+            border: 1.5px solid ${Colors.primary};
+            color: ${Colors.primary};
             font-weight: 700;
             padding: 3px 10px;
             border-radius: 6px;
@@ -283,7 +285,7 @@ export default function ReceiptScreen() {
             margin: 0 0 8px 0;
             font-size: 12px;
             font-weight: 700;
-            color: #dc2626;
+            color: ${Colors.primary};
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
@@ -379,7 +381,7 @@ export default function ReceiptScreen() {
         <div class="section-card">
           <div class="grid-3">
             <div>
-              <div class="info-row"><span class="info-lbl">เลขที่ใบรับซ่อม:</span> <span class="info-val" style="color:#dc2626; font-size:13px;">${j.job_number}</span></div>
+              <div class="info-row"><span class="info-lbl">เลขที่ใบรับซ่อม:</span> <span class="info-val" style="color:${Colors.primary}; font-size:13px;">${j.job_number}</span></div>
               <div class="info-row"><span class="info-lbl">วันที่รับเครื่อง:</span> <span class="info-val">${createdDateStr}</span></div>
             </div>
             <div>
@@ -493,7 +495,7 @@ export default function ReceiptScreen() {
               const isService = it.item_type_id === 2 || !it.item_id;
               const typeLabel = isService
                 ? '<span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;background:#e0f2fe;color:#0284c7;margin-left:6px;">บริการ</span>'
-                : '<span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;background:#fee2e2;color:#dc2626;margin-left:6px;">อะไหล่</span>';
+                : `<span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:6px;background:#fee2e2;color:${Colors.primary};margin-left:6px;">อะไหล่</span>`;
 
               return `
               <tr>
@@ -543,14 +545,14 @@ export default function ReceiptScreen() {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            border-bottom: 3px solid #dc2626;
+            border-bottom: 3px solid ${Colors.primary};
             padding-bottom: 14px;
             margin-bottom: 18px;
           }
           .brand-name {
             font-size: 24px;
             font-weight: 800;
-            color: #dc2626;
+            color: ${Colors.primary};
             margin: 0 0 2px 0;
             letter-spacing: -0.5px;
           }
@@ -601,7 +603,7 @@ export default function ReceiptScreen() {
             margin: 0 0 8px 0;
             font-size: 11.5px;
             font-weight: 700;
-            color: #dc2626;
+            color: ${Colors.primary};
             text-transform: uppercase;
             letter-spacing: 0.5px;
           }
@@ -648,9 +650,9 @@ export default function ReceiptScreen() {
           }
           .totals-table .grand-row {
             background: #fef2f2;
-            border-top: 2px solid #dc2626;
-            border-bottom: 2px solid #dc2626;
-            color: #dc2626;
+            border-top: 2px solid ${Colors.primary};
+            border-bottom: 2px solid ${Colors.primary};
+            color: ${Colors.primary};
             font-size: 15px;
             font-weight: 800;
           }
@@ -887,7 +889,7 @@ export default function ReceiptScreen() {
       <SafeAreaView className="flex-1 bg-slate-50">
         <Stack.Screen options={{ headerShown: false }} />
         <View className="flex-1 justify-center items-center bg-slate-50">
-          <ActivityIndicator size="large" color="#D32F2F" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text className="mt-4 text-slate-500 text-base">กำลังโหลดข้อมูลเอกสาร...</Text>
         </View>
       </SafeAreaView>
@@ -902,10 +904,10 @@ export default function ReceiptScreen() {
           <Ionicons name="document-text-outline" size={60} color="#cbd5e1" />
           <Text className="mt-4 text-slate-500 text-base">ไม่พบข้อมูลงานซ่อม</Text>
           <TouchableOpacity
-            className="mt-4 px-6 py-2.5 rounded-xl border border-[#D32F2F]"
+            className="mt-4 px-6 py-2.5 rounded-xl border border-primary"
             onPress={() => router.back()}
           >
-            <Text className="text-[#D32F2F] font-bold">กลับ</Text>
+            <Text className="text-primary font-bold">กลับ</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -917,11 +919,11 @@ export default function ReceiptScreen() {
     return (
       <SafeAreaView className="flex-1 bg-slate-100">
         <Stack.Screen options={{ headerShown: false }} />
-        <StatusBar barStyle="light-content" backgroundColor="#DC2626" />
+        <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
         {/* Header Bar */}
         <View
-          className="flex-row items-center justify-between px-4 pb-4 bg-[#DC2626]"
+          className="flex-row items-center justify-between px-4 pb-4 bg-primary"
           style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 12 }}
         >
           <TouchableOpacity onPress={() => router.back()} className="p-1">
@@ -963,7 +965,7 @@ export default function ReceiptScreen() {
             </Text>
             <View className="space-y-2 bg-slate-50 rounded-xl p-3 border border-slate-100">
               <Text className="text-xs text-slate-600 font-body leading-5">
-                • <Text className="font-bold text-slate-800">ใบรับซ่อม (PDF):</Text> พิมพ์ได้เฉพาะสถานะ <Text className="font-bold text-[#DC2626]">"รอตรวจเช็ค"</Text> เท่านั้น
+                • <Text className="font-bold text-slate-800">ใบรับซ่อม (PDF):</Text> พิมพ์ได้เฉพาะสถานะ <Text className="font-bold text-primary">"รอตรวจเช็ค"</Text> เท่านั้น
               </Text>
               <Text className="text-xs text-slate-600 font-body leading-5">
                 • <Text className="font-bold text-slate-800">ใบเสร็จรับเงิน (PDF):</Text> พิมพ์ได้เฉพาะสถานะ <Text className="font-bold text-emerald-600">"เสร็จสิ้น"</Text> เท่านั้น
@@ -987,11 +989,11 @@ export default function ReceiptScreen() {
   return (
     <SafeAreaView className="flex-1 bg-slate-100">
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar barStyle="light-content" backgroundColor="#DC2626" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
       {/* Header Bar */}
       <View
-        className="flex-row items-center justify-between px-4 pb-4 bg-[#DC2626]"
+        className="flex-row items-center justify-between px-4 pb-4 bg-primary"
         style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 12 }}
       >
         <TouchableOpacity onPress={() => router.back()} className="p-1">
@@ -1018,7 +1020,7 @@ export default function ReceiptScreen() {
 
           {/* Shop Header */}
           <View className="items-center mb-2 pt-2">
-            <Text className="text-2xl font-black text-[#DC2626] font-heading">IT VERTEX</Text>
+            <Text className="text-2xl font-black text-primary font-heading">IT VERTEX</Text>
             <Text className="text-xs text-slate-500 text-center font-body mt-0.5">
               ศูนย์บริการซ่อมคอมพิวเตอร์และอุปกรณ์ไอทีครบวงจร
             </Text>
@@ -1049,7 +1051,7 @@ export default function ReceiptScreen() {
 
           {/* Customer Information */}
           <View className="px-1">
-            <Text className="text-xs font-bold text-[#DC2626] uppercase mb-2 font-heading tracking-wide">
+            <Text className="text-xs font-bold text-primary uppercase mb-2 font-heading tracking-wide">
               ข้อมูลลูกค้า (Customer)
             </Text>
             <Text className="text-[13px] text-slate-700 leading-5 mb-1 font-body">
@@ -1070,7 +1072,7 @@ export default function ReceiptScreen() {
 
           {/* Device & Intake Details (ตรงตามหน้ารับเครื่องซ่อม) */}
           <View className="px-1">
-            <Text className="text-xs font-bold text-[#DC2626] uppercase mb-2 font-heading tracking-wide">
+            <Text className="text-xs font-bold text-primary uppercase mb-2 font-heading tracking-wide">
               ข้อมูลอุปกรณ์และสเปกเครื่อง
             </Text>
             <Text className="text-[13px] text-slate-700 leading-5 mb-1 font-body">
@@ -1103,7 +1105,7 @@ export default function ReceiptScreen() {
 
           {/* Symptoms Details */}
           <View className="px-1">
-            <Text className="text-xs font-bold text-[#DC2626] uppercase mb-2 font-heading tracking-wide">
+            <Text className="text-xs font-bold text-primary uppercase mb-2 font-heading tracking-wide">
               รายละเอียดอาการแจ้งซ่อม
             </Text>
             <Text className="text-[13px] text-slate-700 leading-5 mb-1 font-body">
@@ -1123,7 +1125,7 @@ export default function ReceiptScreen() {
 
               {/* Payment Details */}
               <View className="px-1">
-                <Text className="text-xs font-bold text-[#DC2626] uppercase mb-2 font-heading tracking-wide">
+                <Text className="text-xs font-bold text-primary uppercase mb-2 font-heading tracking-wide">
                   ข้อมูลการชำระเงิน
                 </Text>
                 <View className="flex-row justify-between items-center mb-1">
@@ -1145,7 +1147,7 @@ export default function ReceiptScreen() {
               {/* Items Table */}
               <View className="px-1">
                 <View className="flex-row items-center justify-between mb-2.5">
-                  <Text className="text-xs font-bold text-[#DC2626] uppercase font-heading tracking-wide">
+                  <Text className="text-xs font-bold text-primary uppercase font-heading tracking-wide">
                     {isCancelled ? 'รายการค่าบริการ (ยกเลิกซ่อม)' : 'รายการอะไหล่ & บริการ'}
                   </Text>
                   {isCancelled && (
@@ -1213,7 +1215,7 @@ export default function ReceiptScreen() {
                 </View>
                 <View className="flex-row justify-between items-center bg-red-50 p-3.5 rounded-2xl mt-2 border border-red-100">
                   <View>
-                    <Text className="text-[15px] font-extrabold text-[#DC2626] font-heading">
+                    <Text className="text-[15px] font-extrabold text-primary font-heading">
                       {isCancelled ? 'ยอดชำระสุทธิ (ค่าตรวจเช็ค)' : 'ยอดชำระสุทธิ'}
                     </Text>
                     {isCancelled && (
@@ -1222,7 +1224,7 @@ export default function ReceiptScreen() {
                       </Text>
                     )}
                   </View>
-                  <Text className="text-xl font-black text-[#DC2626] font-heading">
+                  <Text className="text-xl font-black text-primary font-heading">
                     {formatNumber(grandTotal)} บาท
                   </Text>
                 </View>
@@ -1249,7 +1251,7 @@ export default function ReceiptScreen() {
         <View className="w-full gap-3 pb-8">
           {/* พิมพ์ใบรับซ่อม / ใบเสร็จ */}
           <TouchableOpacity
-            className="bg-[#DC2626] h-12 rounded-2xl items-center flex-row justify-center shadow-sm active:opacity-90"
+            className="bg-primary h-12 rounded-2xl items-center flex-row justify-center shadow-sm active:opacity-90"
             onPress={printToPDF}
             disabled={isPrinting}
           >

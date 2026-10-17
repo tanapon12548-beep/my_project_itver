@@ -4,6 +4,8 @@ import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface SearchFilterBarProps {
   value: string;
   onChangeText: (text: string) => void;
@@ -47,7 +49,7 @@ export default function SearchFilterBar({
       {showFilter && (
         <TouchableOpacity
           className={`w-12 h-12 rounded-2xl justify-center items-center relative border shadow-sm ${hasActiveFilters
-              ? 'bg-red-50 border-[#DC2626]'
+              ? 'bg-red-50 border-primary'
               : 'bg-white border-slate-200'
             }`}
           onPress={onPressFilter}
@@ -57,10 +59,10 @@ export default function SearchFilterBar({
           <Ionicons
             name="filter"
             size={22}
-            color={hasActiveFilters ? '#DC2626' : '#475569'}
+            color={hasActiveFilters ? Colors.primary : '#475569'}
           />
           {hasActiveFilters && (
-            <View className="absolute -top-1.5 -right-1.5 bg-[#DC2626] rounded-full min-w-[20px] h-[20px] px-1 items-center justify-center border-2 border-white">
+            <View className="absolute -top-1.5 -right-1.5 bg-primary rounded-full min-w-[20px] h-[20px] px-1 items-center justify-center border-2 border-white">
               <Text className="text-white text-[11px] font-bold leading-none">
                 {activeFilterCount}
               </Text>

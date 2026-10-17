@@ -16,6 +16,8 @@ import { useAlert } from '@/hooks/use-alert';
 import type { RepairJob } from '@/types/repair';
 import type { QuoteItem } from '@/types/quotation';
 
+import { Colors } from '@/constants/theme';
+
 export default function VerifyQuoteScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -154,11 +156,11 @@ export default function VerifyQuoteScreen() {
   return (
     <View className="flex-1 bg-slate-50">
       {/* Top Header Bar */}
-      <PageHeader title="ตรวจสอบและส่งต่อ" bgColor="#D32F2F" />
+      <PageHeader title="ตรวจสอบและส่งต่อ" bgColor={Colors.primary} />
 
       {loading ? (
         <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#D32F2F" />
+          <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       ) : (
         <ScrollView

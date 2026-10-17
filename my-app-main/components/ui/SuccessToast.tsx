@@ -10,6 +10,8 @@ import {
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 type ToastType = 'success' | 'info' | 'logout';
 
 interface SuccessToastProps {
@@ -101,7 +103,7 @@ export default function SuccessToast({
         iconBg: 'bg-red-500/20',
         iconColor: '#F87171',
         defaultIcon: 'log-out-outline' as const,
-        progressBg: '#DC2626',
+        progressBg: Colors.primary,
       };
     }
     if (type === 'info') {

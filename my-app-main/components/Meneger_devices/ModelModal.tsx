@@ -16,6 +16,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import type { CatalogBrand, CatalogDeviceType, CatalogModel } from '@/types/device';
 
+import { Colors } from '@/constants/theme';
+
 interface ModelModalProps {
   visible: boolean;
   item: CatalogModel | null;
@@ -105,7 +107,7 @@ export default function ModelModal({
           <View className="flex-row items-center justify-between pb-3 border-b border-slate-100 mb-4">
             <View className="flex-row items-center gap-2">
               <View className="w-8 h-8 rounded-full bg-red-50 items-center justify-center">
-                <Ionicons name="hardware-chip" size={16} color="#DC2626" />
+                <Ionicons name="hardware-chip" size={16} color={Colors.primary} />
               </View>
               <Text className="text-base font-bold text-slate-800 font-heading">
                 {item ? 'แก้ไขรุ่นอุปกรณ์' : 'เพิ่มรุ่นอุปกรณ์'}
@@ -118,7 +120,7 @@ export default function ModelModal({
 
           {error ? (
             <View className="bg-red-50 border border-red-200 rounded-xl p-2.5 mb-3 flex-row items-center gap-2">
-              <Ionicons name="alert-circle" size={16} color="#DC2626" />
+              <Ionicons name="alert-circle" size={16} color={Colors.primary} />
               <Text className="text-xs text-red-600 font-body flex-1">{error}</Text>
             </View>
           ) : null}

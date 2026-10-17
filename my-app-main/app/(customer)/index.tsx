@@ -26,6 +26,8 @@ import CustomerJobCard from '@/components/Customer/CustomerJobCard';
 import CustomerFilterBar from '@/components/Customer/CustomerFilterBar';
 import CustomerEmptyState from '@/components/Customer/CustomerEmptyState';
 
+import { Colors } from '@/constants/theme';
+
 interface CustomerSegmentCardProps {
   label: string;
   count: number;
@@ -169,7 +171,7 @@ export default function CustomerDashboard() {
 
   return (
     <View className="flex-1 bg-slate-50">
-      <StatusBar style="light" backgroundColor="#DC2626" />
+      <StatusBar style="light" backgroundColor={Colors.primary} />
 
       {/* Header มาตรฐานแบบเดียวกับทุกบทบาท */}
       <Header
@@ -189,7 +191,7 @@ export default function CustomerDashboard() {
         {/* Job List */}
         {loading ? (
           <View className="flex-1 justify-center items-center py-12">
-            <ActivityIndicator size="large" color="#DC2626" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text className="text-slate-400 text-xs font-body mt-2">กำลังโหลดรายการงานซ่อม...</Text>
           </View>
         ) : (
@@ -205,7 +207,7 @@ export default function CustomerDashboard() {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 120 }}
             refreshControl={
-              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#DC2626']} />
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
             }
             ListEmptyComponent={
               <CustomerEmptyState

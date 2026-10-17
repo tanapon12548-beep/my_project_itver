@@ -206,7 +206,7 @@ export default function RegisterScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="flex-1 bg-white px-6 pt-6 pb-6">
-            <Text className="text-2xl font-black text-[#D32F2F] text-center tracking-widest mb-1">IT VERTEX</Text>
+            <Text className="text-2xl font-black text-primary text-center tracking-widest mb-1">IT VERTEX</Text>
             <Text className="text-xl font-bold text-slate-800 text-center mb-1.5">
               ลงทะเบียนบัญชีใหม่
             </Text>
@@ -304,7 +304,7 @@ export default function RegisterScreen() {
 
             {/* Submit Button */}
             <TouchableOpacity
-              className={`rounded-xl h-[52px] justify-center items-center mt-4 ${isSubmitDisabled ? 'bg-[#DC2626]/40' : 'bg-[#DC2626] shadow-lg shadow-[#DC2626]/20 elevation-4'}`}
+              className={`rounded-xl h-[52px] justify-center items-center mt-4 ${isSubmitDisabled ? 'bg-primary/40' : 'bg-primary shadow-lg shadow-primary/20 elevation-4'}`}
               onPress={handleRegister}
               disabled={isSubmitDisabled}
               activeOpacity={0.8}

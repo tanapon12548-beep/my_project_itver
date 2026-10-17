@@ -16,6 +16,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import type { CatalogBrand, CatalogDeviceType } from '@/types/device';
 
+import { Colors } from '@/constants/theme';
+
 interface BrandModalProps {
   visible: boolean;
   item: CatalogBrand | null;
@@ -80,7 +82,7 @@ export default function BrandModal({
           <View className="flex-row items-center justify-between pb-3 border-b border-slate-100 mb-4">
             <View className="flex-row items-center gap-2">
               <View className="w-8 h-8 rounded-full bg-red-50 items-center justify-center">
-                <Ionicons name="pricetag" size={16} color="#DC2626" />
+                <Ionicons name="pricetag" size={16} color={Colors.primary} />
               </View>
               <Text className="text-base font-bold text-slate-800 font-heading">
                 {item ? 'แก้ไขยี่ห้อ (แบรนด์)' : 'เพิ่มยี่ห้อใหม่'}
@@ -93,7 +95,7 @@ export default function BrandModal({
 
           {error ? (
             <View className="bg-red-50 border border-red-200 rounded-xl p-2.5 mb-3 flex-row items-center gap-2">
-              <Ionicons name="alert-circle" size={16} color="#DC2626" />
+              <Ionicons name="alert-circle" size={16} color={Colors.primary} />
               <Text className="text-xs text-red-600 font-body flex-1">{error}</Text>
             </View>
           ) : null}
@@ -149,7 +151,7 @@ export default function BrandModal({
                       <Ionicons
                         name={isChecked ? 'checkbox' : 'square-outline'}
                         size={20}
-                        color={isChecked ? '#DC2626' : '#94A3B8'}
+                        color={isChecked ? Colors.primary : '#94A3B8'}
                       />
                     </TouchableOpacity>
                   );

@@ -29,6 +29,8 @@ import CustomerPaymentForm from '@/components/Staff_verify_payment/CustomerPayme
 import SlipPreviewModal from '@/components/Staff_verify_payment/SlipPreviewModal';
 import PaymentFooterButtons from '@/components/Staff_verify_payment/PaymentFooterButtons';
 
+import { Colors } from '@/constants/theme';
+
 export default function VerifyPaymentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{
@@ -321,10 +323,10 @@ export default function VerifyPaymentScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
-      <StatusBar style="light" backgroundColor="#D32F2F" />
+      <StatusBar style="light" backgroundColor={Colors.primary} />
 
       {/* Header */}
-      <View className="bg-[#D32F2F] pt-4 pb-6 px-4 flex-row items-center relative z-10">
+      <View className="bg-primary pt-4 pb-6 px-4 flex-row items-center relative z-10">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
           <Ionicons name="chevron-back" size={24} color="#ffffff" />
         </TouchableOpacity>
@@ -338,7 +340,7 @@ export default function VerifyPaymentScreen() {
 
       {loadingJob ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#D32F2F" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text className="text-slate-500 font-body text-xs mt-3">กำลังโหลดข้อมูล...</Text>
         </View>
       ) : (

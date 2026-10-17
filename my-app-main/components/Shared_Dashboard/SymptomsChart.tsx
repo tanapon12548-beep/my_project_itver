@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { getDeviceTypeBullet } from '@/lib/deviceTypeLabel';
 
+import { Colors } from '@/constants/theme';
+
 export interface SymptomItem {
   label: string;
   jobs_count: number;
@@ -29,7 +31,7 @@ export default function SymptomsChart({
   const totalJobs = data.reduce((sum, item) => sum + (item.jobs_count || 0), 0);
   const maxCount = data.length > 0 ? Math.max(...data.map((d) => d.jobs_count || 1)) : 1;
 
-  const BAR_COLORS = ['#DC2626', '#EA580C', '#D97706', '#0284C7', '#6366F1', '#10B981', '#8B5CF6', '#64748B'];
+  const BAR_COLORS = [Colors.primary, '#EA580C', '#D97706', '#0284C7', '#6366F1', '#10B981', '#8B5CF6', '#64748B'];
 
   const deviceLabel = getDeviceTypeBullet(deviceType);
 

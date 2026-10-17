@@ -11,6 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // 3. API
 import { getRepair } from '@/lib/api';
 
+import { Colors } from '@/constants/theme';
+
 const THAI_MONTHS = [
   'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน',
   'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม',
@@ -106,10 +108,10 @@ export default function SchedulePickupScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
-      <StatusBar style="light" backgroundColor="#D32F2F" />
+      <StatusBar style="light" backgroundColor={Colors.primary} />
 
       {/* Header */}
-      <View className="bg-[#D32F2F] pt-4 pb-6 px-4 flex-row items-center relative z-10">
+      <View className="bg-primary pt-4 pb-6 px-4 flex-row items-center relative z-10">
         <TouchableOpacity onPress={() => router.back()} className="mr-3">
           <Ionicons name="chevron-back" size={24} color="#ffffff" />
         </TouchableOpacity>
@@ -123,7 +125,7 @@ export default function SchedulePickupScreen() {
 
       {loading ? (
         <View className="flex-1 items-center justify-center">
-          <ActivityIndicator size="large" color="#D32F2F" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text className="text-xs text-slate-500 font-body mt-2">กำลังโหลดข้อมูลปฏิทิน...</Text>
         </View>
       ) : (
@@ -136,8 +138,8 @@ export default function SchedulePickupScreen() {
                 วันที่สามารถมารับเครื่อง
               </Text>
               <View className="bg-red-50 px-2.5 py-1 rounded-full border border-red-200 flex-row items-center">
-                <Ionicons name="calendar-outline" size={13} color="#D32F2F" style={{ marginRight: 4 }} />
-                <Text className="text-xs font-bold text-[#D32F2F]">ปฏิทิน</Text>
+                <Ionicons name="calendar-outline" size={13} color={Colors.primary} style={{ marginRight: 4 }} />
+                <Text className="text-xs font-bold text-primary">ปฏิทิน</Text>
               </View>
             </View>
             <Text className="text-xs text-slate-500 font-body mb-4">
@@ -248,7 +250,7 @@ export default function SchedulePickupScreen() {
             <View className="space-y-3">
               <View className="flex-row items-start py-2 border-b border-slate-100">
                 <View className="w-8 h-8 rounded-lg bg-red-50 items-center justify-center mr-3 border border-red-100 mt-0.5">
-                  <Ionicons name="calendar" size={16} color="#D32F2F" />
+                  <Ionicons name="calendar" size={16} color={Colors.primary} />
                 </View>
                 <View className="flex-1">
                   <Text className="text-xs text-slate-500 font-body">วันที่รับเครื่องได้</Text>
@@ -327,7 +329,7 @@ export default function SchedulePickupScreen() {
                 },
               });
             }}
-            className="flex-1 bg-[#D32F2F] py-3.5 rounded-2xl items-center justify-center shadow-sm active:opacity-90 flex-row gap-1.5"
+            className="flex-1 bg-primary py-3.5 rounded-2xl items-center justify-center shadow-sm active:opacity-90 flex-row gap-1.5"
           >
             <Ionicons name="card-outline" size={18} color="#ffffff" />
             <Text className="text-white font-bold font-heading text-sm">แจ้งชำระเงิน</Text>

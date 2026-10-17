@@ -74,7 +74,7 @@ export default function QuotationTable({
                     hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
                     className="bg-red-50 self-start px-2 py-1 rounded-md mt-1.5 border border-red-100 flex-row items-center gap-1 active:bg-red-100"
                   >
-                    <Text className="text-[11px] font-bold text-[#D32F2F] font-heading">
+                    <Text className="text-[11px] font-bold text-primary font-heading">
                       {item.job_no}
                     </Text>
                   </TouchableOpacity>
@@ -115,7 +115,7 @@ export default function QuotationTable({
 
                 {/* คอลัมน์ 4: ยอดรวมเสนอราคา */}
                 <View className="w-[140px] pr-2 items-end justify-center">
-                  <Text className="text-[15px] font-bold text-[#D32F2F] font-heading">
+                  <Text className="text-[15px] font-bold text-primary font-heading">
                     {grandTotal} <Text className="text-xs font-normal text-slate-600">บาท</Text>
                   </Text>
                 </View>

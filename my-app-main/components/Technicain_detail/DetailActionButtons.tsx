@@ -19,7 +19,7 @@ export default function DetailActionButtons({
   return (
     <View className="flex-row gap-3 mt-4">
       <TouchableOpacity
-        className={`flex-1 bg-[#D32F2F] h-[44px] rounded-xl justify-center items-center shadow-sm active:opacity-90 ${loading ? 'opacity-60' : ''}`}
+        className={`flex-1 bg-primary h-[44px] rounded-xl justify-center items-center shadow-sm active:opacity-90 ${loading ? 'opacity-60' : ''}`}
         onPress={onConfirm}
         disabled={loading}
       >

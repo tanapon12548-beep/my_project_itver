@@ -6,6 +6,8 @@ import { PanResponder, Platform, StyleSheet, Text, TouchableOpacity, View } from
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path } from 'react-native-svg';
 
+import { Colors } from '@/constants/theme';
+
 interface Point {
   x: number;
   y: number;
@@ -222,7 +224,7 @@ function WebSignaturePad({
             onPress={handleClear}
             activeOpacity={0.7}
           >
-            <Ionicons name="trash-outline" size={13} color="#DC2626" />
+            <Ionicons name="trash-outline" size={13} color={Colors.primary} />
             <Text className="text-[11px] text-red-600 font-bold">ล้างลายเซ็น</Text>
           </TouchableOpacity>
         )}
@@ -343,7 +345,7 @@ function NativeSignaturePad({
             onPress={handleClear}
             activeOpacity={0.7}
           >
-            <Ionicons name="trash-outline" size={13} color="#DC2626" />
+            <Ionicons name="trash-outline" size={13} color={Colors.primary} />
             <Text className="text-[11px] text-red-600 font-bold">ล้างลายเซ็น</Text>
           </TouchableOpacity>
         )}

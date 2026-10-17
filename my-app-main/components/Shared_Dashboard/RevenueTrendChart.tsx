@@ -8,6 +8,8 @@ import { LineChart, CurveType } from 'react-native-gifted-charts';
 
 import { getDeviceTypeBullet } from '@/lib/deviceTypeLabel';
 
+import { Colors } from '@/constants/theme';
+
 export interface RevenueTrendDataPoint {
   value: number;
   label: string;
@@ -193,7 +195,7 @@ export default function RevenueTrendChart({
   // ── สรุปตัวเลขในกรอบเดียวกับข้อมูลจริงของกราฟ (รายรับ - ต้นทุนอะไหล่ = กำไรขั้นต้น) ──
   const safeRevenue = Math.max(0, totalRevenue);
   const profitIsNegative = (grossProfit ?? 0) < 0;
-  const profitColor = profitIsNegative ? '#DC2626' : '#047857';
+  const profitColor = profitIsNegative ? Colors.primary : '#047857';
   const marginPct = safeRevenue > 0 ? Math.round(((grossProfit ?? 0) / safeRevenue) * 100) : 0;
 
   const statCells: { label: string; value: string; color?: string }[] = [

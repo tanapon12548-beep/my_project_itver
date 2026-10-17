@@ -4,6 +4,8 @@ import { Modal, Text, TouchableOpacity, View } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface ReceiptPreviewModalProps {
   visible: boolean;
   jobNo: string;
@@ -31,14 +33,14 @@ export default function ReceiptPreviewModal({
         <View className="bg-white rounded-t-3xl p-5 gap-4">
           {/* Header Icon + Title */}
           <View className="flex-row items-center gap-2">
-            <Ionicons name="document-text" size={24} color="#DC2626" />
+            <Ionicons name="document-text" size={24} color={Colors.primary} />
             <Text className="text-base font-bold text-slate-800 font-heading">ตัวอย่างใบรับซ่อม</Text>
           </View>
 
           {/* Receipt Preview Card */}
           <View className="bg-slate-50 border border-slate-200 rounded-2xl p-4 items-center">
             {/* IT VERTEX Brand Title */}
-            <Text className="text-xl font-bold text-[#DC2626] font-heading">IT VERTEX</Text>
+            <Text className="text-xl font-bold text-primary font-heading">IT VERTEX</Text>
             <Text className="text-[11px] text-slate-500 mt-0.5 mb-2.5">ใบรับซ่อมอุปกรณ์ IT</Text>
 
             <View className="w-full h-px bg-slate-200 mb-3" />
@@ -76,7 +78,7 @@ export default function ReceiptPreviewModal({
               <Text className="text-sm font-bold text-slate-700 font-heading">แก้ไข</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity className="flex-[1.5] h-12 bg-[#DC2626] rounded-xl justify-center items-center shadow-sm active:opacity-90" onPress={onConfirmAndPrint}>
+            <TouchableOpacity className="flex-[1.5] h-12 bg-primary rounded-xl justify-center items-center shadow-sm active:opacity-90" onPress={onConfirmAndPrint}>
               <Text className="text-sm font-bold text-white font-heading">ยืนยันและออกใบรับซ่อม</Text>
             </TouchableOpacity>
           </View>

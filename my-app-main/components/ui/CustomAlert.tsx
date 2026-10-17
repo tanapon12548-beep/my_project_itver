@@ -4,6 +4,8 @@ import { Modal, Text, TouchableOpacity, View } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface CustomAlertProps {
   visible: boolean;
   title: string;
@@ -33,7 +35,7 @@ export default function CustomAlert({
       case 'warning':
         return <Ionicons name="warning" size={48} color="#D97706" />;
       case 'danger':
-        return <Ionicons name="alert-circle" size={48} color="#DC2626" />;
+        return <Ionicons name="alert-circle" size={48} color={Colors.primary} />;
       default:
         return <Ionicons name="information-circle" size={48} color="#0284C7" />;
     }
@@ -42,13 +44,13 @@ export default function CustomAlert({
   const getConfirmBg = () => {
     switch (type) {
       case 'danger':
-        return 'bg-[#DC2626]';
+        return 'bg-primary';
       case 'success':
         return 'bg-emerald-600';
       case 'warning':
         return 'bg-amber-600';
       default:
-        return 'bg-[#DC2626]';
+        return 'bg-primary';
     }
   };
 

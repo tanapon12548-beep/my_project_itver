@@ -28,6 +28,8 @@ import SignaturesCard from '@/components/Technicain_detail/SignaturesCard';
 import FloatingActionButton from '@/components/ui/FloatingActionButton';
 import { useAlert } from '@/hooks/use-alert';
 
+import { Colors } from '@/constants/theme';
+
 // ── สถานะที่ช่างสามารถเปลี่ยนไปได้ (เฉพาะขอบเขตของช่าง) ──
 const TECH_STATUS_OPTIONS: Record<string, string[]> = {
   'รอตรวจเช็ค': ['ดำเนินการตรวจเช็ค'],
@@ -326,7 +328,7 @@ export default function TechnicianDetailScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-slate-100">
-        <View className="bg-[#DC2626] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
+        <View className="bg-primary px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
           <View className="flex-row items-center">
             <TouchableOpacity onPress={() => router.back()} className="mr-3">
               <Ionicons name="chevron-back" size={28} color="#ffffff" />
@@ -335,7 +337,7 @@ export default function TechnicianDetailScreen() {
           </View>
         </View>
         <View className="flex-1 justify-center items-center py-10">
-          <ActivityIndicator size="large" color="#DC2626" />
+          <ActivityIndicator size="large" color={Colors.primary} />
           <Text className="mt-3 text-sm text-slate-500">กำลังโหลดข้อมูล...</Text>
         </View>
       </View>
@@ -345,7 +347,7 @@ export default function TechnicianDetailScreen() {
   if (!job) {
     return (
       <View className="flex-1 bg-slate-100">
-        <View className="bg-[#DC2626] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
+        <View className="bg-primary px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
           <View className="flex-row items-center">
             <TouchableOpacity onPress={() => router.back()} className="mr-3">
               <Ionicons name="chevron-back" size={28} color="#ffffff" />
@@ -379,7 +381,7 @@ export default function TechnicianDetailScreen() {
   return (
     <View className="flex-1 bg-slate-100">
       {/* Top Header */}
-      <View className="bg-[#DC2626] px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
+      <View className="bg-primary px-5 pb-4 z-10" style={{ paddingTop: insets.top + 10 }}>
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center flex-1">
             <TouchableOpacity
@@ -505,7 +507,7 @@ export default function TechnicianDetailScreen() {
                     setIsDropdownOpen(false);
                   }}
                 >
-                  <Text className={`text-sm ${status === opt ? 'text-[#D32F2F] font-bold' : 'text-slate-800'}`}>
+                  <Text className={`text-sm ${status === opt ? 'text-primary font-bold' : 'text-slate-800'}`}>
                     {opt}
                   </Text>
                 </TouchableOpacity>
@@ -528,7 +530,7 @@ export default function TechnicianDetailScreen() {
       <FloatingActionButton
         onPress={() => setIsEditing(true)}
         icon="create-outline"
-        bgColor="#DC2626"
+        bgColor={Colors.primary}
         visible={
           !isEditing &&
           currentRole !== 'manager' &&

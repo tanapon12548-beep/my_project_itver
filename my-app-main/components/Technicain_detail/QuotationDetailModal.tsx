@@ -11,6 +11,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { getQuotation } from '@/lib/api';
 import { canEditOrDeleteQuote } from '../Technicain_quotation/QuotationStatusBadge';
 
+import { Colors } from '@/constants/theme';
+
 interface QuotationDetailModalProps {
   visible: boolean;
   quotationId: number | null;
@@ -122,7 +124,7 @@ export default function QuotationDetailModal({
             <View>
               <Text className="text-lg font-bold text-slate-800 font-heading">รายละเอียดใบเสนอราคา</Text>
               <View className="flex-row items-center gap-2 mt-0.5">
-                <Text className="text-xs font-bold text-[#D32F2F]">{quoteNo}</Text>
+                <Text className="text-xs font-bold text-primary">{quoteNo}</Text>
                 <Text className="text-slate-300 text-xs">•</Text>
                 <Text className="text-xs font-bold text-slate-600">{jobNo}</Text>
               </View>
@@ -137,7 +139,7 @@ export default function QuotationDetailModal({
 
           {loading ? (
             <View className="py-20 justify-center items-center">
-              <ActivityIndicator size="large" color="#D32F2F" />
+              <ActivityIndicator size="large" color={Colors.primary} />
               <Text className="mt-3 text-sm text-slate-500 font-body">กำลังโหลดข้อมูลใบเสนอราคา...</Text>
             </View>
           ) : data ? (
@@ -279,7 +281,7 @@ export default function QuotationDetailModal({
                     </Text>
                   )}
                 </View>
-                <Text className="text-2xl font-black text-[#D32F2F] font-heading">
+                <Text className="text-2xl font-black text-primary font-heading">
                   {grandTotal.toLocaleString()}{' '}
                   <Text className="text-xs font-normal text-slate-600">บาท</Text>
                 </Text>

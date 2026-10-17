@@ -150,8 +150,8 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
                 onPress={() => setItemType('parts')}
                 disabled={loading}
               >
-                <View className={`w-5 h-5 rounded-full border-2 items-center justify-center mr-2 ${itemType === 'parts' ? 'border-[#DC2626]' : 'border-slate-300'}`}>
-                  {itemType === 'parts' && <View className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />}
+                <View className={`w-5 h-5 rounded-full border-2 items-center justify-center mr-2 ${itemType === 'parts' ? 'border-primary' : 'border-slate-300'}`}>
+                  {itemType === 'parts' && <View className="w-2.5 h-2.5 rounded-full bg-primary" />}
                 </View>
                 <Text className="text-sm font-medium text-slate-800 font-heading">อะไหล่</Text>
               </TouchableOpacity>
@@ -162,8 +162,8 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
                 onPress={() => setItemType('services')}
                 disabled={loading}
               >
-                <View className={`w-5 h-5 rounded-full border-2 items-center justify-center mr-2 ${itemType === 'services' ? 'border-[#DC2626]' : 'border-slate-300'}`}>
-                  {itemType === 'services' && <View className="w-2.5 h-2.5 rounded-full bg-[#DC2626]" />}
+                <View className={`w-5 h-5 rounded-full border-2 items-center justify-center mr-2 ${itemType === 'services' ? 'border-primary' : 'border-slate-300'}`}>
+                  {itemType === 'services' && <View className="w-2.5 h-2.5 rounded-full bg-primary" />}
                 </View>
                 <Text className="text-sm font-medium text-slate-800 font-heading">ค่าบริการ</Text>
               </TouchableOpacity>
@@ -233,7 +233,7 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
           )}
 
           <TouchableOpacity
-            className={`bg-[#DC2626] h-12 rounded-xl justify-center items-center mt-2.5 shadow-sm active:opacity-90 ${loading ? 'opacity-70' : ''}`}
+            className={`bg-primary h-12 rounded-xl justify-center items-center mt-2.5 shadow-sm active:opacity-90 ${loading ? 'opacity-70' : ''}`}
             onPress={handleSave}
             disabled={loading}
           >

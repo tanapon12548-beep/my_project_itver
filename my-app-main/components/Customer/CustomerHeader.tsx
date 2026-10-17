@@ -5,6 +5,8 @@ import { View, Text, TouchableOpacity } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 export type CustomerFilterTab = 'all' | 'in_progress' | 'pending_approval' | 'completed';
 
 interface CustomerHeaderProps {
@@ -26,7 +28,7 @@ export default function CustomerHeader({
   onSelectTab,
 }: CustomerHeaderProps) {
   return (
-    <View className="bg-[#DC2626] px-5 pt-4 pb-6 rounded-b-[28px] shadow-sm">
+    <View className="bg-primary px-5 pt-4 pb-6 rounded-b-[28px] shadow-sm">
       <View className="flex-row items-center justify-between mb-3">
         <View>
           <View className="flex-row items-center gap-2">
@@ -56,7 +58,7 @@ export default function CustomerHeader({
             <Ionicons
               name="hammer-outline"
               size={14}
-              color={activeTab === 'in_progress' ? '#DC2626' : '#FFFFFF'}
+              color={activeTab === 'in_progress' ? Colors.primary : '#FFFFFF'}
             />
             <Text
               className={`text-base font-bold font-heading ${

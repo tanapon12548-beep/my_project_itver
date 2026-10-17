@@ -17,6 +17,8 @@ import { useAlert } from '@/hooks/use-alert';
 // 3. API helpers
 import { lookupProfiles, lookupProfilesAdvanced, registerCustomer } from '@/lib/api';
 
+import { Colors } from '@/constants/theme';
+
 type AdvFilterId = 'name' | 'phone' | 'email';
 
 // เลือกได้ว่าจะเปิดกรองละเอียดอันไหนบ้าง — ลบอันที่ไม่ต้องการออกจาก array นี้
@@ -366,7 +368,7 @@ export default function CustomerFormCard({
                   returnKeyType="search"
                 />
                 {loading ? (
-                  <ActivityIndicator size="small" color="#DC2626" />
+                  <ActivityIndicator size="small" color={Colors.primary} />
                 ) : searchText.length > 0 ? (
                   <TouchableOpacity
                     onPress={handleClearSearch}
@@ -479,7 +481,7 @@ export default function CustomerFormCard({
                         hitSlop={10}
                         accessibilityLabel={`เอาตัวกรอง${meta.label}ออก`}
                       >
-                        <Ionicons name="close-circle" size={18} color="#DC2626" />
+                        <Ionicons name="close-circle" size={18} color={Colors.primary} />
                       </TouchableOpacity>
                     </View>
                   );
@@ -544,7 +546,7 @@ export default function CustomerFormCard({
                   onPress={() => handleSelectSuggestion(item)}
                 >
                   <View className="w-8 h-8 rounded-full bg-red-50 items-center justify-center border border-red-100">
-                    <Ionicons name="person" size={16} color="#DC2626" />
+                    <Ionicons name="person" size={16} color={Colors.primary} />
                   </View>
                   <View className="flex-1">
                     <Text className="text-[13px] font-bold text-slate-800 font-heading">{fullName}</Text>
@@ -669,7 +671,7 @@ export default function CustomerFormCard({
           <View className="bg-white rounded-2xl w-full max-w-sm p-5 shadow-lg border border-slate-200">
             <View className="flex-row items-center justify-between mb-3 pb-2 border-b border-slate-100">
               <View className="flex-row items-center gap-2">
-                <Ionicons name="person-add" size={20} color="#DC2626" />
+                <Ionicons name="person-add" size={20} color={Colors.primary} />
                 <Text className="text-base font-bold text-slate-900 font-heading">
                   ลงทะเบียนลูกค้าใหม่หน้าร้าน
                 </Text>
@@ -735,7 +737,7 @@ export default function CustomerFormCard({
               <TouchableOpacity
                 onPress={handleConfirmQuickRegister}
                 disabled={isRegistering}
-                className="flex-1 py-2.5 rounded-xl bg-[#DC2626] items-center"
+                className="flex-1 py-2.5 rounded-xl bg-primary items-center"
               >
                 {isRegistering ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />

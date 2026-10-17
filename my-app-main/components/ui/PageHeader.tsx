@@ -6,10 +6,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Colors } from '@/constants/theme';
+
 interface PageHeaderProps {
   title?: string;
   onBack?: () => void;
-  /** Background color. Default: '#DC2626' (brand) */
+  /** Background color. Default: Colors.primary (brand) */
   bgColor?: string;
 }
 
@@ -17,7 +19,7 @@ interface PageHeaderProps {
  * Shared page header with back button.
  * Replaces HandoverHeader and VerifyHeader.
  */
-export default function PageHeader({ title = '', onBack, bgColor = '#DC2626' }: PageHeaderProps) {
+export default function PageHeader({ title = '', onBack, bgColor = Colors.primary }: PageHeaderProps) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 

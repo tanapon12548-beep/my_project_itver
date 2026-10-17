@@ -16,6 +16,8 @@ import SuccessToast from '@/components/ui/SuccessToast';
 import FormInput from '@/components/ui/FormInput';
 import { useAlert } from '@/hooks/use-alert';
 
+import { Colors } from '@/constants/theme';
+
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
@@ -131,9 +133,9 @@ export default function LoginScreen() {
   // ════════════════════════════════════════════════════════
 
   return (
-    <SafeAreaView className="flex-1 bg-[#DC2626]">
+    <SafeAreaView className="flex-1 bg-primary">
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar barStyle="light-content" backgroundColor="#DC2626" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
       <SuccessToast
         visible={showToast}
@@ -156,7 +158,7 @@ export default function LoginScreen() {
         >
           {/* ═══ Red Header ═══ */}
           <View
-            className="bg-[#DC2626] pb-10 px-6 relative overflow-hidden"
+            className="bg-primary pb-10 px-6 relative overflow-hidden"
             style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) + 40 : 60 }}
           >
             <View className="absolute w-[250px] h-[250px] rounded-full bg-white/5 -top-[50px] -right-[80px]" />
@@ -210,7 +212,7 @@ export default function LoginScreen() {
 
             {/* Submit Button */}
             <TouchableOpacity
-              className={`rounded-xl h-[52px] justify-center items-center mt-3 ${isSubmitDisabled ? 'bg-[#DC2626]/40' : 'bg-[#DC2626] shadow-lg shadow-[#DC2626]/20 elevation-4'}`}
+              className={`rounded-xl h-[52px] justify-center items-center mt-3 ${isSubmitDisabled ? 'bg-primary/40' : 'bg-primary shadow-lg shadow-primary/20 elevation-4'}`}
               onPress={handleLogin}
               disabled={isSubmitDisabled}
               activeOpacity={0.8}
@@ -229,7 +231,7 @@ export default function LoginScreen() {
               onPress={handleForgotPassword}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text className="text-[#DC2626] text-sm font-semibold font-heading">
+              <Text className="text-primary text-sm font-semibold font-heading">
                 ลืมรหัสผ่าน?
               </Text>
             </TouchableOpacity>

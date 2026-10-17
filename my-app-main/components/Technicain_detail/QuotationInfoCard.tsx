@@ -89,8 +89,8 @@ export default function QuotationInfoCard({
     <View className="mb-4">
       {/* Header Section Label */}
       <View className="flex-row items-center mb-2 ml-1">
-        <View className="w-1 h-4 bg-[#D32F2F] mr-2 rounded-sm" />
-        <Text className="text-sm font-bold text-[#D32F2F]">
+        <View className="w-1 h-4 bg-primary mr-2 rounded-sm" />
+        <Text className="text-sm font-bold text-primary">
           ข้อมูลใบเสนอราคา (QUOTATION)
         </Text>
       </View>
@@ -217,7 +217,7 @@ export default function QuotationInfoCard({
               </Text>
             ) : null}
           </View>
-          <Text className="text-xl font-black text-[#D32F2F]">
+          <Text className="text-xl font-black text-primary">
             {grandTotal.toLocaleString()}{' '}
             <Text className="text-xs font-normal text-slate-500">บาท</Text>
           </Text>

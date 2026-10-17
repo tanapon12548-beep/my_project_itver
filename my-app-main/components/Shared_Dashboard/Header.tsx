@@ -83,7 +83,7 @@ export default function Header({
 
   return (
     <View
-      className="bg-[#DC2626] px-5 pb-4 shadow-md z-10 rounded-b-3xl"
+      className="bg-primary px-5 pb-4 shadow-md z-10 rounded-b-3xl"
       style={{ paddingTop: insets.top + 8 }}
     >
       <View className="flex-row items-center justify-between">
@@ -126,7 +126,7 @@ export default function Header({
 
             {/* Profile Avatar Circle */}
             <View className="w-9 h-9 rounded-full bg-white items-center justify-center shadow-sm border border-white/30">
-              <Text className="text-[#DC2626] font-bold text-[12px] font-heading">
+              <Text className="text-primary font-bold text-[12px] font-heading">
                 {getInitials(currentUser)}
               </Text>
             </View>

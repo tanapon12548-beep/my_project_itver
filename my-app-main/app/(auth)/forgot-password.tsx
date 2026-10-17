@@ -21,6 +21,8 @@ import { useAlert } from '@/hooks/use-alert';
 // 3. Auth helpers
 import { forgotPassword } from '@/lib/auth';
 
+import { Colors } from '@/constants/theme';
+
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -95,10 +97,10 @@ export default function ForgotPasswordScreen() {
         >
           <View className="flex-1 bg-white px-6 pt-6 pb-6">
             <View className="w-16 h-16 rounded-2xl bg-red-50 border border-red-100 items-center justify-center mb-4 self-center">
-              <Ionicons name="key-outline" size={32} color="#D32F2F" />
+              <Ionicons name="key-outline" size={32} color={Colors.primary} />
             </View>
 
-            <Text className="text-2xl font-black text-[#D32F2F] text-center tracking-widest mb-1">IT VERTEX</Text>
+            <Text className="text-2xl font-black text-primary text-center tracking-widest mb-1">IT VERTEX</Text>
             <Text className="text-xl font-bold text-slate-800 text-center mb-1.5">
               ยืนยันตัวตนเพื่อรีเซ็ตรหัสผ่าน
             </Text>
@@ -112,12 +114,12 @@ export default function ForgotPasswordScreen() {
                 อีเมลบัญชีผู้ใช้ (Email)
               </Text>
               <View
-                className={`flex-row items-center bg-white border rounded-xl px-4 h-[52px] ${focusedField === 'email' ? 'border-[#D32F2F]' : 'border-slate-200'}`}
+                className={`flex-row items-center bg-white border rounded-xl px-4 h-[52px] ${focusedField === 'email' ? 'border-primary' : 'border-slate-200'}`}
               >
                 <Ionicons
                   name="mail-outline"
                   size={20}
-                  color={focusedField === 'email' ? '#D32F2F' : '#94a3b8'}
+                  color={focusedField === 'email' ? Colors.primary : '#94a3b8'}
                   className="mr-2.5"
                 />
                 <TextInput
@@ -145,12 +147,12 @@ export default function ForgotPasswordScreen() {
                 เบอร์โทรศัพท์ (Phone)
               </Text>
               <View
-                className={`flex-row items-center bg-white border rounded-xl px-4 h-[52px] ${focusedField === 'phone' ? 'border-[#D32F2F]' : 'border-slate-200'}`}
+                className={`flex-row items-center bg-white border rounded-xl px-4 h-[52px] ${focusedField === 'phone' ? 'border-primary' : 'border-slate-200'}`}
               >
                 <Ionicons
                   name="call-outline"
                   size={20}
-                  color={focusedField === 'phone' ? '#D32F2F' : '#94a3b8'}
+                  color={focusedField === 'phone' ? Colors.primary : '#94a3b8'}
                   className="mr-2.5"
                 />
                 <TextInput
@@ -173,7 +175,7 @@ export default function ForgotPasswordScreen() {
 
             {/* Submit Button */}
             <TouchableOpacity
-              className={`rounded-xl h-[52px] justify-center items-center mt-4 ${(!email.trim() || !phone.trim() || loading) ? 'bg-[#DC2626]/40' : 'bg-[#DC2626] shadow-lg shadow-[#DC2626]/20 elevation-4'}`}
+              className={`rounded-xl h-[52px] justify-center items-center mt-4 ${(!email.trim() || !phone.trim() || loading) ? 'bg-primary/40' : 'bg-primary shadow-lg shadow-primary/20 elevation-4'}`}
               onPress={handleVerifyIdentity}
               disabled={!email.trim() || !phone.trim() || loading}
               activeOpacity={0.8}

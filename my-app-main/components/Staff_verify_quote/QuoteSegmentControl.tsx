@@ -17,7 +17,7 @@ export default function QuoteSegmentControl({
       <View className="flex-row bg-slate-100 rounded-full p-1">
         {/* Approved Mode Tab */}
         <TouchableOpacity
-          className={`flex-1 py-2.5 rounded-full items-center justify-center ${activeMode === 'approved' ? 'bg-[#D32F2F] shadow-md shadow-[#D32F2F]/20 elevation-3' : ''}`}
+          className={`flex-1 py-2.5 rounded-full items-center justify-center ${activeMode === 'approved' ? 'bg-primary shadow-md shadow-primary/20 elevation-3' : ''}`}
           activeOpacity={0.8}
           onPress={() => onChangeMode('approved')}
         >
@@ -30,7 +30,7 @@ export default function QuoteSegmentControl({
 
         {/* Cancelled Mode Tab */}
         <TouchableOpacity
-          className={`flex-1 py-2.5 rounded-full items-center justify-center ${activeMode === 'cancelled' ? 'bg-[#D32F2F] shadow-md shadow-[#D32F2F]/20 elevation-3' : ''}`}
+          className={`flex-1 py-2.5 rounded-full items-center justify-center ${activeMode === 'cancelled' ? 'bg-primary shadow-md shadow-primary/20 elevation-3' : ''}`}
           activeOpacity={0.8}
           onPress={() => onChangeMode('cancelled')}
         >

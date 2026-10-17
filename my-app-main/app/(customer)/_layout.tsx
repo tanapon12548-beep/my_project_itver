@@ -3,6 +3,8 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
+import { Colors } from '@/constants/theme';
+
 export default function CustomerTabLayout() {
   const { colorScheme } = useColorScheme();
   
@@ -10,7 +12,7 @@ export default function CustomerTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#DC2626',
+        tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: '#94a3b8',
         tabBarStyle: {
           backgroundColor: colorScheme === 'dark' ? '#1e293b' : '#ffffff',

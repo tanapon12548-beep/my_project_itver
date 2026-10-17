@@ -4,6 +4,8 @@ import { View, Text, TextInput, TouchableOpacity, TextInputProps } from 'react-n
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface FormInputProps extends TextInputProps {
   label: string;
   isFocused: boolean;
@@ -31,7 +33,7 @@ export default function FormInput({
       <Text className="text-[15px] text-slate-800 mb-2 font-bold">{label}</Text>
       <View
         className={`flex-row items-center bg-white border-2 rounded-2xl px-4 min-h-[56px] ${
-          error ? 'border-red-500 bg-red-50/40' : isFocused ? 'border-[#DC2626] bg-white shadow-sm shadow-red-100' : 'border-slate-200'
+          error ? 'border-red-500 bg-red-50/40' : isFocused ? 'border-primary bg-white shadow-sm shadow-red-100' : 'border-slate-200'
         }`}
       >
         <TextInput
@@ -59,7 +61,7 @@ export default function FormInput({
       </View>
       {error && (
         <View className="flex-row items-center gap-1 mt-1.5 ml-1">
-          <Ionicons name="alert-circle" size={14} color="#DC2626" />
+          <Ionicons name="alert-circle" size={14} color={Colors.primary} />
           <Text className="text-[#B91C1C] text-[13px] font-medium">{error}</Text>
         </View>
       )}

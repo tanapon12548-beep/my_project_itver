@@ -21,6 +21,8 @@ import { useAlert } from '@/hooks/use-alert';
 // 3. Auth helpers
 import { getCurrentUser } from '@/lib/auth';
 
+import { Colors } from '@/constants/theme';
+
 export default function ReportErrorScreen() {
   const router = useRouter();
   const [description, setDescription] = useState('');
@@ -56,10 +58,10 @@ export default function ReportErrorScreen() {
 
   if (submitted) {
     return (
-      <SafeAreaView className="flex-1 bg-[#D32F2F]">
+      <SafeAreaView className="flex-1 bg-primary">
         <Stack.Screen options={{ headerShown: false }} />
-        <StatusBar barStyle="light-content" backgroundColor="#D32F2F" />
-        <View className="flex-row items-center justify-between px-4 pb-4 bg-[#D32F2F]" style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 12 }}>
+        <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+        <View className="flex-row items-center justify-between px-4 pb-4 bg-primary" style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 12 }}>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="chevron-back" size={24} color="#fff" />
           </TouchableOpacity>
@@ -73,7 +75,7 @@ export default function ReportErrorScreen() {
           <Text className="text-2xl font-bold text-green-600 mb-3">ส่งรายงานสำเร็จ!</Text>
           <Text className="text-[15px] text-slate-500 text-center leading-[22px] mb-8">ขอบคุณที่แจ้งปัญหา ทีมพัฒนาจะตรวจสอบและดำเนินการแก้ไขโดยเร็ว</Text>
           <TouchableOpacity
-            className="bg-[#D32F2F] rounded-2xl py-4 px-10 shadow-lg shadow-[#D32F2F]/30 elevation-4"
+            className="bg-primary rounded-2xl py-4 px-10 shadow-lg shadow-primary/30 elevation-4"
             onPress={() => router.back()}
           >
             <Text className="text-white text-base font-bold">กลับหน้าหลัก</Text>
@@ -84,12 +86,12 @@ export default function ReportErrorScreen() {
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#D32F2F]">
+    <SafeAreaView className="flex-1 bg-primary">
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar barStyle="light-content" backgroundColor="#D32F2F" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
 
       {/* Header */}
-      <View className="flex-row items-center justify-between px-4 pb-4 bg-[#D32F2F]" style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 12 }}>
+      <View className="flex-row items-center justify-between px-4 pb-4 bg-primary" style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 12 : 12 }}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
@@ -127,7 +129,7 @@ export default function ReportErrorScreen() {
             />
 
             <TouchableOpacity
-              className={`bg-[#D32F2F] rounded-2xl py-4 flex-row items-center justify-center shadow-lg shadow-[#D32F2F]/30 elevation-4 ${saving ? 'opacity-70' : ''}`}
+              className={`bg-primary rounded-2xl py-4 flex-row items-center justify-center shadow-lg shadow-primary/30 elevation-4 ${saving ? 'opacity-70' : ''}`}
               onPress={handleSubmit}
               disabled={saving}
               activeOpacity={0.8}

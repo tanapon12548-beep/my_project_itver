@@ -13,6 +13,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Colors } from '@/constants/theme';
+
 export type SortOption = 'newest' | 'name_asc' | 'price_asc' | 'price_desc' | 'popular';
 export type UsageFilter = 'all' | 'used' | 'frequent' | 'unused';
 
@@ -315,7 +317,7 @@ export default function ItemFilterSheet({
           <View className="flex-row items-center justify-between px-5 py-3.5 border-b border-slate-200">
             <View className="flex-row items-center gap-2">
               <View className="w-8 h-8 rounded-lg bg-red-50 items-center justify-center">
-                <Ionicons name="filter" size={18} color="#DC2626" />
+                <Ionicons name="filter" size={18} color={Colors.primary} />
               </View>
               <Text className="text-base font-bold text-slate-800 font-heading">
                 ตัวกรอง & จัดเรียง ({activeTab === 'parts' ? 'อะไหล่' : 'ค่าบริการ'})
@@ -395,7 +397,7 @@ export default function ItemFilterSheet({
                       <Text className={`text-xs font-heading ${isSelected ? 'text-red-700 font-bold' : 'text-slate-700'}`}>
                         {cat.label}
                       </Text>
-                      {isSelected && <Ionicons name="checkmark-circle" size={13} color="#DC2626" />}
+                      {isSelected && <Ionicons name="checkmark-circle" size={13} color={Colors.primary} />}
                     </TouchableOpacity>
                   );
                 })}
@@ -504,7 +506,7 @@ export default function ItemFilterSheet({
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => onApply(draft)}
-              className="flex-[2] h-12 bg-[#DC2626] rounded-xl items-center justify-center shadow-sm"
+              className="flex-[2] h-12 bg-primary rounded-xl items-center justify-center shadow-sm"
             >
               <Text className="text-white font-bold text-sm font-heading">
                 นำไปใช้

@@ -5,6 +5,8 @@ import { Text, TouchableOpacity, View } from 'react-native';
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface DeviceCatalogTableProps {
   type: 'types' | 'brands' | 'models';
   title: string;
@@ -90,7 +92,7 @@ export default function DeviceCatalogTable({
                 {type === 'types' && (
                   <View className="flex-row items-center gap-2.5">
                     <View className="w-8 h-8 rounded-lg bg-red-50 border border-red-100 items-center justify-center">
-                      <Ionicons name="hardware-chip-outline" size={16} color="#DC2626" />
+                      <Ionicons name="hardware-chip-outline" size={16} color={Colors.primary} />
                     </View>
                     <Text className="text-sm font-bold text-slate-800 font-heading" numberOfLines={1}>
                       {item.device_type_name}
@@ -190,7 +192,7 @@ export default function DeviceCatalogTable({
                   activeOpacity={0.7}
                   className="w-8 h-8 rounded-lg bg-red-50 border border-red-200 items-center justify-center active:bg-red-100"
                 >
-                  <Ionicons name="trash-outline" size={14} color="#DC2626" />
+                  <Ionicons name="trash-outline" size={14} color={Colors.primary} />
                 </TouchableOpacity>
               </View>
             </View>

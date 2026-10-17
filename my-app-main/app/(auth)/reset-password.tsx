@@ -21,6 +21,8 @@ import { useAlert } from '@/hooks/use-alert';
 // 3. Auth helpers
 import { resetPassword } from '@/lib/auth';
 
+import { Colors } from '@/constants/theme';
+
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const searchParams = useLocalSearchParams();
@@ -78,13 +80,13 @@ export default function ResetPasswordScreen() {
     return (
       <SafeAreaView className="flex-1 justify-center items-center bg-white">
         <Stack.Screen options={{ headerShown: false }} />
-        <ActivityIndicator size="large" color="#D32F2F" />
+        <ActivityIndicator size="large" color={Colors.primary} />
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView className="flex-1 bg-[#D32F2F]">
+    <SafeAreaView className="flex-1 bg-primary">
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar barStyle="light-content" backgroundColor="#cc292b" />
 
@@ -98,7 +100,7 @@ export default function ResetPasswordScreen() {
           keyboardShouldPersistTaps="handled"
         >
           {/* Header Section */}
-          <View className="bg-[#D32F2F] h-[220px] justify-center items-center relative overflow-hidden">
+          <View className="bg-primary h-[220px] justify-center items-center relative overflow-hidden">
             <View className="absolute w-[260px] h-[260px] rounded-full bg-white/5 -top-[60px] -left-[40px]" />
             <View className="absolute w-[180px] h-[180px] rounded-full bg-white/5 -bottom-[50px] -right-[30px]" />
 
@@ -117,7 +119,7 @@ export default function ResetPasswordScreen() {
             <View className="mb-5">
               <Text className="text-sm text-slate-500 mb-2 font-semibold">รหัสผ่านใหม่ (New Password)</Text>
               <View
-                className={`flex-row items-center bg-white border rounded-xl px-4 h-[52px] ${focusedField === 'password' ? 'border-[#D32F2F]' : 'border-slate-200'}`}
+                className={`flex-row items-center bg-white border rounded-xl px-4 h-[52px] ${focusedField === 'password' ? 'border-primary' : 'border-slate-200'}`}
               >
                 <Ionicons name="lock-closed-outline" size={20} color="#64748b" className="mr-2.5" />
                 <TextInput
@@ -148,7 +150,7 @@ export default function ResetPasswordScreen() {
             <View className="mb-5">
               <Text className="text-sm text-slate-500 mb-2 font-semibold">ยืนยันรหัสผ่านใหม่ (Confirm New Password)</Text>
               <View
-                className={`flex-row items-center bg-white border rounded-xl px-4 h-[52px] ${focusedField === 'confirmPassword' ? 'border-[#D32F2F]' : 'border-slate-200'}`}
+                className={`flex-row items-center bg-white border rounded-xl px-4 h-[52px] ${focusedField === 'confirmPassword' ? 'border-primary' : 'border-slate-200'}`}
               >
                 <Ionicons name="lock-closed-outline" size={20} color="#64748b" className="mr-2.5" />
                 <TextInput
@@ -177,7 +179,7 @@ export default function ResetPasswordScreen() {
 
             {/* Submit Button */}
             <TouchableOpacity
-              className={`bg-[#DC2626] rounded-xl h-[52px] justify-center items-center mt-3 shadow-lg shadow-[#DC2626]/20 elevation-4 ${loading ? 'opacity-80' : ''}`}
+              className={`bg-primary rounded-xl h-[52px] justify-center items-center mt-3 shadow-lg shadow-primary/20 elevation-4 ${loading ? 'opacity-80' : ''}`}
               onPress={handleResetPassword}
               disabled={loading}
               activeOpacity={0.8}

@@ -5,6 +5,8 @@ import { ActivityIndicator, Modal, Text, TouchableOpacity, View } from 'react-na
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface ConfirmLogoutModalProps {
   visible: boolean;
   userName?: string;
@@ -41,7 +43,7 @@ export default function ConfirmLogoutModal({
         <View className="w-full max-w-[340px] bg-white rounded-2xl p-6 items-center shadow-xl shadow-black/20 elevation-10">
           {/* Logout Icon Container */}
           <View className="w-14 h-14 rounded-full bg-red-50 border border-red-100 justify-center items-center mb-3.5">
-            <Ionicons name="log-out-outline" size={28} color="#DC2626" />
+            <Ionicons name="log-out-outline" size={28} color={Colors.primary} />
           </View>
 
           {/* Title */}
@@ -84,7 +86,7 @@ export default function ConfirmLogoutModal({
 
             <TouchableOpacity
               disabled={loading}
-              className="flex-1 bg-[#DC2626] border border-red-700 h-12 rounded-xl justify-center items-center active:opacity-90 shadow-sm shadow-red-300"
+              className="flex-1 bg-primary border border-red-700 h-12 rounded-xl justify-center items-center active:opacity-90 shadow-sm shadow-red-300"
               onPress={onConfirm}
               activeOpacity={0.8}
             >

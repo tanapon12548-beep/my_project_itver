@@ -28,6 +28,8 @@ import RepairTrendChart from '@/components/Shared_Dashboard/RepairTrendChart';
 import RevenueTrendChart from '@/components/Shared_Dashboard/RevenueTrendChart';
 import WorkActivityChart, { type WorkActivityMember } from '@/components/Shared_Dashboard/WorkActivityChart';
 
+import { Colors } from '@/constants/theme';
+
 interface DashboardScreenProps {
   /** 'staff' or 'manager' — passed to getDashboardMetrics */
   role: 'staff' | 'manager';
@@ -241,8 +243,8 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
               onPress={() => router.push(role === 'manager' ? '/(meneger)/repairs' : '/(staff)/repairs')}
               className="flex-row items-center gap-1"
             >
-              <Text className="text-xs font-bold text-[#DC2626] font-heading">ดูทั้งหมด</Text>
-              <Ionicons name="chevron-forward" size={12} color="#DC2626" />
+              <Text className="text-xs font-bold text-primary font-heading">ดูทั้งหมด</Text>
+              <Ionicons name="chevron-forward" size={12} color={Colors.primary} />
             </TouchableOpacity>
           </View>
 

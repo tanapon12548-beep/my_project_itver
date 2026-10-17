@@ -23,6 +23,8 @@ import RepairDetailsModal from '@/components/Shared_Repairs/RepairDetailsModal';
 import { useRepairJobs } from './useRepairJobs';
 import type { RepairItem } from './types';
 
+import { Colors } from '@/constants/theme';
+
 type RepairSortMode = 'latest' | 'oldest' | 'price';
 
 const sortOptions: { key: RepairSortMode; label: string }[] = [
@@ -181,14 +183,14 @@ export default function RepairListScreen({
             accessibilityRole="button"
             accessibilityLabel={filterDate ? 'เปลี่ยนวันที่กรอง' : 'เลือกวันที่กรอง'}
             className={`min-h-[48px] px-3.5 rounded-2xl border flex-row items-center justify-center gap-1.5 ${filterDate
-              ? 'bg-red-50 border-[#DC2626]'
+              ? 'bg-red-50 border-primary'
               : 'bg-white border-slate-200'
               }`}
           >
             <Ionicons
               name="calendar-outline"
               size={19}
-              color={filterDate ? '#DC2626' : '#64748B'}
+              color={filterDate ? Colors.primary : '#64748B'}
             />
             <Text
               className={`text-[13px] font-bold ${filterDate ? 'text-red-700' : 'text-slate-600'
@@ -204,7 +206,7 @@ export default function RepairListScreen({
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 accessibilityLabel="ล้างวันที่กรอง"
               >
-                <Ionicons name="close-circle" size={16} color="#DC2626" />
+                <Ionicons name="close-circle" size={16} color={Colors.primary} />
               </TouchableOpacity>
             )}
           </TouchableOpacity>
@@ -214,7 +216,7 @@ export default function RepairListScreen({
         {activeFilterSummary.length > 0 && (
           <View className="mb-3 flex-row items-center justify-between rounded-2xl border border-red-200 bg-red-50 px-3.5 py-2.5">
             <View className="flex-1 flex-row items-center gap-1.5 pr-2">
-              <Ionicons name="filter-circle" size={19} color="#DC2626" />
+              <Ionicons name="filter-circle" size={19} color={Colors.primary} />
               <Text className="flex-1 text-[13px] font-medium text-red-800" numberOfLines={2}>
                 {activeFilterSummary.join(' · ')}
               </Text>
@@ -409,7 +411,7 @@ export default function RepairListScreen({
         {/* Main List Area */}
         {isLoading ? (
           <View className="flex-1 justify-center items-center py-10">
-            <ActivityIndicator size="large" color="#DC2626" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text className="mt-3 text-[15px] text-slate-500">
               กำลังโหลดรายการซ่อม...
             </Text>
@@ -422,7 +424,7 @@ export default function RepairListScreen({
               <RefreshControl
                 refreshing={isRefreshing}
                 onRefresh={handleRefresh}
-                colors={['#DC2626']}
+                colors={[Colors.primary]}
               />
             }
           >

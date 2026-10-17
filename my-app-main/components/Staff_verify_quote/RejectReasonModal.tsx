@@ -30,7 +30,7 @@ export default function RejectReasonModal({
         <View className="w-full bg-white rounded-[20px] p-5 gap-3.5 shadow-lg shadow-black/20 elevation-5">
           {/* Header */}
           <View className="flex-row justify-between items-center border-b border-slate-200 pb-3">
-            <Text className="text-[17px] font-bold text-[#DC2626]">ตีกลับใบเสนอราคาให้ช่าง</Text>
+            <Text className="text-[17px] font-bold text-primary">ตีกลับใบเสนอราคาให้ช่าง</Text>
             <TouchableOpacity onPress={onClose} className="p-1">
               <Ionicons name="close" size={22} color="#94A3B8" />
             </TouchableOpacity>
@@ -60,7 +60,7 @@ export default function RejectReasonModal({
               <Text className="text-sm font-bold text-slate-800">ยกเลิก</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity className="flex-[1.2] h-11 rounded-full bg-[#DC2626] justify-center items-center" onPress={handleConfirm}>
+            <TouchableOpacity className="flex-[1.2] h-11 rounded-full bg-primary justify-center items-center" onPress={handleConfirm}>
               <Text className="text-sm font-bold text-white">ยืนยันตีกลับ</Text>
             </TouchableOpacity>
           </View>

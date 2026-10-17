@@ -45,6 +45,8 @@ import BrandModal from '@/components/Meneger_devices/BrandModal';
 import ModelModal from '@/components/Meneger_devices/ModelModal';
 import DeviceCatalogFilterSheet from '@/components/Meneger_devices/DeviceCatalogFilterSheet';
 
+import { Colors } from '@/constants/theme';
+
 type ActiveTab = 'types' | 'brands' | 'models';
 
 export default function DeviceCatalogScreen() {
@@ -360,7 +362,7 @@ export default function DeviceCatalogScreen() {
         {activeFilterCount > 0 && (
           <View className="flex-row items-center flex-wrap mb-3 bg-white p-2.5 rounded-xl border border-slate-200">
             <View className="flex-row items-center mr-2 mb-1">
-              <Ionicons name="funnel" size={13} color="#DC2626" />
+              <Ionicons name="funnel" size={13} color={Colors.primary} />
               <Text className="text-[11px] font-bold text-slate-700 font-heading ml-1">
                 ตัวกรอง:
               </Text>
@@ -375,7 +377,7 @@ export default function DeviceCatalogScreen() {
                   onPress={() => handleSelectQuickType(null)}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Ionicons name="close-circle" size={14} color="#DC2626" />
+                  <Ionicons name="close-circle" size={14} color={Colors.primary} />
                 </TouchableOpacity>
               </View>
             )}
@@ -418,7 +420,7 @@ export default function DeviceCatalogScreen() {
             activeOpacity={0.8}
           >
             <Text
-              className={`font-body text-xs ${activeTab === 'types' ? 'font-bold text-[#DC2626] font-heading' : 'text-slate-600'
+              className={`font-body text-xs ${activeTab === 'types' ? 'font-bold text-primary font-heading' : 'text-slate-600'
                 }`}
             >
               ประเภท ({filteredDeviceTypes.length})
@@ -432,7 +434,7 @@ export default function DeviceCatalogScreen() {
             activeOpacity={0.8}
           >
             <Text
-              className={`font-body text-xs ${activeTab === 'brands' ? 'font-bold text-[#DC2626] font-heading' : 'text-slate-600'
+              className={`font-body text-xs ${activeTab === 'brands' ? 'font-bold text-primary font-heading' : 'text-slate-600'
                 }`}
             >
               ยี่ห้อ ({filteredBrands.length})
@@ -446,7 +448,7 @@ export default function DeviceCatalogScreen() {
             activeOpacity={0.8}
           >
             <Text
-              className={`font-body text-xs ${activeTab === 'models' ? 'font-bold text-[#DC2626] font-heading' : 'text-slate-600'
+              className={`font-body text-xs ${activeTab === 'models' ? 'font-bold text-primary font-heading' : 'text-slate-600'
                 }`}
             >
               รุ่น ({filteredModels.length})
@@ -457,7 +459,7 @@ export default function DeviceCatalogScreen() {
         {/* Table Content */}
         {isLoading ? (
           <View className="flex-1 justify-center items-center py-10">
-            <ActivityIndicator size="large" color="#D62828" />
+            <ActivityIndicator size="large" color={Colors.primary} />
             <Text className="mt-3 font-body text-sm text-text-light">
               กำลังโหลดข้อมูลแคตตาล็อกอุปกรณ์...
             </Text>

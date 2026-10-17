@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { Colors } from '@/constants/theme';
+
 interface PaymentFooterButtonsProps {
   isStaff: boolean;
   paymentVerified: boolean;
@@ -48,7 +50,7 @@ export default function PaymentFooterButtons({
               <Text className="text-slate-700 font-bold font-heading text-sm">ย้อนกลับ</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              className="flex-1 bg-[#D32F2F] py-3.5 rounded-full items-center shadow-sm active:opacity-90"
+              className="flex-1 bg-primary py-3.5 rounded-full items-center shadow-sm active:opacity-90"
               onPress={onGoToHandover}
             >
               <Text className="text-white font-bold font-heading text-sm">ไปหน้าส่งมอบเครื่อง</Text>
@@ -70,7 +72,7 @@ export default function PaymentFooterButtons({
                 <Ionicons
                   name="close-circle-outline"
                   size={18}
-                  color={isBusy || showRejectInput ? '#94a3b8' : '#dc2626'}
+                  color={isBusy || showRejectInput ? '#94a3b8' : Colors.primary}
                 />
                 <Text
                   className={`font-bold font-heading text-sm ${
@@ -146,7 +148,7 @@ export default function PaymentFooterButtons({
       ) : (
         <TouchableOpacity
           className={`w-full py-4 rounded-full items-center shadow-sm ${
-            isBusy ? 'bg-red-400 opacity-60' : 'bg-[#D32F2F] active:opacity-90'
+            isBusy ? 'bg-red-400 opacity-60' : 'bg-primary active:opacity-90'
           }`}
           onPress={onSubmitPayment}
           disabled={isBusy}

@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { getDeviceTypeSuffix } from '@/lib/deviceTypeLabel';
 
+import { Colors } from '@/constants/theme';
+
 export interface PartUsageItem {
   item_id: number | string;
   item_name: string;
@@ -35,7 +37,7 @@ export default function PartsUsageChart({
   const totalPartsUsed = data.reduce((sum, item) => sum + (item.total_quantity || 0), 0);
   const maxQty = data.length > 0 ? Math.max(...data.map((d) => d.total_quantity || 1)) : 1;
 
-  const BAR_COLORS = ['#DC2626', '#EA580C', '#D97706', '#0284C7', '#6366F1', '#10B981'];
+  const BAR_COLORS = [Colors.primary, '#EA580C', '#D97706', '#0284C7', '#6366F1', '#10B981'];
 
   return (
     <View className="bg-white p-4 mx-4 mb-4 rounded-2xl border border-slate-200 shadow-sm">
