@@ -110,9 +110,9 @@ export function getRoleName(user: User): string {
 export function getRoleRedirectPath(user: User): string {
   const role = getRoleName(user);
   switch (role) {
-    case 'manager': return '/(meneger)';
+    case 'manager': return '/(manager)';
     case 'staff': return '/(staff)';
-    case 'tech': return '/(technicain)';
+    case 'tech': return '/(technician)';
     case 'customer': return '/(customer)';
     default: return '/(customer)';
   }

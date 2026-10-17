@@ -23,7 +23,7 @@ interface FloatingActionButtonProps {
 
 /**
  * Shared floating action button.
- * Replaces Meneger_item/FloatingButton and Technicain_detail/FloatingEditButton.
+ * Replaces Manager_item/FloatingButton and Technician_detail/FloatingEditButton.
  */
 export default function FloatingActionButton({
   onPress,

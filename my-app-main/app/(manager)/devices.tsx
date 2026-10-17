@@ -39,11 +39,11 @@ import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 import { useAlert } from '@/hooks/use-alert';
 
 // 5. Manager Device Components
-import DeviceCatalogTable from '@/components/Meneger_devices/Table';
-import DeviceTypeModal from '@/components/Meneger_devices/DeviceTypeModal';
-import BrandModal from '@/components/Meneger_devices/BrandModal';
-import ModelModal from '@/components/Meneger_devices/ModelModal';
-import DeviceCatalogFilterSheet from '@/components/Meneger_devices/DeviceCatalogFilterSheet';
+import DeviceCatalogTable from '@/components/Manager_devices/Table';
+import DeviceTypeModal from '@/components/Manager_devices/DeviceTypeModal';
+import BrandModal from '@/components/Manager_devices/BrandModal';
+import ModelModal from '@/components/Manager_devices/ModelModal';
+import DeviceCatalogFilterSheet from '@/components/Manager_devices/DeviceCatalogFilterSheet';
 
 import { Colors } from '@/constants/theme';
 

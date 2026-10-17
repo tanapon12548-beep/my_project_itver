@@ -20,14 +20,14 @@ import Header from '@/components/Shared_Dashboard/Header';
 import SearchFilterBar from '@/components/ui/SearchFilterBar';
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 import { useAlert } from '@/hooks/use-alert';
-import QuotationDetailModal from '@/components/Technicain_detail/QuotationDetailModal';
+import QuotationDetailModal from '@/components/Technician_detail/QuotationDetailModal';
 
 // Sub-components
-import QuotationFilterTabs from '@/components/Technicain_quotation/QuotationFilterTabs';
-import QuotationCard from '@/components/Technicain_quotation/QuotationCard';
-import QuotationTable from '@/components/Technicain_quotation/QuotationTable';
-import QuotationEmptyState from '@/components/Technicain_quotation/QuotationEmptyState';
-import { canEditOrDeleteQuote } from '@/components/Technicain_quotation/QuotationStatusBadge';
+import QuotationFilterTabs from '@/components/Technician_quotation/QuotationFilterTabs';
+import QuotationCard from '@/components/Technician_quotation/QuotationCard';
+import QuotationTable from '@/components/Technician_quotation/QuotationTable';
+import QuotationEmptyState from '@/components/Technician_quotation/QuotationEmptyState';
+import { canEditOrDeleteQuote } from '@/components/Technician_quotation/QuotationStatusBadge';
 
 // Types
 import type { QuotationFilter, QuotationItem } from '@/types/quotation';

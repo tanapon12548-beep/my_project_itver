@@ -18,8 +18,8 @@ import { updateStaff, getStaff, deleteStaff } from '@/lib/api';
 // 4. Components
 import Header from '@/components/Shared_Dashboard/Header';
 import SearchFilterBar from '@/components/ui/SearchFilterBar';
-import EditStaffModal from '@/components/Meneger_staff/EditStaffModal';
-import StaffTable from '@/components/Meneger_staff/Table';
+import EditStaffModal from '@/components/Manager_staff/EditStaffModal';
+import StaffTable from '@/components/Manager_staff/Table';
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 import { useAlert } from '@/hooks/use-alert';
 

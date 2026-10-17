@@ -240,7 +240,7 @@ export default function DashboardScreen({ role }: DashboardScreenProps) {
               </Text>
             </View>
             <TouchableOpacity
-              onPress={() => router.push(role === 'manager' ? '/(meneger)/repairs' : '/(staff)/repairs')}
+              onPress={() => router.push(role === 'manager' ? '/(manager)/repairs' : '/(staff)/repairs')}
               className="flex-row items-center gap-1"
             >
               <Text className="text-xs font-bold text-primary font-heading">ดูทั้งหมด</Text>

@@ -65,8 +65,8 @@ export default function RootLayout() {
         <Stack.Screen name="(auth)/forgot-password" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)/reset-password" options={{ headerShown: false }} />
         <Stack.Screen name="(customer)" options={{ headerShown: false }} />
-        <Stack.Screen name="(meneger)" options={{ headerShown: false }} />
-        <Stack.Screen name="(technicain)" options={{ headerShown: false }} />
+        <Stack.Screen name="(manager)" options={{ headerShown: false }} />
+        <Stack.Screen name="(technician)" options={{ headerShown: false }} />
         <Stack.Screen name="(staff)" options={{ headerShown: false }} />
         <Stack.Screen name="detail" options={{ headerShown: false }} />
         <Stack.Screen name="make-quote" options={{ headerShown: false }} />

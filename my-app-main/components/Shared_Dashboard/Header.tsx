@@ -67,10 +67,10 @@ export default function Header({
     const role = getRoleName(currentUser);
     switch (role) {
       case 'manager':
-        router.push('/(meneger)/profile' as any);
+        router.push('/(manager)/profile' as any);
         break;
       case 'tech':
-        router.push('/(technicain)/profile' as any);
+        router.push('/(technician)/profile' as any);
         break;
       case 'staff':
         router.push('/(staff)/profile' as any);

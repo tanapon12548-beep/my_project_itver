@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { getQuotation } from '@/lib/api';
-import { canEditOrDeleteQuote } from '../Technicain_quotation/QuotationStatusBadge';
+import { canEditOrDeleteQuote } from '../Technician_quotation/QuotationStatusBadge';
 
 import { Colors } from '@/constants/theme';
 

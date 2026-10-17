@@ -17,11 +17,11 @@ import { deleteItem, getItems } from '@/lib/api';
 
 // 4. Components
 import Header from '@/components/Shared_Dashboard/Header';
-import AddPartModal from '@/components/Meneger_item/AddPartModal';
+import AddPartModal from '@/components/Manager_item/AddPartModal';
 import FloatingActionButton from '@/components/ui/FloatingActionButton';
-import PartDetailsModal from '@/components/Meneger_item/PartDetailsModal';
+import PartDetailsModal from '@/components/Manager_item/PartDetailsModal';
 import SearchFilterBar from '@/components/ui/SearchFilterBar';
-import PartTable from '@/components/Meneger_item/Table';
+import PartTable from '@/components/Manager_item/Table';
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 import { useAlert } from '@/hooks/use-alert';
 import ItemFilterSheet, {
@@ -30,7 +30,7 @@ import ItemFilterSheet, {
   PARTS_CATEGORIES,
   SERVICES_CATEGORIES,
   getItemSubcategory,
-} from '@/components/Meneger_item/ItemFilterSheet';
+} from '@/components/Manager_item/ItemFilterSheet';
 import type { InventoryItem } from '@/types/item';
 
 import { Colors } from '@/constants/theme';

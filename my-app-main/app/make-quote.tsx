@@ -20,9 +20,9 @@ import { createQuotation, getQuotation, getRepair, logRepairJobDetail, updateQuo
 import { CANCEL_INSPECTION_FEE } from '@/constants/status';
 
 // 4. Components
-import PartsCostCard from '@/components/Technicain_make_quote/PartsCostCard';
-import ServiceFeeCard from '@/components/Technicain_make_quote/ServiceFeeCard';
-import SymptomCard from '@/components/Technicain_make_quote/SymptomCard';
+import PartsCostCard from '@/components/Technician_make_quote/PartsCostCard';
+import ServiceFeeCard from '@/components/Technician_make_quote/ServiceFeeCard';
+import SymptomCard from '@/components/Technician_make_quote/SymptomCard';
 import { useAlert } from '@/hooks/use-alert';
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 
@@ -456,7 +456,7 @@ export default function MakeQuoteScreen() {
               type: 'success',
               confirmText: 'กลับไปหน้ารายการใบเสนอราคา',
               onConfirm: () => {
-                router.replace('/(technicain)/repairing');
+                router.replace('/(technician)/repairing');
               },
             });
           }, 100);

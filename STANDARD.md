@@ -14,7 +14,7 @@
 | **Phase 1** | Back-end — แก้ค่าคงที่/สิทธิ์/รหัสตอบกลับ/ชื่อฟังก์ชันให้ตรงมาตรฐาน | ✅ ทำแล้ว |
 | **Phase 2a** | Front-end — รวมระบบแจ้งเตือนเป็น hook กลาง `useAlert()` ตัวเดียวทั้งโปรเจกต์ | ✅ ทำแล้ว |
 | **Phase 2b** | Front-end — ย้ายสีที่ hardcode (`#DC2626`/`#D32F2F`/`#D62828`) ให้มาจาก `theme.ts` + โทเคน Tailwind | ✅ ทำแล้ว |
-| **Phase 3** | Front-end — เปลี่ยนชื่อโฟลเดอร์/ไฟล์ที่สะกดผิด (`Meneger_*`, `Technicain_*`) | ⏳ รอทำ |
+| **Phase 3** | Front-end — แก้ชื่อโฟลเดอร์/กลุ่มเส้นทางที่สะกดผิด (`Meneger_*`/`(meneger)` → `Manager_*`/`(manager)`, `Technicain_*`/`(technicain)` → `Technician_*`/`(technician)`) | ✅ ทำแล้ว |
 | **Phase 4** | เอกสาร — ซิงก์ `README.md` / `AGENTS.md` ให้ตรงความจริง | ⏳ รอทำ |
 
 **หลักการสำคัญ:** การปรับทุกเฟส **ห้ามเปลี่ยนพฤติกรรมที่ผู้ใช้เห็น** ยกเว้นรายการที่ระบุว่าเป็น "แก้บั๊ก/ปิดช่องโหว่" ไว้ชัดเจน
@@ -160,9 +160,9 @@
 - **FE-THM-03**: ฟอนต์ใช้คลาส `font-heading` / `font-body` เท่านั้น
 
 ### 3.5 โครงสร้างไฟล์/โฟลเดอร์
-- **FE-STR-01**: หน้าจอใน `app/<group>/` ใช้ `<group>` = `(auth)` | `(customer)` | `(staff)` | `(technicain)` | `(meneger)`
-- **FE-STR-02**: คอมโพเนนต์แยกตามโดเมน: `Staff_*`, `Technicain_*`, `Meneger_*`, `Customer*`, `Shared_*`
-  → ชื่อที่สะกดผิด (`Meneger`, `Technicain`) จะแก้ใน **Phase 3** (ต้องแก้ import ทั้งโปรเจกต์)
+- **FE-STR-01**: หน้าจอใน `app/<group>/` ใช้ `<group>` = `(auth)` | `(customer)` | `(staff)` | `(technician)` | `(manager)`
+- **FE-STR-02**: คอมโพเนนต์แยกตามโดเมน: `Staff_*`, `Technician_*`, `Manager_*`, `Customer*`, `Shared_*`
+  → ชื่อที่สะกดผิด (`Meneger`, `Technicain`) แก้แล้วใน **Phase 3** (โฟลเดอร์ + import ทั้งโปรเจกต์)
 - **FE-STR-03**: ไฟล์ `.tsx` = มี JSX, `.ts` = ไม่มี JSX (types/โลจิก)
 
 ### 3.6 สถานะหน้าจอ
@@ -201,7 +201,7 @@
 |---|---|---|---|---|---|---|
 | สมัครลูกค้า | `(auth)/register.tsx` | `lib/auth.ts: register()` | `POST /api/auth/register` | `auth.register` | `profiles` | role = Customer(4), รหัสผ่าน ≥8 มี A-Z/a-z/0-9 |
 | เข้าสู่ระบบ | `(auth)/login.tsx` | `lib/auth.ts: login()` | `POST /api/auth/login` | `auth.login` | `profiles` | คืน JWT + user, rate limit 50/15 นาที |
-| แยกเส้นทางตามบทบาท | `app/index.tsx` | `getMe()` | `GET /api/auth/me` | `auth.getMe` | `profiles`, `roles` | Manager → `(meneger)`, อื่น ๆ → `(tabs)` |
+| แยกเส้นทางตามบทบาท | `app/index.tsx` | `getMe()` | `GET /api/auth/me` | `auth.getMe` | `profiles`, `roles` | Manager → `(manager)`, อื่น ๆ → `(tabs)` |
 | ลืมรหัสผ่าน | `(auth)/forgot-password.tsx` | `lib/auth.ts: forgotPassword()` | `POST /api/auth/forgot-password` | `auth.forgotPassword` | `password_reset_tokens` | ยืนยัน **อีเมล+เบอร์โทร** ต้องตรง, token อายุ 15 นาที |
 | ตั้งรหัสใหม่ | `(auth)/reset-password.tsx` | `lib/auth.ts: resetPassword()` | `POST /api/auth/reset-password` | `auth.resetPassword` | `password_reset_tokens`, `profiles` | token ต้อง `used=false` และไม่หมดอายุ → แล้วปิด `used=true` |
 | แก้ข้อมูลส่วนตัว | `profile.tsx` (ทุกกลุ่ม) | `updateProfile()` | `PUT /api/auth/profile` | `auth.updateProfile` | `profiles` | |
@@ -217,16 +217,16 @@
 ### FLOW-03 ตรวจเช็คและวินิจฉัย
 | ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
 |---|---|---|---|---|---|---|
-| เริ่มตรวจเช็ค | `(technicain)/checking.tsx` | `updateRepairStatus()` | `PATCH /api/repairs/:id/status` | `repair.updateStatus` | `repair_job`, `repair_job_detail` | 1 → **2** |
+| เริ่มตรวจเช็ค | `(technician)/checking.tsx` | `updateRepairStatus()` | `PATCH /api/repairs/:id/status` | `repair.updateStatus` | `repair_job`, `repair_job_detail` | 1 → **2** |
 | บันทึกอาการที่ตรวจพบ | `make-quote.tsx` / `job-detail.tsx` | `updateRepair()` | `PUT /api/repairs/:id` | `repair.update` | `repair_job.actual_symptom` | |
 
 ### FLOW-04 ออก/แก้ไขใบเสนอราคา
 | ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
 |---|---|---|---|---|---|---|
-| เลือกอะไหล่/ค่าบริการ | `make-quote.tsx` + `Technicain_make_quote/*` | `getItems()` | `GET /api/items` | `item.getAll` | `item` | ดึงจากแคตตาล็อกเท่านั้น |
+| เลือกอะไหล่/ค่าบริการ | `make-quote.tsx` + `Technician_make_quote/*` | `getItems()` | `GET /api/items` | `item.getAll` | `item` | ดึงจากแคตตาล็อกเท่านั้น |
 | ส่งใบเสนอราคา | `make-quote.tsx` | `createQuotation()` | `POST /api/quotations` | `quotation.create` | `quotation`, `quotation_details` | **201**; snapshot `unit_cost` = `item.cost_price`; มีค่าบริการอย่างน้อย 1 รายการถ้ามีอะไหล่; งาน → **4 รออนุมัติ** |
 | แก้ไขใบเสนอราคา | `make-quote.tsx` | `updateQuotation()` | `PUT /api/quotations/:id` | `quotation.update` | `quotation`, `quotation_details` | แทนรายการเดิมทั้งชุด |
-| ลบใบเสนอราคา | `(technicain)/repairing.tsx` | `deleteQuotation()` | `DELETE /api/quotations/:id` | `quotation.remove` | `quotation` | งานถอยกลับเป็น **3 กำลังทำใบเสนอราคา** |
+| ลบใบเสนอราคา | `(technician)/repairing.tsx` | `deleteQuotation()` | `DELETE /api/quotations/:id` | `quotation.remove` | `quotation` | งานถอยกลับเป็น **3 กำลังทำใบเสนอราคา** |
 
 ### FLOW-05 อนุมัติ / ขอแก้ไข / ยกเลิกใบเสนอราคา (ลูกค้า)
 | ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
@@ -239,8 +239,8 @@
 ### FLOW-06 ซ่อมและส่งต่อรอชำระ
 | ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
 |---|---|---|---|---|---|---|
-| เริ่มซ่อม | `(technicain)/repairing.tsx` | `logRepairJobDetail()` | `POST /api/repairs/:id/detail` | `repair.addDetail` | `repair_job_detail` | `action_type_id = 4` |
-| ซ่อมเสร็จ | `(technicain)/repairing.tsx` | `updateRepairStatus(7)` | `PATCH /api/repairs/:id/status` | `repair.updateStatus` | `repair_job` | 5 → **7 รอชำระ** + บันทึก `repaired_at` |
+| เริ่มซ่อม | `(technician)/repairing.tsx` | `logRepairJobDetail()` | `POST /api/repairs/:id/detail` | `repair.addDetail` | `repair_job_detail` | `action_type_id = 4` |
+| ซ่อมเสร็จ | `(technician)/repairing.tsx` | `updateRepairStatus(7)` | `PATCH /api/repairs/:id/status` | `repair.updateStatus` | `repair_job` | 5 → **7 รอชำระ** + บันทึก `repaired_at` |
 
 ### FLOW-07 ชำระเงินและตรวจสอบ (สำคัญ: ทุกอย่างต้องยืนยันได้)
 | ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
@@ -276,10 +276,10 @@
 ### FLOW-11 จัดการข้อมูล (Manager)
 | ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
 |---|---|---|---|---|---|---|
-| อะไหล่/ค่าบริการ | `(meneger)/item.tsx`, `Meneger_item/*` | `getItems/createItem/updateItem/deleteItem` | `/api/items` | `item.*` | `item` | CRUD; ต้องมี `cost_price` เพื่อคิดกำไร; **Phase 1 ปิดสิทธิ์เป็น Manager** |
-| ประเภทเครื่อง/ยี่ห้อ/รุ่น | `(meneger)/devices.tsx`, `Meneger_devices/*` | `*CatalogDeviceType/Brand/Model` | `/api/catalog/*` | `catalog.*` | `device_types`, `brands`, `device_models` | ลบไม่ได้ถ้ามีเครื่อง/รุ่นผูกอยู่ |
-| พนักงาน | `(meneger)/staff.tsx`, `Meneger_staff/*` | `getStaff/updateStaff/deleteStaff` | `/api/staff` | `staff.*` | `profiles` | ลบพนักงาน → ลบ token รีเซ็ตรหัสด้วย |
-| รายการงานซ่อม | `(meneger)/repairs.tsx` | `getRepairs()` | `GET /api/repairs` | `repair.getAll` | `repair_jobs_view` | อ่านเท่านั้น (ไม่มีปุ่มลบงานบนหน้าจอ) |
+| อะไหล่/ค่าบริการ | `(manager)/item.tsx`, `Manager_item/*` | `getItems/createItem/updateItem/deleteItem` | `/api/items` | `item.*` | `item` | CRUD; ต้องมี `cost_price` เพื่อคิดกำไร; **Phase 1 ปิดสิทธิ์เป็น Manager** |
+| ประเภทเครื่อง/ยี่ห้อ/รุ่น | `(manager)/devices.tsx`, `Manager_devices/*` | `*CatalogDeviceType/Brand/Model` | `/api/catalog/*` | `catalog.*` | `device_types`, `brands`, `device_models` | ลบไม่ได้ถ้ามีเครื่อง/รุ่นผูกอยู่ |
+| พนักงาน | `(manager)/staff.tsx`, `Manager_staff/*` | `getStaff/updateStaff/deleteStaff` | `/api/staff` | `staff.*` | `profiles` | ลบพนักงาน → ลบ token รีเซ็ตรหัสด้วย |
+| รายการงานซ่อม | `(manager)/repairs.tsx` | `getRepairs()` | `GET /api/repairs` | `repair.getAll` | `repair_jobs_view` | อ่านเท่านั้น (ไม่มีปุ่มลบงานบนหน้าจอ) |
 
 ### FLOW-12 ความปลอดภัย (ทุกคำขอ)
 | ขั้น | ที่ทำงาน | กฎ |
@@ -303,7 +303,7 @@
 | ISS-05 | `repair.controller` + `staff.controller` มี alias ตายตัว `exports.delete = exports.remove` (ไม่มีใครเรียก) | ห้ามมี alias — ใช้ `remove` ชื่อเดียว | ✅ **แก้แล้ว (Phase 1)** |
 | ISS-06 | `showAlert` ถูกประกาศซ้ำ **14 ไฟล์** + `setAlertConfig` ตรง ๆ อีก 6 ไฟล์ + popup เขียนเองใน `slips.tsx` (รวม 20 ไฟล์, 4 signature, มี `'error'` ที่ไม่ใช่ค่ามาตรฐาน) | ใช้ hook กลาง `useAlert()` ตัวเดียว | ✅ **แก้แล้ว (Phase 2a)** — เหลือ `CustomAlert` ที่เดียวในระบบ (ใน hook) |
 | ISS-07 | สีแดง hardcode ปนกัน **3 เฉด** (`#DC2626`, `#D32F2F`, `#D62828`) ทั้งที่ `theme.ts` มี `Colors.primary` | อ้างจาก theme | ✅ **แก้แล้ว (Phase 2b)** — 279 จุดใน 84 ไฟล์ เหลือต้นทางที่ `theme.ts` + `tailwind.config.js` |
-| ISS-08 | โฟลเดอร์สะกดผิด `Meneger_*`, `Technicain_*` | `Manager_*`, `Technician_*` | ⏳ Phase 3 |
+| ISS-08 | โฟลเดอร์ + กลุ่มเส้นทางสะกดผิด `Meneger_*`, `Technicain_*`, `(meneger)`, `(technicain)` | `Manager_*`, `Technician_*`, `(manager)`, `(technician)` | ✅ **แก้แล้ว (Phase 3)** — 8 โฟลเดอร์ + 64 จุดอ้างอิงใน 13 ไฟล์ |
 | ISS-09 | SQL อยู่inline ใน 8 controller แต่แยก `queries/` แค่ 4 | งานยาว/ซ้ำ → ย้ายเข้า `queries/` | ⏳ รอพิจารณา |
 | ISS-10 | `AGENTS.md` ยังบอกว่าแอปใช้ Supabase query ตรง | ตัดออก/แก้ให้ตรงจริง | ⏳ Phase 4 |
 | ISS-11 | `quotation_status` มี id 5 ในฐานข้อมูล แต่ `constants.QUOTE_STATUS` ไม่มี | เพิ่มให้ครบ | ⏳ Phase 1.1 |
@@ -333,7 +333,11 @@
 3. `tailwind.config.js` — โทเคน `primary` จาก `#D62828` → `#DC2626` ให้ตรงกับ `Colors.primary` (เป็น "รวมเฉดแดง 3 → 1" ตามเจตนาของ ISS-07)
 4. ตรวจผล: `tsc --noEmit` = exit 0 · `eslint` = 4 error / 30 warning เท่าเดิม · grep ยืนยันไม่เหลือรหัสสีแบรนด์นอก `constants/theme.ts` และ `tailwind.config.js`
 
-**Phase 3 — Naming:** เปลี่ยนชื่อโฟลเดอร์/คอมโพเนนต์ `Meneger_*` → `Manager_*`, `Technicain_*` → `Technician_*` พร้อมแก้ import และทดสอบ `tsc`/`eslint`
+**Phase 3 — Naming (ทำแล้วรอบนี้)**
+1. `git mv` 8 โฟลเดอร์: `app/(meneger)` → `app/(manager)`, `app/(technicain)` → `app/(technician)`, `components/Meneger_{devices,item,staff}` → `Manager_*`, `components/Technicain_{detail,make_quote,quotation}` → `Technician_*`
+2. แก้จุดอ้างอิง **64 จุด ใน 13 ไฟล์**: import `@/components/Meneger_*|Technicain_*`, เส้นทาง `router.push/replace('/(meneger)/…' | '/(technicain)/…')`, `<Stack.Screen name="(meneger)|(technicain)">` ใน `app/_layout.tsx`, ค่าปลายทางใน `lib/auth.ts`, และคอมเมนต์
+3. ตรวจผล: `tsc --noEmit` = exit 0 · `eslint` = 4 error / 30 warning เท่าเดิม · grep ไม่เหลือคำสะกดผิดในโค้ด
+   *หมายเหตุ:* `.expo/types/router.d.ts` เป็นไฟล์ generate (gitignored) ที่ค้างสถานะระหว่างการ rename จึงลบทิ้ง — `expo start` ครั้งถัดไปจะสร้างใหม่ให้ตรง route ปัจจุบัน (ไม่มีผลต่อการรัน)
 
 **Phase 4 — Docs:** ซิงก์ `README.md`/`AGENTS.md` (`devices` tab, ไม่มี Supabase)
 

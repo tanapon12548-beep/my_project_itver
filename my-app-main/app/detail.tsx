@@ -19,12 +19,12 @@ import { getUser } from '@/lib/auth';
 import type { JobData } from '@/types/repair';
 
 // 4. Components
-import CustomerInfoCard from '@/components/Technicain_detail/CustomerInfoCard';
-import DetailActionButtons from '@/components/Technicain_detail/DetailActionButtons';
-import DeviceInfoCard from '@/components/Technicain_detail/DeviceInfoCard';
-import DocumentInfoCard from '@/components/Technicain_detail/DocumentInfoCard';
-import PaymentInfoCard from '@/components/Technicain_detail/PaymentInfoCard';
-import SignaturesCard from '@/components/Technicain_detail/SignaturesCard';
+import CustomerInfoCard from '@/components/Technician_detail/CustomerInfoCard';
+import DetailActionButtons from '@/components/Technician_detail/DetailActionButtons';
+import DeviceInfoCard from '@/components/Technician_detail/DeviceInfoCard';
+import DocumentInfoCard from '@/components/Technician_detail/DocumentInfoCard';
+import PaymentInfoCard from '@/components/Technician_detail/PaymentInfoCard';
+import SignaturesCard from '@/components/Technician_detail/SignaturesCard';
 import FloatingActionButton from '@/components/ui/FloatingActionButton';
 import { useAlert } from '@/hooks/use-alert';
 
@@ -390,9 +390,9 @@ export default function TechnicianDetailScreen() {
                   router.back();
                 } else {
                   if (currentRole === 'manager') {
-                    router.replace('/(meneger)/repairs');
+                    router.replace('/(manager)/repairs');
                   } else {
-                    router.replace('/(technicain)');
+                    router.replace('/(technician)');
                   }
                 }
               }}
