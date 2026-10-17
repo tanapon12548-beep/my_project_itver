@@ -34,7 +34,9 @@ import Header from '@/components/Shared_Dashboard/Header';
 import SearchFilterBar from '@/components/ui/SearchFilterBar';
 import FloatingActionButton from '@/components/ui/FloatingActionButton';
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
-import CustomAlert from '@/components/ui/CustomAlert';
+
+// 5. Hooks (มาตรฐานกลาง)
+import { useAlert } from '@/hooks/use-alert';
 
 // 5. Manager Device Components
 import DeviceCatalogTable from '@/components/Meneger_devices/Table';
@@ -84,26 +86,8 @@ export default function DeviceCatalogScreen() {
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Custom Alert State
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
-
-  const showAlert = (
-    title: string,
-    message: string,
-    type: 'success' | 'warning' | 'danger' | 'info' = 'info'
-  ) => {
-    setAlertConfig({ visible: true, title, message, type });
-  };
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   const fetchData = useCallback(async () => {
     setIsLoading(true);
@@ -123,7 +107,7 @@ export default function DeviceCatalogScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [showAlert]);
 
   useFocusEffect(
     useCallback(() => {
@@ -617,14 +601,8 @@ export default function DeviceCatalogScreen() {
         }}
       />
 
-      {/* CustomAlert Notifications */}
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
-      />
+      {/* การแจ้งเตือน (มาตรฐานกลาง) */}
+      {alertElement}
     </View>
   );
 }

@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 
 // 3. API helpers
 import { getRepair, verifyPayment } from '@/lib/api';
@@ -34,33 +34,8 @@ export default function ReceiptScreen() {
   const [loading, setLoading] = useState(true);
   const [isPrinting, setIsPrinting] = useState(false);
 
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-    onConfirm?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
-
-  const showAlert = (
-    title: string,
-    message: string,
-    type: 'success' | 'warning' | 'danger' | 'info' = 'danger',
-    onConfirm?: () => void
-  ) => {
-    setAlertConfig({
-      visible: true,
-      title,
-      message,
-      type,
-      onConfirm,
-    });
-  };
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   useEffect(() => {
     if (targetId) {
@@ -1004,16 +979,7 @@ export default function ReceiptScreen() {
           </TouchableOpacity>
         </View>
 
-        <CustomAlert
-          visible={alertConfig.visible}
-          title={alertConfig.title}
-          message={alertConfig.message}
-          type={alertConfig.type}
-          onConfirm={() => {
-            setAlertConfig((prev) => ({ ...prev, visible: false }));
-            alertConfig.onConfirm?.();
-          }}
-        />
+        {alertElement}
       </SafeAreaView>
     );
   }
@@ -1322,16 +1288,7 @@ export default function ReceiptScreen() {
         </View>
       </ScrollView>
 
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={() => {
-          setAlertConfig((prev) => ({ ...prev, visible: false }));
-          alertConfig.onConfirm?.();
-        }}
-      />
+      {alertElement}
     </SafeAreaView>
   );
 }

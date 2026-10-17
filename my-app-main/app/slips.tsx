@@ -16,6 +16,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { deleteSlip, createSlip, getSlips } from '@/lib/api';
 import { getCurrentUser } from '@/lib/auth';
 
+// 4. Hooks (มาตรฐานกลาง)
+import { useAlert } from '@/hooks/use-alert';
+
 const { width } = Dimensions.get('window');
 
 import type { SlipRecord } from '@/types/payment';
@@ -28,29 +31,8 @@ export default function SlipsPage() {
   const [currentUser, setCurrentUser] = useState<{ id: number | string; email: string } | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  // Popup states
-  const [popupVisible, setPopupVisible] = useState(false);
-  const [popupTitle, setPopupTitle] = useState('');
-  const [popupMessage, setPopupMessage] = useState('');
-  const [popupType, setPopupType] = useState<'info' | 'success' | 'error' | 'confirm'>('info');
-  const [popupConfirmCallback, setPopupConfirmCallback] = useState<(() => void) | null>(null);
-
-  const showPopup = (
-    title: string,
-    message: string,
-    type: 'info' | 'success' | 'error' | 'confirm' = 'info',
-    onConfirm: (() => void) | null = null
-  ) => {
-    setPopupTitle(title);
-    setPopupMessage(message);
-    setPopupType(type);
-    setPopupConfirmCallback(() => onConfirm);
-    setPopupVisible(true);
-  };
-
-  const showAlert = (title: string, message: string, type: 'info' | 'success' | 'error' = 'info') => {
-    showPopup(title, message, type);
-  };
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, showConfirm, alertElement } = useAlert();
 
   useEffect(() => {
     loadCurrentUser();
@@ -62,7 +44,7 @@ export default function SlipsPage() {
       setCurrentUser({ id: user.id, email: user.email ?? 'unknown' });
       fetchMySlips(user.id);
     } else {
-      showAlert('ไม่ได้เข้าสู่ระบบ', 'กรุณา Login ก่อนใช้งาน', 'error');
+      showAlert('ไม่ได้เข้าสู่ระบบ', 'กรุณา Login ก่อนใช้งาน', 'danger');
     }
   };
 
@@ -109,7 +91,7 @@ export default function SlipsPage() {
 
   const uploadImage = async () => {
     if (!imageUri) { showAlert('กรุณาเลือกรูปภาพ', 'กรุณาเลือกรูปภาพก่อน', 'info'); return; }
-    if (!currentUser) { showAlert('ไม่ได้เข้าสู่ระบบ', 'กรุณา Login ก่อน', 'error'); return; }
+    if (!currentUser) { showAlert('ไม่ได้เข้าสู่ระบบ', 'กรุณา Login ก่อน', 'danger'); return; }
 
     try {
       setUploading(true);
@@ -135,18 +117,20 @@ export default function SlipsPage() {
       showAlert('สำเร็จ', 'อัปโหลดสลิปเรียบร้อยแล้ว', 'success');
     } catch (error: any) {
       console.error('Upload error:', error);
-      showAlert('อัปโหลดไม่สำเร็จ', error.message || 'เกิดข้อผิดพลาดในการอัปโหลด', 'error');
+      showAlert('อัปโหลดไม่สำเร็จ', error.message || 'เกิดข้อผิดพลาดในการอัปโหลด', 'danger');
     } finally {
       setUploading(false);
     }
   };
 
   const handleDeleteSlip = async (item: SlipRecord) => {
-    showPopup(
-      'ยืนยันการลบ',
-      'คุณต้องการลบสลิปนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้',
-      'confirm',
-      async () => {
+    showConfirm({
+      title: 'ยืนยันการลบ',
+      message: 'คุณต้องการลบสลิปนี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้',
+      type: 'danger',
+      confirmText: 'ยืนยัน',
+      cancelText: 'ยกเลิก',
+      onConfirm: async () => {
         try {
           const res = await deleteSlip(item.id);
           if (!res.success) throw new Error(res.message);
@@ -154,10 +138,10 @@ export default function SlipsPage() {
           showAlert('สำเร็จ', 'ลบสลิปเรียบร้อยแล้ว', 'success');
         } catch (error: any) {
           console.error('General delete error:', error);
-          showAlert('ลบไม่สำเร็จ', error.message || 'เกิดข้อผิดพลาดในการลบ', 'error');
+          showAlert('ลบไม่สำเร็จ', error.message || 'เกิดข้อผิดพลาดในการลบ', 'danger');
         }
-      }
-    );
+      },
+    });
   };
 
   const renderSlipCard = ({ item }: { item: SlipRecord }) => (
@@ -272,67 +256,8 @@ export default function SlipsPage() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Custom Alert/Confirm Popup Modal */}
-      <Modal visible={popupVisible} transparent animationType="fade">
-        <View className="flex-1 bg-slate-900/60 justify-center items-center">
-          <View className="bg-white w-[85%] max-w-[340px] rounded-[24px] p-6 items-center shadow-lg shadow-black/15 elevation-10">
-            <View className={`w-16 h-16 rounded-full justify-center items-center mb-4 ${
-              popupType === 'success' ? 'bg-green-100' :
-                popupType === 'error' ? 'bg-red-100' :
-                  popupType === 'confirm' ? 'bg-amber-100' :
-                    'bg-sky-100'
-            }`}>
-              <Ionicons
-                name={
-                  popupType === 'success' ? 'checkmark-circle-outline' :
-                    popupType === 'error' ? 'close-circle-outline' :
-                      popupType === 'confirm' ? 'help-circle-outline' :
-                        'information-circle-outline'
-                }
-                size={40}
-                color={
-                  popupType === 'success' ? '#15803d' :
-                    popupType === 'error' ? '#b91c1c' :
-                      popupType === 'confirm' ? '#b45309' :
-                        '#0369a1'
-                }
-              />
-            </View>
-
-            <Text className="text-lg font-extrabold text-slate-900 mb-2 text-center">{popupTitle}</Text>
-            <Text className="text-sm text-slate-600 text-center leading-5 mb-6">{popupMessage}</Text>
-
-            <View className="flex-row w-full gap-3">
-              {popupType === 'confirm' ? (
-                <>
-                  <TouchableOpacity
-                    className="flex-1 h-11 rounded-xl justify-center items-center bg-slate-100"
-                    onPress={() => setPopupVisible(false)}
-                  >
-                    <Text className="text-slate-500 font-bold text-sm">ยกเลิก</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    className="flex-1 h-11 rounded-xl justify-center items-center bg-red-500"
-                    onPress={() => {
-                      setPopupVisible(false);
-                      if (popupConfirmCallback) popupConfirmCallback();
-                    }}
-                  >
-                    <Text className="text-white font-bold text-sm">ยืนยัน</Text>
-                  </TouchableOpacity>
-                </>
-              ) : (
-                <TouchableOpacity
-                  className="flex-1 h-11 rounded-xl justify-center items-center bg-blue-600"
-                  onPress={() => setPopupVisible(false)}
-                >
-                  <Text className="text-white font-bold text-sm">ตกลง</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          </View>
-        </View>
-      </Modal>
+      {/* การแจ้งเตือน (มาตรฐานกลาง) */}
+      {alertElement}
     </SafeAreaView>
   );
 }

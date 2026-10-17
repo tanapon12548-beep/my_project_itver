@@ -19,7 +19,7 @@ import { getRepair, updateRepairSignature, updateRepairStatus, logRepairJobDetai
 
 // 4. Components
 import RepairSummaryCard from '@/components/Staff_handover/RepairSummaryCard';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 import SignaturePad from '@/components/ui/SignaturePad';
 
 export default function DeliverHandoverScreen() {
@@ -81,17 +81,8 @@ export default function DeliverHandoverScreen() {
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null);
 
   // Alert State
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
 
 
@@ -100,12 +91,7 @@ export default function DeliverHandoverScreen() {
   const handleCompleteHandover = async () => {
     if (uploading) return;
     if (!signatureImage) {
-      setAlertConfig({
-        visible: true,
-        title: 'ยังไม่มีลายเซ็น',
-        message: 'กรุณาให้ลูกค้าเซ็นชื่อในกรอบและกดยืนยันก่อนทำรายการส่งมอบ',
-        type: 'warning',
-      });
+      showAlert('ยังไม่มีลายเซ็น', 'กรุณาให้ลูกค้าเซ็นชื่อในกรอบและกดยืนยันก่อนทำรายการส่งมอบ', 'warning');
       return;
     }
 
@@ -137,41 +123,23 @@ export default function DeliverHandoverScreen() {
         });
       }
 
-      setAlertConfig({
-        visible: true,
-        title: 'ส่งมอบเครื่องสำเร็จ',
-        message: `บันทึกลายเซ็นและส่งมอบงาน ${jobNo} เรียบร้อยแล้ว`,
-        type: 'success',
+      showAlert('ส่งมอบเครื่องสำเร็จ', `บันทึกลายเซ็นและส่งมอบงาน ${jobNo} เรียบร้อยแล้ว`, 'success', () => {
+        const targetId = resolveJobId();
+        const targetIdStr = String(targetId || jobIdParam || '');
+        router.replace({
+          pathname: '/receipt' as any,
+          params: {
+            jobId: targetIdStr,
+            job_id: targetIdStr,
+            job_no: jobNo,
+          },
+        });
       });
     } catch (err: any) {
       console.error('Handover completion error:', err);
-      setAlertConfig({
-        visible: true,
-        title: 'เกิดข้อผิดพลาด',
-        message: err.message || 'ไม่สามารถส่งมอบเครื่องได้ กรุณาลองใหม่อีกครั้ง',
-        type: 'danger',
-      });
+      showAlert('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถส่งมอบเครื่องได้ กรุณาลองใหม่อีกครั้ง', 'danger', () => router.back());
     } finally {
       setUploading(false);
-    }
-  };
-
-  const handleAlertConfirm = () => {
-    const isSuccess = alertConfig.type === 'success';
-    setAlertConfig((prev) => ({ ...prev, visible: false }));
-    if (isSuccess) {
-      const targetId = resolveJobId();
-      const targetIdStr = String(targetId || jobIdParam || '');
-      router.replace({
-        pathname: '/receipt' as any,
-        params: {
-          jobId: targetIdStr,
-          job_id: targetIdStr,
-          job_no: jobNo,
-        },
-      });
-    } else {
-      router.back();
     }
   };
 
@@ -327,15 +295,8 @@ export default function DeliverHandoverScreen() {
         </SafeAreaView>
       </Modal>
 
-      {/* Success Alert */}
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        confirmText="ตกลง"
-        onConfirm={handleAlertConfirm}
-      />
+      {/* การแจ้งเตือน (มาตรฐานกลาง) */}
+      {alertElement}
     </SafeAreaView>
   );
 }

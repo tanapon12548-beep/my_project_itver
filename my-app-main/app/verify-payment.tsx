@@ -21,7 +21,7 @@ import { createPayment, getRepair, verifyPayment, rejectPayment, getImageUrl } f
 import { REPAIR_STATUS, QUOTE_STATUS, PAYMENT_METHODS, CANCEL_INSPECTION_FEE } from '@/constants/status';
 
 // 4. Components
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert, type AlertType } from '@/hooks/use-alert';
 import InvoiceSummaryCard from '@/components/Staff_verify_payment/InvoiceSummaryCard';
 import StaffReviewCard from '@/components/Staff_verify_payment/StaffReviewCard';
 import CustomerLockedCard from '@/components/Staff_verify_payment/CustomerLockedCard';
@@ -72,43 +72,19 @@ export default function VerifyPaymentScreen() {
   const [showRejectInput, setShowRejectInput] = useState(false);
   const [rejectInputText, setRejectInputText] = useState('');
 
-  // In-app alert modal
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-    confirmText?: string;
-    cancelText?: string;
-    onConfirm?: () => void;
-  }>({ visible: false, title: '', message: '', type: 'info' });
-
-  const hideAlert = () => setAlertConfig((prev) => ({ ...prev, visible: false }));
-
-  const showAppAlert = (
-    title: string,
-    message: string,
-    type: 'success' | 'warning' | 'danger' | 'info' = 'info',
-    opts?: { confirmText?: string; cancelText?: string; onConfirm?: () => void }
-  ) => {
-    setAlertConfig({
-      visible: true,
-      title,
-      message,
-      type,
-      confirmText: opts?.confirmText,
-      cancelText: opts?.cancelText,
-      onConfirm: opts?.onConfirm,
-    });
-  };
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, showConfirm, alertElement } = useAlert();
 
   const askConfirmBeforeSave = (
     title: string,
     message: string,
     onConfirmAction: () => void,
-    type: 'success' | 'warning' | 'danger' | 'info' = 'warning'
+    type: AlertType = 'warning'
   ) => {
-    showAppAlert(title, message, type, {
+    showConfirm({
+      title,
+      message,
+      type,
       confirmText: 'ยืนยัน',
       cancelText: 'ยกเลิก',
       onConfirm: onConfirmAction,
@@ -174,7 +150,7 @@ export default function VerifyPaymentScreen() {
     if (Platform.OS !== 'web') {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showAppAlert('ต้องการสิทธิ์การเข้าถึง', 'กรุณาอนุญาตให้เข้าถึงรูปภาพเพื่อแนบสลิป', 'warning');
+        showAlert('ต้องการสิทธิ์การเข้าถึง', 'กรุณาอนุญาตให้เข้าถึงรูปภาพเพื่อแนบสลิป', 'warning');
         return;
       }
     }
@@ -191,7 +167,7 @@ export default function VerifyPaymentScreen() {
   const handleSubmit = () => {
     if (isBusy) return;
     if (paymentMethod === 'transfer' && !slipImage) {
-      showAppAlert('กรุณาแนบสลิป', 'สำหรับการโอนเงิน กรุณาอัปโหลดหลักฐานสลิปการโอนเงินก่อนยืนยัน', 'warning');
+      showAlert('กรุณาแนบสลิป', 'สำหรับการโอนเงิน กรุณาอัปโหลดหลักฐานสลิปการโอนเงินก่อนยืนยัน', 'warning');
       return;
     }
     const methodText = paymentMethod === 'cash' ? 'ชำระหน้าร้าน' : 'โอนเงิน';
@@ -243,23 +219,15 @@ export default function VerifyPaymentScreen() {
 
       const res = await createPayment(payload, isFormData);
       if (res.success) {
-        showAppAlert(
-          'บันทึกสำเร็จ!',
-          'ระบบได้บันทึกข้อมูลการชำระเงินเรียบร้อยแล้ว',
-          'success',
-          {
-            confirmText: 'ตกลง',
-            onConfirm: () => {
-              if (router.canGoBack()) router.back();
-              else router.replace('/');
-            },
-          }
-        );
+        showAlert('บันทึกสำเร็จ!', 'ระบบได้บันทึกข้อมูลการชำระเงินเรียบร้อยแล้ว', 'success', () => {
+          if (router.canGoBack()) router.back();
+          else router.replace('/');
+        });
       } else {
-        showAppAlert('เกิดข้อผิดพลาด', res.message || 'ไม่สามารถบันทึกข้อมูลได้', 'danger');
+        showAlert('เกิดข้อผิดพลาด', res.message || 'ไม่สามารถบันทึกข้อมูลได้', 'danger');
       }
     } catch (err: any) {
-      showAppAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถบันทึกข้อมูลได้', 'danger');
+      showAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถบันทึกข้อมูลได้', 'danger');
     } finally {
       setSubmitting(false);
     }
@@ -282,15 +250,15 @@ export default function VerifyPaymentScreen() {
       const res = await verifyPayment(numericJobId || rawJobId);
       if (res.success) {
         setPaymentVerified(true);
-        showAppAlert(
-          'ยืนยันการชำระเงินสำเร็จ!',
-          'ปรับสถานะเป็น "พร้อมส่งมอบ" เรียบร้อยแล้ว สามารถไปหน้าส่งมอบเครื่องต่อได้',
-          'success',
-          { confirmText: 'ยืนยัน' }
-        );
+        showConfirm({
+          title: 'ยืนยันการชำระเงินสำเร็จ!',
+          message: 'ปรับสถานะเป็น "พร้อมส่งมอบ" เรียบร้อยแล้ว สามารถไปหน้าส่งมอบเครื่องต่อได้',
+          type: 'success',
+          confirmText: 'ยืนยัน',
+        });
       }
     } catch (err: any) {
-      showAppAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถยืนยันการชำระเงินได้', 'danger');
+      showAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถยืนยันการชำระเงินได้', 'danger');
     } finally {
       setVerifying(false);
     }
@@ -308,10 +276,10 @@ export default function VerifyPaymentScreen() {
         setExistingSlipUrl(null);
         setExistingSlipFilename(null);
         setRejectInputText('');
-        showAppAlert('ปฏิเสธการชำระเงินแล้ว', 'ระบบได้แจ้งให้ลูกค้าทราบเพื่อส่งหลักฐานใหม่แล้ว', 'success', { confirmText: 'ยืนยัน' });
+        showConfirm({ title: 'ปฏิเสธการชำระเงินแล้ว', message: 'ระบบได้แจ้งให้ลูกค้าทราบเพื่อส่งหลักฐานใหม่แล้ว', type: 'success', confirmText: 'ยืนยัน' });
       }
     } catch (err: any) {
-      showAppAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถปฏิเสธการชำระเงินได้', 'danger');
+      showAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถปฏิเสธการชำระเงินได้', 'danger');
     } finally {
       setRejecting(false);
     }
@@ -339,10 +307,10 @@ export default function VerifyPaymentScreen() {
       if (res.success) {
         setPaymentVerified(true);
         setExistingPaymentMethodId(1);
-        showAppAlert('สำเร็จ', 'บันทึกรับชำระเงินสดหน้าร้านและยืนยันเรียบร้อยแล้ว', 'success', { confirmText: 'ยืนยัน' });
+        showConfirm({ title: 'สำเร็จ', message: 'บันทึกรับชำระเงินสดหน้าร้านและยืนยันเรียบร้อยแล้ว', type: 'success', confirmText: 'ยืนยัน' });
       }
     } catch (err: any) {
-      showAppAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถทำรายการได้', 'danger');
+      showAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถทำรายการได้', 'danger');
     } finally {
       setVerifying(false);
     }
@@ -458,21 +426,8 @@ export default function VerifyPaymentScreen() {
         onSubmitPayment={handleSubmit}
       />
 
-      {/* In-app alert modal */}
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        confirmText={alertConfig.confirmText || 'ยืนยัน'}
-        cancelText={alertConfig.cancelText}
-        onConfirm={() => {
-          const cb = alertConfig.onConfirm;
-          hideAlert();
-          cb?.();
-        }}
-        onCancel={alertConfig.cancelText ? hideAlert : undefined}
-      />
+      {/* การแจ้งเตือน (มาตรฐานกลาง) */}
+      {alertElement}
     </SafeAreaView>
   );
 }

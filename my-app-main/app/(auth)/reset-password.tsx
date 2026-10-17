@@ -16,7 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 
 // 3. Auth helpers
 import { resetPassword } from '@/lib/auth';
@@ -33,55 +33,30 @@ export default function ResetPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<'password' | 'confirmPassword' | null>(null);
 
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-    onConfirm?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'danger',
-  });
-
-  const showAlert = (
-    title: string,
-    message: string,
-    onPress?: () => void,
-    type: 'success' | 'warning' | 'danger' | 'info' = 'danger'
-  ) => {
-    setAlertConfig({
-      visible: true,
-      title,
-      message,
-      type,
-      onConfirm: onPress,
-    });
-  };
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   useEffect(() => {
     if (!token) {
-      showAlert('ข้อผิดพลาด', 'ไม่พบ Token สำหรับรีเซ็ตรหัสผ่าน กรุณาทำการขอใหม่', () => {
+      showAlert('ข้อผิดพลาด', 'ไม่พบ Token สำหรับรีเซ็ตรหัสผ่าน กรุณาทำการขอใหม่', 'danger', () => {
         router.replace('/(auth)/forgot-password');
-      }, 'danger');
+      });
     }
   }, [token]);
 
   const handleResetPassword = async () => {
     if (!password || !confirmPassword) {
-      showAlert('ข้อผิดพลาด', 'กรุณากรอกรหัสผ่านใหม่ให้ครบถ้วน');
+      showAlert('ข้อผิดพลาด', 'กรุณากรอกรหัสผ่านใหม่ให้ครบถ้วน', 'danger');
       return;
     }
 
     if (password.length < 6) {
-      showAlert('ข้อผิดพลาด', 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร');
+      showAlert('ข้อผิดพลาด', 'รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร', 'danger');
       return;
     }
 
     if (password !== confirmPassword) {
-      showAlert('ข้อผิดพลาด', 'รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน');
+      showAlert('ข้อผิดพลาด', 'รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน', 'danger');
       return;
     }
 
@@ -89,11 +64,11 @@ export default function ResetPasswordScreen() {
     try {
       await resetPassword(token, password);
 
-      showAlert('สำเร็จ', 'เปลี่ยนรหัสผ่านใหม่เรียบร้อยแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่', () => {
+      showAlert('สำเร็จ', 'เปลี่ยนรหัสผ่านใหม่เรียบร้อยแล้ว กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่', 'success', () => {
         router.replace('/(auth)/login');
-      }, 'success');
+      });
     } catch (error: any) {
-      showAlert('เกิดข้อผิดพลาด', error.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้ Token อาจหมดอายุ', undefined, 'danger');
+      showAlert('เกิดข้อผิดพลาด', error.message || 'ไม่สามารถเปลี่ยนรหัสผ่านได้ Token อาจหมดอายุ', 'danger');
     } finally {
       setLoading(false);
     }
@@ -226,16 +201,7 @@ export default function ResetPasswordScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={() => {
-          setAlertConfig(prev => ({ ...prev, visible: false }));
-          alertConfig.onConfirm?.();
-        }}
-      />
+      {alertElement}
     </SafeAreaView>
   );
 }

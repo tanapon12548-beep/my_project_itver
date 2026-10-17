@@ -19,7 +19,7 @@ import { deleteQuotation, getQuotations } from '@/lib/api';
 import Header from '@/components/Shared_Dashboard/Header';
 import SearchFilterBar from '@/components/ui/SearchFilterBar';
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 import QuotationDetailModal from '@/components/Technicain_detail/QuotationDetailModal';
 
 // Sub-components
@@ -53,18 +53,8 @@ export default function TechnicianQuotationScreen() {
   const [deletingQuoteNo, setDeletingQuoteNo] = useState<string>('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Custom Alert state
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   const loadQuotations = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -131,12 +121,7 @@ export default function TechnicianQuotationScreen() {
 
   const handlePromptDelete = (item: QuotationItem) => {
     if (!canEditOrDeleteQuote(item)) {
-      setAlertConfig({
-        visible: true,
-        title: 'ไม่อนุญาตให้ลบ',
-        message: 'สามารถลบได้เฉพาะใบเสนอราคาที่อยู่ในสถานะ "รอการอนุมัติ" หรือ "ขอแก้ไข" เท่านั้น',
-        type: 'warning',
-      });
+      showAlert('ไม่อนุญาตให้ลบ', 'สามารถลบได้เฉพาะใบเสนอราคาที่อยู่ในสถานะ "รอการอนุมัติ" หรือ "ขอแก้ไข" เท่านั้น', 'warning');
       return;
     }
     setDeletingId(item.quotation_id);
@@ -151,23 +136,13 @@ export default function TechnicianQuotationScreen() {
       const res = await deleteQuotation(deletingId);
       if (res?.success) {
         setDeleteModalVisible(false);
-        setAlertConfig({
-          visible: true,
-          title: 'สำเร็จ',
-          message: 'ลบใบเสนอราคาเรียบร้อยแล้ว สถานะงานซ่อมถูกรีเซ็ตกลับเป็นขั้นตอนตรวจเช็ค',
-          type: 'success',
-        });
+        showAlert('สำเร็จ', 'ลบใบเสนอราคาเรียบร้อยแล้ว สถานะงานซ่อมถูกรีเซ็ตกลับเป็นขั้นตอนตรวจเช็ค', 'success');
         loadQuotations(true);
       } else {
         throw new Error(res?.message || 'ไม่สามารถลบใบเสนอราคาได้');
       }
     } catch (err: any) {
-      setAlertConfig({
-        visible: true,
-        title: 'เกิดข้อผิดพลาด',
-        message: err.message || 'ไม่สามารถลบใบเสนอราคาได้ กรุณาลองใหม่อีกครั้ง',
-        type: 'danger',
-      });
+      showAlert('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถลบใบเสนอราคาได้ กรุณาลองใหม่อีกครั้ง', 'danger');
     } finally {
       setIsDeleting(false);
       setDeletingId(null);
@@ -181,12 +156,7 @@ export default function TechnicianQuotationScreen() {
 
   const handleEdit = (item: QuotationItem) => {
     if (!canEditOrDeleteQuote(item)) {
-      setAlertConfig({
-        visible: true,
-        title: 'ไม่อนุญาตให้แก้ไข',
-        message: 'สามารถแก้ไขได้เฉพาะใบเสนอราคาที่อยู่ในสถานะ "รอการอนุมัติ" หรือ "ขอแก้ไข" เท่านั้น',
-        type: 'warning',
-      });
+      showAlert('ไม่อนุญาตให้แก้ไข', 'สามารถแก้ไขได้เฉพาะใบเสนอราคาที่อยู่ในสถานะ "รอการอนุมัติ" หรือ "ขอแก้ไข" เท่านั้น', 'warning');
       return;
     }
     router.push({
@@ -301,12 +271,7 @@ export default function TechnicianQuotationScreen() {
         onEdit={(qId, jNo, jId, cName) => {
           const targetQuote = quotations.find((q) => q.quotation_id === qId);
           if (targetQuote && !canEditOrDeleteQuote(targetQuote)) {
-            setAlertConfig({
-              visible: true,
-              title: 'ไม่อนุญาตให้แก้ไข',
-              message: 'สามารถแก้ไขได้เฉพาะใบเสนอราคาที่อยู่ในสถานะ "รอการอนุมัติ" หรือ "ขอแก้ไข" เท่านั้น',
-              type: 'warning',
-            });
+            showAlert('ไม่อนุญาตให้แก้ไข', 'สามารถแก้ไขได้เฉพาะใบเสนอราคาที่อยู่ในสถานะ "รอการอนุมัติ" หรือ "ขอแก้ไข" เท่านั้น', 'warning');
             return;
           }
           router.push({
@@ -350,14 +315,8 @@ export default function TechnicianQuotationScreen() {
         }}
       />
 
-      {/* Custom Alert */}
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
-      />
+      {/* การแจ้งเตือน (มาตรฐานกลาง) */}
+      {alertElement}
     </View>
   );
 }

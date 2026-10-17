@@ -12,7 +12,7 @@ import { getRepair, updateRepairStatus, logRepairJobDetail } from '@/lib/api';
 import ConfirmSendModal from '@/components/ui/ConfirmSendModal';
 import TechnicianQuoteCard from '@/components/Staff_verify_quote/TechnicianQuoteCard';
 import PageHeader from '@/components/ui/PageHeader';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 import type { RepairJob } from '@/types/repair';
 import type { QuoteItem } from '@/types/quotation';
 
@@ -38,20 +38,8 @@ export default function VerifyQuoteScreen() {
   const [services, setServices] = useState<QuoteItem[]>([]);
   const [actualSymptom, setActualSymptom] = useState<string>('');
 
-  // Alert State
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-    confirmText?: string;
-    onConfirm?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   // Fetch quote data from DB
   useEffect(() => {
@@ -124,14 +112,7 @@ export default function VerifyQuoteScreen() {
   // เปิดป๊อปอัปยืนยันก่อนกดส่ง (ตรวจสอบว่ามีรายการใบเสนอราคาจริง)
   const handleOpenConfirmModal = () => {
     if (parts.length === 0 && services.length === 0 && (!job || !job.total_amount || job.total_amount <= 0)) {
-      setAlertConfig({
-        visible: true,
-        title: 'ไม่สามารถส่งได้',
-        message: 'ไม่พบรายการหรือยอดเงินในใบเสนอราคาจริง กรุณาสร้างใบเสนอราคาก่อนส่งให้ลูกค้า',
-        type: 'warning',
-        confirmText: 'ตกลง',
-        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-      });
+      showAlert('ไม่สามารถส่งได้', 'ไม่พบรายการหรือยอดเงินในใบเสนอราคาจริง กรุณาสร้างใบเสนอราคาก่อนส่งให้ลูกค้า', 'warning', () => router.back());
       return;
     }
     setConfirmModalVisible(true);
@@ -144,14 +125,7 @@ export default function VerifyQuoteScreen() {
     if (sending) return;
     if (parts.length === 0 && services.length === 0 && (!job || !job.total_amount || job.total_amount <= 0)) {
       setConfirmModalVisible(false);
-      setAlertConfig({
-        visible: true,
-        title: 'ไม่สามารถส่งได้',
-        message: 'ไม่พบรายการหรือยอดเงินในใบเสนอราคาจริง กรุณาสร้างใบเสนอราคาก่อนส่งให้ลูกค้า',
-        type: 'warning',
-        confirmText: 'ตกลง',
-        onConfirm: () => setAlertConfig(prev => ({ ...prev, visible: false })),
-      });
+      showAlert('ไม่สามารถส่งได้', 'ไม่พบรายการหรือยอดเงินในใบเสนอราคาจริง กรุณาสร้างใบเสนอราคาก่อนส่งให้ลูกค้า', 'warning', () => router.back());
       return;
     }
     setSending(true);
@@ -168,22 +142,10 @@ export default function VerifyQuoteScreen() {
 
       setConfirmModalVisible(false);
       setIsSent(true);
-      setAlertConfig({
-        visible: true,
-        title: 'ส่งใบเสนอราคาสำเร็จ',
-        message: 'ส่งใบเสนอราคาให้ลูกค้าพิจารณาเรียบร้อยแล้ว (สถานะเปลี่ยนเป็นรอการอนุมัติ)',
-        type: 'success',
-        confirmText: 'ตกลง',
-      });
+      showAlert('ส่งใบเสนอราคาสำเร็จ', 'ส่งใบเสนอราคาให้ลูกค้าพิจารณาเรียบร้อยแล้ว (สถานะเปลี่ยนเป็นรอการอนุมัติ)', 'success', () => router.back());
     } catch (err) {
       console.error('Error logging confirm send:', err);
-      setAlertConfig({
-        visible: true,
-        title: 'เกิดข้อผิดพลาด',
-        message: 'ไม่สามารถส่งใบเสนอราคาได้ กรุณาลองใหม่อีกครั้ง',
-        type: 'danger',
-        confirmText: 'ตกลง',
-      });
+      showAlert('เกิดข้อผิดพลาด', 'ไม่สามารถส่งใบเสนอราคาได้ กรุณาลองใหม่อีกครั้ง', 'danger');
     } finally {
       setSending(false);
     }
@@ -222,20 +184,8 @@ export default function VerifyQuoteScreen() {
         loading={sending}
       />
 
-      {/* Alert Modal */}
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        confirmText={alertConfig.confirmText}
-        onConfirm={() => {
-          setAlertConfig((prev) => ({ ...prev, visible: false }));
-          if (alertConfig.type === 'success' || alertConfig.type === 'warning') {
-            router.back();
-          }
-        }}
-      />
+      {/* การแจ้งเตือน (มาตรฐานกลาง) */}
+      {alertElement}
     </View>
   );
 }

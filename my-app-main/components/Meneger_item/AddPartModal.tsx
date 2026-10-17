@@ -13,7 +13,7 @@ import {
 
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 
 // 3. API helpers
 import { updateItem, createItem } from '@/lib/api';
@@ -32,18 +32,8 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
   const [costPrice, setCostPrice] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-    onConfirm?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'danger',
-  });
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   useEffect(() => {
     if (itemToEdit) {
@@ -61,21 +51,6 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
     setItemName('');
     setSellingPrice('');
     setCostPrice('');
-  };
-
-  const showAlert = (
-    title: string,
-    message: string,
-    type: 'success' | 'warning' | 'danger' | 'info' = 'danger',
-    onConfirm?: () => void
-  ) => {
-    setAlertConfig({
-      visible: true,
-      title,
-      message,
-      type,
-      onConfirm,
-    });
   };
 
   const handleSave = async () => {
@@ -273,16 +248,7 @@ export default function AddPartModal({ visible, itemToEdit, onClose, onSuccess }
         </View>
       </KeyboardAvoidingView>
 
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={() => {
-          setAlertConfig((prev) => ({ ...prev, visible: false }));
-          alertConfig.onConfirm?.();
-        }}
-      />
+      {alertElement}
     </Modal>
   );
 }

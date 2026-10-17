@@ -21,7 +21,7 @@ import SearchFilterBar from '@/components/ui/SearchFilterBar';
 import EditStaffModal from '@/components/Meneger_staff/EditStaffModal';
 import StaffTable from '@/components/Meneger_staff/Table';
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 
 import type { StaffMember, StaffRoleThai } from '@/types/user';
 
@@ -63,33 +63,14 @@ export default function StaffScreen() {
   const [memberToDelete, setMemberToDelete] = useState<StaffMember | null>(null);
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<'ALL' | StaffRoleThai>('ALL');
 
-  // Custom Alert State
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   useFocusEffect(
     useCallback(() => {
       fetchStaff();
     }, [])
   );
-
-  const showAlert = (title: string, message: string, type: 'success' | 'warning' | 'danger' | 'info' = 'info') => {
-    setAlertConfig({
-      visible: true,
-      title,
-      message,
-      type,
-    });
-  };
 
   async function fetchStaff() {
     try {
@@ -272,14 +253,8 @@ export default function StaffScreen() {
         }}
       />
 
-      {/* แจ้งเตือนผลลัพธ์การทำงาน */}
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
-      />
+      {/* แจ้งเตือนผลลัพธ์การทำงาน (มาตรฐานกลาง) */}
+      {alertElement}
     </View>
   );
 }

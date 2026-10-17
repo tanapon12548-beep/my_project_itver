@@ -16,7 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 
 // 3. Auth helpers
 import { forgotPassword } from '@/lib/auth';
@@ -28,39 +28,21 @@ export default function ForgotPasswordScreen() {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<'email' | 'phone' | null>(null);
 
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'danger',
-  });
-
-  const showAlert = (title: string, message: string, type: 'success' | 'warning' | 'danger' | 'info' = 'danger') => {
-    setAlertConfig({
-      visible: true,
-      title,
-      message,
-      type,
-    });
-  };
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   const handleVerifyIdentity = async () => {
     const trimmedEmail = email.trim();
     const digitsPhone = phone.replace(/-/g, '');
 
     if (!trimmedEmail || !digitsPhone) {
-      showAlert('กรอกข้อมูลไม่ครบ', 'กรุณากรอกอีเมลและเบอร์โทรศัพท์ของคุณ');
+      showAlert('กรอกข้อมูลไม่ครบ', 'กรุณากรอกอีเมลและเบอร์โทรศัพท์ของคุณ', 'danger');
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmedEmail)) {
-      showAlert('อีเมลไม่ถูกต้อง', 'กรุณาตรวจสอบรูปแบบอีเมลของคุณให้ถูกต้อง');
+      showAlert('อีเมลไม่ถูกต้อง', 'กรุณาตรวจสอบรูปแบบอีเมลของคุณให้ถูกต้อง', 'danger');
       return;
     }
 
@@ -78,7 +60,7 @@ export default function ForgotPasswordScreen() {
         throw new Error('ไม่พบ Token จากระบบ');
       }
     } catch (error: any) {
-      showAlert('เกิดข้อผิดพลาด', error.message || 'ข้อมูลไม่ถูกต้อง หรือไม่พบผู้ใช้งาน');
+      showAlert('เกิดข้อผิดพลาด', error.message || 'ข้อมูลไม่ถูกต้อง หรือไม่พบผู้ใช้งาน', 'danger');
     } finally {
       setLoading(false);
     }
@@ -216,13 +198,7 @@ export default function ForgotPasswordScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
-      />
+      {alertElement}
     </SafeAreaView>
   );
 }

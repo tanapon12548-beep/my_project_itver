@@ -12,7 +12,7 @@ import {
 
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 
 // 3. API helpers
 import { lookupProfiles, lookupProfilesAdvanced, registerCustomer } from '@/lib/api';
@@ -81,27 +81,8 @@ export default function CustomerFormCard({
   const [regEmail, setRegEmail] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
 
-  // Alert State
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
-
-  const showAlert = (title: string, message: string, type: 'success' | 'warning' | 'danger' | 'info' = 'danger') => {
-    setAlertConfig({
-      visible: true,
-      title,
-      message,
-      type,
-    });
-  };
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   // Single unified search (name / phone / email) with 300ms Debounce, min 1 char
   const searchProfiles = (query: string, filterOverride?: 'all' | 'name' | 'phone' | 'email') => {
@@ -767,13 +748,7 @@ export default function CustomerFormCard({
         </View>
       </Modal>
 
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
-      />
+      {alertElement}
     </View>
   );
 }

@@ -26,7 +26,7 @@ import DocumentInfoCard from '@/components/Technicain_detail/DocumentInfoCard';
 import PaymentInfoCard from '@/components/Technicain_detail/PaymentInfoCard';
 import SignaturesCard from '@/components/Technicain_detail/SignaturesCard';
 import FloatingActionButton from '@/components/ui/FloatingActionButton';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 
 // ── สถานะที่ช่างสามารถเปลี่ยนไปได้ (เฉพาะขอบเขตของช่าง) ──
 const TECH_STATUS_OPTIONS: Record<string, string[]> = {
@@ -213,29 +213,8 @@ export default function TechnicianDetailScreen() {
       : TECH_STATUS_OPTIONS[job.status]) || []
     : [];
 
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-    confirmText?: string;
-    cancelText?: string;
-    onConfirm?: () => void;
-    onCancel?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
-
-  const showAlert = (config: Omit<typeof alertConfig, 'visible'>) => {
-    setAlertConfig({ ...config, visible: true });
-  };
-
-  const hideAlert = () => {
-    setAlertConfig((prev) => ({ ...prev, visible: false }));
-  };
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showConfirm, alertElement } = useAlert();
 
   const applyStatusUpdate = async (targetStatus: string) => {
     if (!job) return;
@@ -304,22 +283,20 @@ export default function TechnicianDetailScreen() {
       await fetchJob();
 
       setTimeout(() => {
-        showAlert({
+        showConfirm({
           title: 'สำเร็จ',
           message: `อัปเดตสถานะเป็น "${targetStatus}" เรียบร้อยแล้ว`,
           type: 'success',
           confirmText: 'ตกลง',
-          onConfirm: hideAlert,
         });
       }, 100);
     } catch (err: any) {
       console.error('Update status error:', err);
-      showAlert({
+      showConfirm({
         title: 'ผิดพลาด',
         message: err.message || 'ไม่สามารถอัปเดตสถานะได้',
         type: 'danger',
         confirmText: 'ตกลง',
-        onConfirm: hideAlert,
       });
     } finally {
       setSaving(false);
@@ -328,15 +305,13 @@ export default function TechnicianDetailScreen() {
 
   const handleConfirm = () => {
     if (!status || !job) return;
-    showAlert({
+    showConfirm({
       title: 'ยืนยันการบันทึก',
       message: `คุณต้องการเปลี่ยนสถานะเป็น "${status}" ใช่หรือไม่?`,
       type: 'info',
       confirmText: 'ยืนยัน',
       cancelText: 'ยกเลิก',
-      onCancel: hideAlert,
       onConfirm: async () => {
-        hideAlert();
         await applyStatusUpdate(status);
       },
     });
@@ -564,29 +539,8 @@ export default function TechnicianDetailScreen() {
         }
       />
 
-      {/* Reusable Custom Alert Modal */}
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        confirmText={alertConfig.confirmText}
-        cancelText={alertConfig.cancelText}
-        onConfirm={() => {
-          const cb = alertConfig.onConfirm;
-          hideAlert();
-          cb?.();
-        }}
-        onCancel={
-          alertConfig.onCancel
-            ? () => {
-              const cb = alertConfig.onCancel;
-              hideAlert();
-              cb?.();
-            }
-            : undefined
-        }
-      />
+      {/* การแจ้งเตือน (มาตรฐานกลาง) */}
+      {alertElement}
     </View>
   );
 }

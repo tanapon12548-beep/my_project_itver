@@ -23,7 +23,7 @@ import { CANCEL_INSPECTION_FEE } from '@/constants/status';
 import PartsCostCard from '@/components/Technicain_make_quote/PartsCostCard';
 import ServiceFeeCard from '@/components/Technicain_make_quote/ServiceFeeCard';
 import SymptomCard from '@/components/Technicain_make_quote/SymptomCard';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
 
 import type { PartItem, ServiceItem } from '@/types/quotation';
@@ -127,13 +127,12 @@ export default function MakeQuoteScreen() {
               const statusName =
                 quoteData.quote_status_name ||
                 (quoteData.quote_status_id === 2 ? 'อนุมัติแล้ว' : 'ลูกค้ายกเลิก');
-              showAlert({
+              showConfirm({
                 title: 'ไม่สามารถแก้ไขใบเสนอราคานี้ได้',
                 message: `ใบเสนอราคานี้อยู่ในสถานะ "${statusName}" แล้ว จึงไม่สามารถทำการแก้ไขหรือเปลี่ยนแปลงรายการได้`,
                 type: 'warning',
                 confirmText: 'ย้อนกลับ',
                 onConfirm: () => {
-                  hideAlert();
                   router.back();
                 },
               });
@@ -206,30 +205,8 @@ export default function MakeQuoteScreen() {
     }
   }
 
-  // Alert State
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-    confirmText?: string;
-    cancelText?: string;
-    onConfirm?: () => void;
-    onCancel?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
-
-  const showAlert = (config: Omit<typeof alertConfig, 'visible'>) => {
-    setAlertConfig({ ...config, visible: true });
-  };
-
-  const hideAlert = () => {
-    setAlertConfig((prev) => ({ ...prev, visible: false }));
-  };
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, showConfirm, alertElement } = useAlert();
 
   // Delete Confirmation State
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -265,12 +242,11 @@ export default function MakeQuoteScreen() {
       if (parts.length <= 1 && services.length > 0) {
         setDeleteModalVisible(false);
         setItemToDelete(null);
-        showAlert({
+        showConfirm({
           title: 'ไม่สามารถลบอะไหล่ทั้งหมดได้',
           message: 'ค่าบริการมีได้ก็ต้องมีรายการอะไหล่ก่อน หากต้องการลบอะไหล่ทั้งหมด กรุณาลบรายการค่าบริการออกก่อน',
           type: 'warning',
           confirmText: 'เข้าใจแล้ว',
-          onConfirm: hideAlert,
         });
         return;
       }
@@ -285,13 +261,12 @@ export default function MakeQuoteScreen() {
   // Add Part — เลือกจากคลังเท่านั้น (ระบบต้องรู้ราคาทุนเพื่อคำนวณกำไรขั้นต้น)
   const handleAddPart = (itemFromDb?: any) => {
     if (!itemFromDb) {
-      showAlert({
+      showConfirm({
         title: 'เลือกอะไหล่จากคลังเท่านั้น',
         message:
           'ระบบต้องรู้ราคาทุนของอะไหล่เพื่อคำนวณกำไรขั้นต้น จึงต้องเลือกจากคลัง\nถ้าไม่พบรายการที่ต้องการ กรุณาเพิ่มที่หน้าจัดการรายการ (พร้อมกรอกราคาทุน) ก่อน',
         type: 'warning',
         confirmText: 'เข้าใจแล้ว',
-        onConfirm: hideAlert,
       });
       return;
     }
@@ -325,12 +300,11 @@ export default function MakeQuoteScreen() {
   // Add Service (ค่าบริการไม่มีจำนวน — ล็อก qty = 1 เสมอ)
   const handleAddService = (itemFromDb?: any) => {
     if (parts.length === 0) {
-      showAlert({
+      showConfirm({
         title: 'ยังไม่มีรายการอะไหล่',
         message: 'ค่าบริการมีได้ก็ต้องมีรายการอะไหล่ก่อน กรุณาเพิ่มรายการอะไหล่อย่างน้อย 1 รายการก่อนเพิ่มค่าบริการ',
         type: 'warning',
         confirmText: 'เข้าใจแล้ว',
-        onConfirm: hideAlert,
       });
       return;
     }
@@ -352,11 +326,7 @@ export default function MakeQuoteScreen() {
     const priceNum = parseFloat(serviceInputPrice);
     if (isNaN(priceNum)) return;
     if (priceNum < 0) {
-      showAlert({
-        title: 'ราคาไม่ถูกต้อง',
-        message: 'ค่าบริการต้องไม่เป็นค่าติดลบ',
-        type: 'warning',
-      });
+      showAlert('ราคาไม่ถูกต้อง', 'ค่าบริการต้องไม่เป็นค่าติดลบ', 'warning');
       return;
     }
 
@@ -388,63 +358,54 @@ export default function MakeQuoteScreen() {
     if (saving) return;
 
     if (!actualSymptom.trim()) {
-      showAlert({
+      showConfirm({
         title: 'กรุณาระบุอาการเสียจริง',
         message: 'กรุณากรอกผลการตรวจเช็คอาการเสียจริงของช่างก่อนส่งข้อมูลเสนอราคา',
         type: 'warning',
         confirmText: 'เข้าใจแล้ว',
-        onConfirm: hideAlert,
       });
       return;
     }
 
     if (parts.length === 0 && services.length === 0) {
-      showAlert({
+      showConfirm({
         title: 'ไม่มีรายการค่าใช้จ่าย',
         message: 'กรุณาเพิ่มรายการอะไหล่และค่าบริการอย่างน้อยประเภทละ 1 รายการก่อนส่งข้อมูลเสนอราคา',
         type: 'warning',
         confirmText: 'เข้าใจแล้ว',
-        onConfirm: hideAlert,
       });
       return;
     }
 
     if (services.length > 0 && parts.length === 0) {
-      showAlert({
+      showConfirm({
         title: 'เงื่อนไขไม่ถูกต้อง',
         message: 'ค่าบริการมีได้ก็ต้องมีรายการอะไหล่อย่างน้อย 1 รายการก่อน กรุณาเพิ่มรายการอะไหล่',
         type: 'warning',
         confirmText: 'เข้าใจแล้ว',
-        onConfirm: hideAlert,
       });
       return;
     }
 
     if (parts.length > 0 && services.length === 0) {
-      showAlert({
+      showConfirm({
         title: 'ยังไม่มีรายการค่าบริการ',
         message: 'ไม่สามารถสร้างหรือแก้ไขใบเสนอราคาที่มีเฉพาะอะไหล่ได้ กรุณาเพิ่มรายการค่าบริการหรือค่าแรงอย่างน้อย 1 รายการ',
         type: 'warning',
         confirmText: 'เข้าใจแล้ว',
-        onConfirm: hideAlert,
       });
       return;
     }
 
-    showAlert({
+    showConfirm({
       title: 'ยืนยันการเสนอราคา',
       message: `คุณต้องการส่งข้อมูลเสนอราคายอดรวม ${grandTotal.toLocaleString()} บาท ใช่หรือไม่?`,
       type: 'info',
       confirmText: 'ยืนยัน',
       cancelText: 'ยกเลิก',
-      onCancel: hideAlert,
       onConfirm: async () => {
         if (quoteStatusId === 2 || quoteStatusId === 3) {
-          showAlert({
-            title: 'ไม่สามารถแก้ไขได้',
-            message: 'ใบเสนอราคานี้ได้รับการอนุมัติหรือลูกค้ายกเลิกแล้ว จึงไม่สามารถบันทึกการแก้ไขได้',
-            type: 'warning',
-          });
+          showAlert('ไม่สามารถแก้ไขได้', 'ใบเสนอราคานี้ได้รับการอนุมัติหรือลูกค้ายกเลิกแล้ว จึงไม่สามารถบันทึกการแก้ไขได้', 'warning');
           return;
         }
         setSaving(true);
@@ -485,7 +446,7 @@ export default function MakeQuoteScreen() {
           await logRepairJobDetail(numericId, actionTypeId);
 
           setTimeout(() => {
-            showAlert({
+            showConfirm({
               title: 'สำเร็จ',
               message: quoteId
                 ? 'ปรับปรุงใบเสนอราคาพร้อมแจ้งลูกค้ารออนุมัติเรียบร้อยแล้ว'
@@ -493,19 +454,17 @@ export default function MakeQuoteScreen() {
               type: 'success',
               confirmText: 'กลับไปหน้ารายการใบเสนอราคา',
               onConfirm: () => {
-                hideAlert();
                 router.replace('/(technicain)/repairing');
               },
             });
           }, 100);
         } catch (err: any) {
           console.error('Save quote error:', err);
-          showAlert({
+          showConfirm({
             title: 'ผิดพลาด',
             message: err.message || 'เกิดข้อผิดพลาดในการบันทึก',
             type: 'danger',
             confirmText: 'ตกลง',
-            onConfirm: hideAlert,
           });
         } finally {
           setSaving(false);
@@ -617,29 +576,8 @@ export default function MakeQuoteScreen() {
         </View>
       </ScrollView>
 
-      {/* Custom Reusable Alert Modal */}
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        confirmText={alertConfig.confirmText}
-        cancelText={alertConfig.cancelText}
-        onConfirm={() => {
-          const cb = alertConfig.onConfirm;
-          hideAlert();
-          cb?.();
-        }}
-        onCancel={
-          alertConfig.onCancel
-            ? () => {
-              const cb = alertConfig.onCancel;
-              hideAlert();
-              cb?.();
-            }
-            : undefined
-        }
-      />
+      {/* การแจ้งเตือน (มาตรฐานกลาง) */}
+      {alertElement}
 
       {/* Delete Item Confirmation Modal */}
       <ConfirmDeleteModal

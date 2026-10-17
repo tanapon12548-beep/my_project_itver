@@ -22,7 +22,7 @@ import { REPAIR_STATUS, QUOTE_STATUS, CANCEL_INSPECTION_FEE } from '@/constants/
 import CustomerProgressBar from '@/components/Customer/CustomerProgressBar';
 import CustomerQuotationCard from '@/components/Customer/CustomerQuotationCard';
 import PickupCalendarCard from '@/components/Shared_Repairs/PickupCalendarCard';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 import SuccessToast from '@/components/ui/SuccessToast';
 import type { RepairJob } from '@/types/repair';
 
@@ -43,8 +43,8 @@ export default function JobDetailScreen() {
   const [job, setJob] = useState<RepairJob | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [showApproveConfirm, setShowApproveConfirm] = useState(false);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showConfirm, alertElement } = useAlert();
   const [toast, setToast] = useState<ToastState>({
     visible: false,
     message: '',
@@ -133,7 +133,6 @@ export default function JobDetailScreen() {
 
   const confirmApprove = async () => {
     if (actionLoading || !job?.quotation_id) return;
-    setShowApproveConfirm(false);
     setActionLoading(true);
     try {
       const numericJobId = parseInt(String(job.id || job.job_id || ''), 10);
@@ -156,12 +155,18 @@ export default function JobDetailScreen() {
 
   const handleApprove = () => {
     if (actionLoading || !job?.quotation_id) return;
-    setShowApproveConfirm(true);
+    showConfirm({
+      title: 'ยืนยันอนุมัติการซ่อม',
+      message: `ยอดรวมค่าซ่อม ${total.toLocaleString()} บาท\n\nคุณต้องการอนุมัติการซ่อมใช่หรือไม่?`,
+      type: 'success',
+      confirmText: 'ยืนยันอนุมัติ',
+      cancelText: 'ยกเลิก',
+      onConfirm: confirmApprove,
+    });
   };
 
   const confirmCancel = async () => {
     if (actionLoading || !job?.quotation_id) return;
-    setShowCancelConfirm(false);
     setActionLoading(true);
     try {
       const numericJobId = parseInt(String(job.id || job.job_id || ''), 10);
@@ -184,7 +189,14 @@ export default function JobDetailScreen() {
 
   const handleCancel = () => {
     if (actionLoading || !job?.quotation_id) return;
-    setShowCancelConfirm(true);
+    showConfirm({
+      title: 'ยืนยันยกเลิกการซ่อม',
+      message: `หากยกเลิก จะมีค่าบริการตรวจเช็คสภาพเครื่อง ${CANCEL_INSPECTION_FEE} บาท\n\nคุณต้องการยกเลิกใช่หรือไม่?`,
+      type: 'danger',
+      confirmText: 'ใช่, ยกเลิกซ่อม',
+      cancelText: 'ไม่ยกเลิก',
+      onConfirm: confirmCancel,
+    });
   };
 
   const handleRequestModification = async (remark: string) => {
@@ -682,27 +694,8 @@ export default function JobDetailScreen() {
         onHide={hideToast}
       />
 
-      <CustomAlert
-        visible={showApproveConfirm}
-        title="ยืนยันอนุมัติการซ่อม"
-        message={`ยอดรวมค่าซ่อม ${total.toLocaleString()} บาท\n\nคุณต้องการอนุมัติการซ่อมใช่หรือไม่?`}
-        confirmText="ยืนยันอนุมัติ"
-        cancelText="ยกเลิก"
-        type="success"
-        onConfirm={confirmApprove}
-        onCancel={() => setShowApproveConfirm(false)}
-      />
-
-      <CustomAlert
-        visible={showCancelConfirm}
-        title="ยืนยันยกเลิกการซ่อม"
-        message={`หากยกเลิก จะมีค่าบริการตรวจเช็คสภาพเครื่อง ${CANCEL_INSPECTION_FEE} บาท\n\nคุณต้องการยกเลิกใช่หรือไม่?`}
-        confirmText="ใช่, ยกเลิกซ่อม"
-        cancelText="ไม่ยกเลิก"
-        type="danger"
-        onConfirm={confirmCancel}
-        onCancel={() => setShowCancelConfirm(false)}
-      />
+      {/* การแจ้งเตือน (มาตรฐานกลาง) */}
+      {alertElement}
     </SafeAreaView>
   );
 }

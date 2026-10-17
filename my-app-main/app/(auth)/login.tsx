@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import SuccessToast from '@/components/ui/SuccessToast';
 import FormInput from '@/components/ui/FormInput';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -28,18 +28,8 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState<'email' | 'password' | null>(null);
 
-  // ── Alert Modal State ──
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'danger',
-  });
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   // ── Toast ──
   const [showToast, setShowToast] = useState(false);
@@ -56,15 +46,6 @@ export default function LoginScreen() {
   // ════════════════════════════════════════════════════════
   // Helpers
   // ════════════════════════════════════════════════════════
-
-  const showAlert = (title: string, message: string, type: 'success' | 'warning' | 'danger' | 'info' = 'danger') => {
-    setAlertConfig({
-      visible: true,
-      title,
-      message,
-      type,
-    });
-  };
 
   const setError = (field: string, msg: string) => {
     setErrors(prev => ({ ...prev, [field]: msg }));
@@ -107,7 +88,7 @@ export default function LoginScreen() {
     setErrors({});
 
     if (!email || !password) {
-      showAlert('ข้อผิดพลาด', 'กรุณากรอกอีเมลและรหัสผ่าน');
+      showAlert('ข้อผิดพลาด', 'กรุณากรอกอีเมลและรหัสผ่าน', 'danger');
       return;
     }
 
@@ -120,7 +101,7 @@ export default function LoginScreen() {
       const { user } = await login(email, password);
       handleAuthSuccess(user);
     } catch (err: any) {
-      showAlert('เข้าสู่ระบบล้มเหลว', err.message || 'เกิดข้อผิดพลาด');
+      showAlert('เข้าสู่ระบบล้มเหลว', err.message || 'เกิดข้อผิดพลาด', 'danger');
       setPassword('');
     } finally {
       setLoading(false);
@@ -276,13 +257,7 @@ export default function LoginScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
-      />
+      {alertElement}
     </SafeAreaView>
   );
 }

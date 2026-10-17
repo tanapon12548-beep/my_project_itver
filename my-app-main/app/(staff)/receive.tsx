@@ -14,7 +14,7 @@ import { createDevice, createRepairJob, logRepairJobDetail, lookupProfiles, regi
 import CustomerFormCard from '@/components/Staff_receive/CustomerFormCard';
 import DeviceFormCard from '@/components/Staff_receive/DeviceFormCard';
 import ReceiptPreviewModal from '@/components/Staff_receive/ReceiptPreviewModal';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 
 export default function StaffReceiveScreen() {
   const router = useRouter();
@@ -45,21 +45,8 @@ export default function StaffReceiveScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generatedJobNo, setGeneratedJobNo] = useState('');
 
-  // Alert Config
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-    confirmText?: string;
-    cancelText?: string;
-    onConfirm?: () => void;
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, showConfirm, alertElement } = useAlert();
 
   const generateJobNumber = () => {
     const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
@@ -69,23 +56,13 @@ export default function StaffReceiveScreen() {
 
   const handleGeneratePdf = async () => {
     if (!customerName.trim() || !phone.trim()) {
-      setAlertConfig({
-        visible: true,
-        title: 'ข้อมูลลูกค้าไม่ครบถ้วน',
-        message: 'กรุณากรอกชื่อลูกค้าและเบอร์โทรศัพท์ติดต่อ',
-        type: 'warning',
-      });
+      showAlert('ข้อมูลลูกค้าไม่ครบถ้วน', 'กรุณากรอกชื่อลูกค้าและเบอร์โทรศัพท์ติดต่อ', 'warning');
       return;
     }
 
     const cleanDigits = phone.replace(/[^0-9]/g, '');
     if (cleanDigits.length < 9) {
-      setAlertConfig({
-        visible: true,
-        title: 'เบอร์โทรศัพท์ไม่ถูกต้อง',
-        message: 'กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (9-10 หลัก)',
-        type: 'warning',
-      });
+      showAlert('เบอร์โทรศัพท์ไม่ถูกต้อง', 'กรุณากรอกเบอร์โทรศัพท์ให้ถูกต้อง (9-10 หลัก)', 'warning');
       return;
     }
 
@@ -122,32 +99,17 @@ export default function StaffReceiveScreen() {
     }
 
     if (!selectedDeviceTypeId) {
-      setAlertConfig({
-        visible: true,
-        title: 'ข้อมูลไม่ครบถ้วน',
-        message: 'กรุณาเลือกประเภทอุปกรณ์ (Device Type)',
-        type: 'warning',
-      });
+      showAlert('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกประเภทอุปกรณ์ (Device Type)', 'warning');
       return;
     }
 
     if (!selectedBrandId && !selectedBrandName.trim()) {
-      setAlertConfig({
-        visible: true,
-        title: 'ข้อมูลไม่ครบถ้วน',
-        message: 'กรุณาเลือกหรือระบุยี่ห้ออุปกรณ์ (Brand)',
-        type: 'warning',
-      });
+      showAlert('ข้อมูลไม่ครบถ้วน', 'กรุณาเลือกหรือระบุยี่ห้ออุปกรณ์ (Brand)', 'warning');
       return;
     }
 
     if (!symptomDetails.trim()) {
-      setAlertConfig({
-        visible: true,
-        title: 'ข้อมูลไม่ครบถ้วน',
-        message: 'กรุณาระบุอาการเสียที่ลูกค้าแจ้ง',
-        type: 'warning',
-      });
+      showAlert('ข้อมูลไม่ครบถ้วน', 'กรุณาระบุอาการเสียที่ลูกค้าแจ้ง', 'warning');
       return;
     }
 
@@ -205,8 +167,7 @@ export default function StaffReceiveScreen() {
       }
 
       const savedJobId = jobRes.success && jobRes.data?.job_id ? jobRes.data.job_id : null;
-      setAlertConfig({
-        visible: true,
+      showConfirm({
         title: 'สร้างใบรับซ่อมสำเร็จ',
         message: `สร้างใบรับซ่อมเลขที่ ${finalJobNo} ลงในระบบเรียบร้อยแล้ว\nต้องการดูหรือพิมพ์ใบรับซ่อม (PDF) หรือไม่?`,
         type: 'success',
@@ -240,12 +201,7 @@ export default function StaffReceiveScreen() {
       setWarrantyYear(1);
       setWarrantyEnd('');
     } catch (err: any) {
-      setAlertConfig({
-        visible: true,
-        title: 'เกิดข้อผิดพลาด',
-        message: err.message || 'ไม่สามารถสร้างใบรับซ่อมได้',
-        type: 'danger',
-      });
+      showAlert('เกิดข้อผิดพลาด', err.message || 'ไม่สามารถสร้างใบรับซ่อมได้', 'danger');
     } finally {
       setIsSubmitting(false);
     }
@@ -356,21 +312,8 @@ export default function StaffReceiveScreen() {
         onConfirmAndPrint={handleConfirmAndPrint}
       />
 
-      {/* Success Alert Modal */}
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        confirmText={alertConfig.confirmText}
-        cancelText={alertConfig.cancelText}
-        onConfirm={() => {
-          const cb = alertConfig.onConfirm;
-          setAlertConfig((prev) => ({ ...prev, visible: false }));
-          cb?.();
-        }}
-        onCancel={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
-      />
+      {/* การแจ้งเตือน (มาตรฐานกลาง) */}
+      {alertElement}
     </View>
   );
 }

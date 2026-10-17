@@ -23,7 +23,7 @@ import PartDetailsModal from '@/components/Meneger_item/PartDetailsModal';
 import SearchFilterBar from '@/components/ui/SearchFilterBar';
 import PartTable from '@/components/Meneger_item/Table';
 import ConfirmDeleteModal from '@/components/ui/ConfirmDeleteModal';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 import ItemFilterSheet, {
   DEFAULT_FILTER_STATE,
   FilterState,
@@ -164,26 +164,8 @@ export default function PartsScreen() {
     return c;
   }, [filters]);
 
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'info',
-  });
-
-  const showAlert = (title: string, message: string, type: 'success' | 'warning' | 'danger' | 'info' = 'info') => {
-    setAlertConfig({
-      visible: true,
-      title,
-      message,
-      type,
-    });
-  };
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   const handleOpenAddModal = () => {
     setItemToEdit(null);
@@ -415,13 +397,7 @@ export default function PartsScreen() {
         }}
       />
 
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={() => setAlertConfig((prev) => ({ ...prev, visible: false }))}
-      />
+      {alertElement}
     </View>
   );
 }

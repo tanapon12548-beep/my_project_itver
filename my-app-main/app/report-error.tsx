@@ -16,7 +16,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, Stack } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import CustomAlert from '@/components/ui/CustomAlert';
+import { useAlert } from '@/hooks/use-alert';
 
 // 3. Auth helpers
 import { getCurrentUser } from '@/lib/auth';
@@ -27,31 +27,13 @@ export default function ReportErrorScreen() {
   const [saving, setSaving] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
-  const [alertConfig, setAlertConfig] = useState<{
-    visible: boolean;
-    title: string;
-    message: string;
-    type: 'success' | 'warning' | 'danger' | 'info';
-  }>({
-    visible: false,
-    title: '',
-    message: '',
-    type: 'danger',
-  });
-
-  const showAlert = (title: string, message: string, type: 'success' | 'warning' | 'danger' | 'info' = 'danger') => {
-    setAlertConfig({
-      visible: true,
-      title,
-      message,
-      type,
-    });
-  };
+  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
+  const { showAlert, alertElement } = useAlert();
 
   const handleSubmit = async () => {
     if (saving) return;
     if (!description.trim()) {
-      showAlert('ข้อผิดพลาด', 'กรุณาระบุรายละเอียดปัญหาที่พบ');
+      showAlert('ข้อผิดพลาด', 'กรุณาระบุรายละเอียดปัญหาที่พบ', 'danger');
       return;
     }
 
@@ -59,14 +41,14 @@ export default function ReportErrorScreen() {
     try {
       const user = await getCurrentUser();
       if (!user) {
-        showAlert('ข้อผิดพลาด', 'กรุณาเข้าสู่ระบบก่อน');
+        showAlert('ข้อผิดพลาด', 'กรุณาเข้าสู่ระบบก่อน', 'danger');
         return;
       }
 
       setSubmitted(true);
       setDescription('');
     } catch (err: any) {
-      showAlert('ล้มเหลว', err.message || 'ไม่สามารถส่งรายงานได้');
+      showAlert('ล้มเหลว', err.message || 'ไม่สามารถส่งรายงานได้', 'danger');
     } finally {
       setSaving(false);
     }
@@ -167,13 +149,7 @@ export default function ReportErrorScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <CustomAlert
-        visible={alertConfig.visible}
-        title={alertConfig.title}
-        message={alertConfig.message}
-        type={alertConfig.type}
-        onConfirm={() => setAlertConfig(prev => ({ ...prev, visible: false }))}
-      />
+      {alertElement}
     </SafeAreaView>
   );
 }
