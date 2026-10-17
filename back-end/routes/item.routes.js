@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/item.controller');
 const auth = require('../middleware/auth');
+const role = require('../middleware/role');
 
 /**
  * @swagger
@@ -31,7 +32,7 @@ router.get('/', auth, ctrl.getAll);
  *     responses:
  *       201: { description: เพิ่มสำเร็จ }
  */
-router.post('/', auth, ctrl.create);
+router.post('/', auth, role('Manager'), ctrl.create);
 
 /**
  * @swagger
@@ -48,7 +49,7 @@ router.post('/', auth, ctrl.create);
  *     responses:
  *       200: { description: อัปเดตสำเร็จ }
  */
-router.put('/:id', auth, ctrl.update);
+router.put('/:id', auth, role('Manager'), ctrl.update);
 
 /**
  * @swagger
@@ -65,6 +66,6 @@ router.put('/:id', auth, ctrl.update);
  *     responses:
  *       200: { description: ลบสำเร็จ }
  */
-router.delete('/:id', auth, ctrl.remove);
+router.delete('/:id', auth, role('Manager'), ctrl.remove);
 
 module.exports = router;

@@ -16,7 +16,7 @@ router.get('/', auth, ctrl.getAll);
 router.post('/', auth, role('Technician', 'Manager'), ctrl.create);
 router.get('/:id', auth, ctrl.getById);
 router.put('/:id', auth, role('Technician', 'Manager'), ctrl.update);
-router.delete('/:id', auth, role('Technician', 'Manager'), ctrl.delete);
+router.delete('/:id', auth, role('Technician', 'Manager'), ctrl.remove);
 router.patch('/:id/status', auth, ctrl.updateStatus);
 
 module.exports = router;

@@ -125,7 +125,7 @@ exports.create = async (req, res, next) => {
       }
     }
 
-    res.json({
+    res.status(201).json({
       success: true,
       message: 'บันทึกข้อมูลการชำระเงินเรียบร้อยแล้ว',
       data: {

@@ -544,5 +544,3 @@ exports.remove = async (req, res, next) => {
     next(err);
   }
 };
-
-exports.delete = exports.remove;

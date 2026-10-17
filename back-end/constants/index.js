@@ -5,10 +5,12 @@
  */
 
 // 1. สิทธิ์การใช้งานระบบ (Roles)
+// ⚠️ ค่าต้องตรงกับตาราง `roles` ในฐานข้อมูลเสมอ (roles.id)
+// 1 = Manager, 2 = Technician, 3 = Staff, 4 = Customer
 exports.ROLES = {
   MANAGER: 1,      // ผู้จัดการ
-  STAFF: 2,        // พนักงานหน้าร้าน
-  TECHNICIAN: 3,   // ช่างเทคนิค
+  TECHNICIAN: 2,   // ช่างเทคนิค
+  STAFF: 3,        // พนักงานหน้าร้าน
   CUSTOMER: 4,     // ลูกค้าทั่วไป
 };
 

@@ -508,7 +508,7 @@ exports.update = async (req, res, next) => {
  * DELETE /api/quotations/:id
  * ลบใบเสนอราคา
  */
-exports.delete = async (req, res, next) => {
+exports.remove = async (req, res, next) => {
   try {
     const { id } = req.params;
     const numId = parseInt(id, 10);
