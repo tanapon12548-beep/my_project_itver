@@ -1,0 +1,338 @@
+# 🧭 IT VERTEX — มาตรฐานโลจิกกลาง (Single Logic Standard)
+
+> **เอกสารอ้างอิงเดียว** สำหรับ "โลจิกทั้งหมด" ของระบบ ทั้ง **Front-end** และ **Back-end**
+> กติกา: **ถ้าโค้ดไม่ตรงกับเอกสารนี้ ให้ปรับโค้ด** (เอกสารนี้คือมาตรฐาน ไม่ใช่โค้ดคือมาตรฐาน)
+>
+> ไฟล์ที่เกี่ยวข้อง: [`README.md`](./README.md) (ติดตั้ง/ใช้งาน) · [`DESIGN.md`](./DESIGN.md) · [`PRODUCT.md`](./PRODUCT.md)
+
+---
+
+## 0. สถานะการปรับใช้ (Migration Status)
+
+| เฟส | ขอบเขต | สถานะ |
+|---|---|---|
+| **Phase 1** | Back-end — แก้ค่าคงที่/สิทธิ์/รหัสตอบกลับ/ชื่อฟังก์ชันให้ตรงมาตรฐาน | ✅ ทำแล้ว |
+| **Phase 2a** | Front-end — รวมระบบแจ้งเตือนเป็น hook กลาง `useAlert()` ตัวเดียวทั้งโปรเจกต์ | ✅ ทำแล้ว |
+| **Phase 2b** | Front-end — ย้ายสีที่ hardcode (`#DC2626`/`#D32F2F`) ให้มาจาก `theme.ts` | ⏳ รอทำ |
+| **Phase 3** | Front-end — เปลี่ยนชื่อโฟลเดอร์/ไฟล์ที่สะกดผิด (`Meneger_*`, `Technicain_*`) | ⏳ รอทำ |
+| **Phase 4** | เอกสาร — ซิงก์ `README.md` / `AGENTS.md` ให้ตรงความจริง | ⏳ รอทำ |
+
+**หลักการสำคัญ:** การปรับทุกเฟส **ห้ามเปลี่ยนพฤติกรรมที่ผู้ใช้เห็น** ยกเว้นรายการที่ระบุว่าเป็น "แก้บั๊ก/ปิดช่องโหว่" ไว้ชัดเจน
+
+---
+
+## 1. สถาปัตยกรรมและการไหลของข้อมูล
+
+```
+[Expo App]
+   หน้าจอ (app/**)  ──เรียก──▶  lib/api.ts (fetchWithAuth)
+                                      │  แนบ Bearer JWT (SecureStore/localStorage)
+                                      ▼
+[Express API]  server.js → routes/*.routes.js
+                                      │  middleware/auth.js  (ตรวจ JWT → req.user)
+                                      │  middleware/role.js  (ตรวจสิทธิ์ตามบทบาท)
+                                      ▼
+                              controllers/*.controller.js   (โลจิก/validation/สถานะ)
+                                      │  queries/*.queries.js  (SQL แบบมีชื่อ) หรือ pool.query ตรง
+                                      ▼
+                              [PostgreSQL app_data]
+```
+
+**ข้อกำหนด**
+- **FR-API-01**: แอปต้องคุยกับ Backend ผ่าน `lib/api.ts` **เท่านั้น** — ห้ามเรียก `fetch`/Supabase ตรงจากหน้าจอ
+  *(ตรวจแล้ว: ปัจจุบันไม่มี `supabase.from(...)` ในโค้ดแอปเลย — ที่เขียนใน `AGENTS.md` เป็นข้อมูลเก่า)*
+- **FR-API-02**: ทุก endpoint (ยกเว้น login/register/forgot/reset) ต้องผ่าน `auth` ก่อนเสมอ
+- **BE-ARC-01**: ลำดับชั้น = `routes → controller → queries`. ถ้า SQL ยาว/ใช้ซ้ำ ให้ย้ายไป `queries/*.queries.js`
+
+---
+
+## 2. มาตรฐาน Back-end
+
+### 2.1 โครงสร้างレスponse (Response Envelope)
+
+```jsonc
+// สำเร็จ
+{ "success": true, "data": <object|array>, "message": "ข้อความไทย (ไม่บังคับ)" }
+
+// ล้มเหลว
+{ "success": false, "message": "ข้อความไทยที่ผู้ใช้อ่านรู้เรื่อง" }
+```
+
+- **BE-RES-01**: ห้ามใส่ฟิลด์อื่นปนระดับบนสุดของ response (เช่น `filename`) ให้ใส่ใน `data` แทน
+- **BE-RES-02**: ข้อความ `message` ต้องเป็นภาษาไทยและบอกสิ่งที่ผู้ใช้ต้องทำต่อ
+
+### 2.2 รหัสสถานะ HTTP
+
+| การกระทำ | รหัส | หมายเหตุ |
+|---|---|---|
+| อ่านสำเร็จ (GET) | `200` | |
+| **สร้างสำเร็จ (POST)** | **`201`** | ใช้เหมือนกันทุก resource |
+| อัปเดต/เปลี่ยนสถานะสำเร็จ (PUT/PATCH) | `200` | |
+| ลบสำเร็จ (DELETE) | `200` + `{success:true, message}` | |
+| ข้อมูลไม่ครบ/ผิดรูปแบบ/ผิดกฎธุรกิจ | `400` | |
+| ไม่ได้ล็อกอิน / token หมดอายุ | `401` | |
+| ล็อกอินแล้วแต่สิทธิ์ไม่พอ | `403` | |
+| ไม่พบข้อมูล | `404` | |
+| ยิงถี่เกินกำหนด | `429` | rate limit |
+| เซิร์ฟเวอร์พัง | `500` | ผ่าน `next(err)` |
+
+### 2.3 การตรวจสิทธิ์ (Role Guard)
+
+- **BE-AUTH-01**: สิทธิ์ตามบทบาทต้องประกาศที่ **route** ด้วย `role(...)` เสมอ ไม่พึ่งการซ่อนปุ่มบนหน้าจอ
+- **BE-AUTH-02**: ถ้าเป็นการตรวจ "เจ้าของข้อมูล" (ลูกค้าดูงานตัวเอง) ให้ตรวจใน controller แล้วตอบ `403`
+- **BE-AUTH-03**: `role_id` ต้องอ้างจาก `constants/index.js` (`ROLES`) ที่ตรงกับตาราง `roles` เท่านั้น
+
+**ตารางสิทธิ์มาตรฐาน (ตรงกับ route จริง)**
+
+| กลุ่ม API | Manager | Technician | Staff | Customer | หมายเหตุ |
+|---|:--:|:--:|:--:|:--:|---|
+| `auth/me`, `auth/profile` | ✅ | ✅ | ✅ | ✅ | ทุกบทบาทที่ล็อกอิน |
+| `devices` (GET/POST/PUT) | ✅ | ✅ | ✅ | ✅ | ใช้ตอนรับเครื่อง |
+| `repairs` (GET/POST/PUT/status/detail/signature) | ✅ | ✅ | ✅ | ✅ | ตรวจเจ้าของใน controller |
+| `repairs` (DELETE) | ✅ | — | — | — | ลบงานที่ยังไม่มีใบเสนอราคา/การชำระ |
+| `quotations` (GET) | ✅ | ✅ | ✅ | ✅ | |
+| `quotations` (POST/PUT/DELETE) | ✅ | ✅ | — | — | ช่างเป็นผู้ออกใบเสนอราคา |
+| `quotations` (PATCH status) | ✅ | ✅ | ✅ | ✅ | ลูกค้าเจ้าของงานอนุมัติ/ขอแก้ไข/ยกเลิก |
+| `payments` (POST) | ✅ | ✅ | ✅ | ✅ | ลูกค้าแจ้งชำระ |
+| `payments` (verify/reject) | ✅ | — | ✅ | — | หน้าร้านตรวจสลิป |
+| `items` (GET) | ✅ | ✅ | ✅ | ✅ | |
+| `items` (POST/PUT/DELETE) | ✅ | — | — | — | **Phase 1 เปลี่ยนจากเดิม (เดิมใครก็ได้)** |
+| `staff` (GET/PUT/DELETE) | ✅ | — | — | — | |
+| `catalog` (GET) | ✅ | ✅ | ✅ | ✅ | |
+| `catalog` (POST/PUT/DELETE) | ✅ | — | — | — | Master Data |
+| `dashboard/*` | ✅ | — | ✅ | — | Staff เห็นแบบไม่มีตัวเลขเงิน |
+| `lookup/*` | ✅ | ✅ | ✅ | ✅ | |
+
+### 2.4 การจัดการ Error
+
+- **BE-ERR-01**: ทุก handler ใช้รูปแบบเดียว: `try { ... } catch (err) { next(err); }`
+- **BE-ERR-02**: งานที่ไม่ใช่หัวใจ (เช่น บันทึก log/สลิป) ถ้าล้มเหลวให้ `console.warn` แล้วทำงานต่อ **ห้าม throw**
+  → ระบุคอมเมนต์ว่าเป็น *soft-fail* เสมอ
+- **BE-ERR-03**: ห้าม `console.error` แล้วกลืน error โดยไม่ตอบ response
+
+### 2.5 Validation
+
+- **BE-VAL-01**: ตรวจ `parseInt` / ค่าบังคับ / ช่วงค่าที่ controller ก่อนแตะ DB เสมอ
+- **BE-VAL-02**: ข้อความ validation ต้องตรงกับที่แอปแสดง (ภาษาไทย, บอกวิธีแก้)
+- **BE-VAL-03**: กฎธุรกิจที่สำคัญต้องอยู่ที่ server (เช่น อะไหล่ต้องมาจากแคตตาล็อก, ต้องมีค่าบริการคู่กับอะไหล่)
+
+### 2.6 การตั้งชื่อ (Naming)
+
+- **BE-NAME-01**: ชื่อฟังก์ชันใน controller ใช้ชุดเดียว: `getAll / getById / create / update / remove / updateStatus / ...`
+  → **ห้ามมี alias** เช่น `exports.delete = exports.remove`
+- **BE-NAME-02**: ชื่อคอลัมน์ใน DB และ payload เป็น `snake_case` เสมอ (`job_id`, `quotation_id`, `payment_method_id`)
+- **BE-NAME-03**: ในตาราง `quotation_details` ใช้ชื่อคอลัมน์ `quote_id` (มีอยู่จริง) — โค้ดต้องอ้างชื่อจริง ไม่ตั้งชื่อเล่นใหม่
+- **BE-NAME-04**: ไฟล์ `queries/*.queries.js` ต้องขึ้นต้นด้วยคำกริยาเช่นเดิม: `SELECT_*`, `INSERT_*`, `UPDATE_*`, `DELETE_*`
+
+### 2.7 Transaction
+
+- **BE-TX-01**: งานที่เขียนหลายตาราง (ใบเสนอราคา + รายการ, ชำระเงิน + สลิป + log) ต้องใช้ `pool.connect()` + `BEGIN/COMMIT/ROLLBACK`
+- **BE-TX-02**: ต้อง `client.release()` ใน `finally` เสมอ
+
+---
+
+## 3. มาตรฐาน Front-end
+
+### 3.1 การเรียก API
+- **FE-API-01**: ทุกการเรียกผ่านฟังก์ชันใน `lib/api.ts` (1 ฟังก์ชัน = 1 endpoint) ห้ามประกอบ URL เองในหน้าจอ
+- **FE-API-02**: `fetchWithAuth` โยน error เมื่อ response ไม่ใช่ 2xx → หน้าจอต้อง `try/catch` และโชว์ข้อความจาก `error.message`
+- **FE-API-03**: **ห้ามยิง API ที่ผู้ใช้ไม่มีสิทธิ์** เพราะจะได้ `403` และทำให้ `Promise.all` ทั้งชุดพัง
+
+### 3.2 โทเคน
+- **FE-TOK-01**: ใช้ `getToken()` / `saveToken()` / `removeToken()` จาก `lib/api.ts` เท่านั้น (native = SecureStore, web = localStorage)
+
+### 3.3 การแจ้งเตือน (Feedback) — ✅ มาตรฐานนี้ถูกบังคับใช้แล้ว (Phase 2a)
+- **FE-UI-01**: ทุกหน้าจอใช้ hook กลาง **`hooks/use-alert.tsx`** เท่านั้น — ห้าม `<CustomAlert>` ตรง ๆ และห้ามประกาศ `alertConfig`/`showAlert`/`showPopup` ซ้ำในไฟล์หน้าจอ
+  ```tsx
+  const { showAlert, showConfirm, alertElement } = useAlert();
+  ```
+  - `showAlert(title, message, type?, onConfirm?)` — ปุ่มเดียว (ค่า `type` default = `'info'`; **ให้ระบุ `type` ทุกครั้งเพื่อความอ่านง่าย**)
+  - `showConfirm({ title, message, type?, confirmText?, cancelText?, onConfirm?, onCancel? })` — กล่องยืนยัน (`type` default = `'warning'`, `confirmText` default = `'ตกลง'`)
+    - **ใส่ `cancelText` = สองปุ่ม** (เช่น `'ยกเลิก'`) / **ไม่ใส่ = ปุ่มเดียว** (พฤติกรรมเดียวกับ `CustomAlert` เดิม)
+  - `alertElement` — นำไปวางใน JSX (ที่เดิมเคยเป็น `<CustomAlert .../>`) ที่เดียวต่อหน้าจอ
+  - **ลำดับใน callback:** hook จะปิดกล่องให้ก่อน แล้วจึงเรียก `onConfirm`/`onCancel` → ห้ามเรียกปิดกล่องเอง (ไม่มี `hideAlert()` แล้ว)
+- **FE-UI-02**: `type` มีแค่ 4 ค่า: `'success' | 'warning' | 'danger' | 'info'` — ค่า `'error'` (ที่ `slips.tsx` เคยใช้) ถือเป็น `'danger'` (แก้แล้ว)
+- **FE-UI-03**: ใช้ `ConfirmDeleteModal` / `ConfirmLogoutModal` / `ConfirmSendModal` เมื่อต้องมี UI ยืนยันเฉพาะทาง (มีปุ่ม/รายละเอียดของตัวเอง) — ส่วนการยืนยันทั่วไปใช้ `showConfirm`
+
+### 3.4 ธีมและสี — *Phase 2*
+- **FE-THM-01**: สีต้องมาจาก `constants/theme.ts` (`Colors.primary = '#DC2626'`, `Colors.status.*`)
+- **FE-THM-02**: ห้าม hardcode `#DC2626` หรือ `#D32F2F` ในหน้าจอ (ปัจจุบันใช้ปนกัน 2 เฉด: `#D32F2F` **ไม่มี** ใน theme)
+- **FE-THM-03**: ฟอนต์ใช้คลาส `font-heading` / `font-body` เท่านั้น
+
+### 3.5 โครงสร้างไฟล์/โฟลเดอร์
+- **FE-STR-01**: หน้าจอใน `app/<group>/` ใช้ `<group>` = `(auth)` | `(customer)` | `(staff)` | `(technicain)` | `(meneger)`
+- **FE-STR-02**: คอมโพเนนต์แยกตามโดเมน: `Staff_*`, `Technicain_*`, `Meneger_*`, `Customer*`, `Shared_*`
+  → ชื่อที่สะกดผิด (`Meneger`, `Technicain`) จะแก้ใน **Phase 3** (ต้องแก้ import ทั้งโปรเจกต์)
+- **FE-STR-03**: ไฟล์ `.tsx` = มี JSX, `.ts` = ไม่มี JSX (types/โลจิก)
+
+### 3.6 สถานะหน้าจอ
+- **FE-ST-01**: โหลดครั้งแรกใช้ `ActivityIndicator`, รีเฟรชใช้ `RefreshControl` (สีจาก theme)
+- **FE-ST-02**: กลับเข้าหน้าจอต้องรีเฟรชข้อมูลด้วย `useFocusEffect` (ไม่ใช่ `useEffect` อย่างเดียว)
+- **FE-ST-03**: ตอน submit ปุ่มต้อง `disabled` + แสดงสถานะกำลังทำงาน กันกดซ้ำ
+
+---
+
+## 4. ทะเบียนค่าคงที่ (Single Source of Truth)
+
+> ค่าอ้างอิงเดียวกับ `back-end/constants/index.js` และตารางใน `database.sql`
+
+| ชุดค่า | ค่า | ความหมาย |
+|---|---|---|
+| **Roles** (`roles.id`) | `1` Manager · `2` Technician · `3` Staff · `4` Customer | **ต้องตรงกับตาราง `roles`** |
+| **สถานะงาน** (`status_id`) | `1` รอตรวจเช็ค · `2` ดำเนินการตรวจเช็ค · `3` ดำเนินการเสนอราคา · `4` รอการอนุมัติ · `5` อนุมัติแล้ว/รอซ่อม · `6` รอลูกค้ามารับเครื่อง · `7` รอชำระ · `8` เสร็จสิ้น · `9` ยกเลิกซ่อม | ลำดับจริง: 1→2→3→4→5→7→6→8 หรือ →9 |
+| **สถานะใบเสนอราคา** (`quote_status_id`) | `1` รออนุมัติ · `2` อนุมัติ · `3` ยกเลิก · `4` ขอแก้ไข/เพิ่มเติมรายการ | `5` มีใน DB แต่ไม่มีใน constants |
+| **ประเภทเครื่อง** (`device_types`) | ดึงจาก DB ผ่าน `GET /api/catalog/device-types` | ห้าม hardcode ในโค้ด |
+| **ประเภทรายการ** (`item_type_id`) | `1` อะไหล่ · `2` ค่าบริการ | |
+| **วิธีชำระเงิน** (`payment_method_id`) | `1` เงินสด · `2` โอนเงิน | |
+| **Log การทำงาน** (`action_type_id`) | `1` รับเครื่อง · `2` เริ่มตรวจเช็ค · `3` ออกใบเสนอราคา · `4` เริ่มซ่อม · `5` ซ่อมเสร็จ · `6` ชำระเงิน · `7` ส่งมอบ · `8` ลูกค้ายกเลิก | |
+| **ค่าตรวจเช็คกรณียกเลิก** | `300` บาท (`DEFAULTS.CANCEL_INSPECTION_FEE`) | |
+| **วันของระบบ** | "วันรับเครื่องมา" = `created_at` · "วันรับเครื่องคืน" = `return_date` | ไม่มี "วันนัดรับเครื่อง" |
+| **วันรับรู้รายได้** | `return_date` → `repaired_at` → `payment_date` → `created_at` (เขตเวลา `Asia/Bangkok`) | |
+| **กำไรขั้นต้น** | รายรับรวม − ต้นทุนอะไหล่ (เฉพาะใบเสนอราคาที่ **อนุมัติ**) | |
+
+---
+
+## 5. แผนผังโลจิกทุก Flow (Front ↔ Back)
+
+รูปแบบเดียวกันทุก flow: **ขั้น → หน้าจอ (ไฟล์) → ฟังก์ชัน `lib/api.ts` → API → Controller → ตาราง → กฎ/สถานะ**
+
+### FLOW-01 ยืนยันตัวตนและบัญชี
+| ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
+|---|---|---|---|---|---|---|
+| สมัครลูกค้า | `(auth)/register.tsx` | `lib/auth.ts: register()` | `POST /api/auth/register` | `auth.register` | `profiles` | role = Customer(4), รหัสผ่าน ≥8 มี A-Z/a-z/0-9 |
+| เข้าสู่ระบบ | `(auth)/login.tsx` | `lib/auth.ts: login()` | `POST /api/auth/login` | `auth.login` | `profiles` | คืน JWT + user, rate limit 50/15 นาที |
+| แยกเส้นทางตามบทบาท | `app/index.tsx` | `getMe()` | `GET /api/auth/me` | `auth.getMe` | `profiles`, `roles` | Manager → `(meneger)`, อื่น ๆ → `(tabs)` |
+| ลืมรหัสผ่าน | `(auth)/forgot-password.tsx` | `lib/auth.ts: forgotPassword()` | `POST /api/auth/forgot-password` | `auth.forgotPassword` | `password_reset_tokens` | ยืนยัน **อีเมล+เบอร์โทร** ต้องตรง, token อายุ 15 นาที |
+| ตั้งรหัสใหม่ | `(auth)/reset-password.tsx` | `lib/auth.ts: resetPassword()` | `POST /api/auth/reset-password` | `auth.resetPassword` | `password_reset_tokens`, `profiles` | token ต้อง `used=false` และไม่หมดอายุ → แล้วปิด `used=true` |
+| แก้ข้อมูลส่วนตัว | `profile.tsx` (ทุกกลุ่ม) | `updateProfile()` | `PUT /api/auth/profile` | `auth.updateProfile` | `profiles` | |
+
+### FLOW-02 รับเครื่อง / เปิดใบรับซ่อม
+| ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
+|---|---|---|---|---|---|---|
+| ค้นหาลูกค้าเดิม | `(staff)/receive.tsx` | `searchProfiles()` | `GET /api/lookup/profiles` | `lookup.searchProfiles` | `profiles` | ค้นด้วยชื่อ/เบอร์/อีเมล, เฉพาะ role Customer |
+| บันทึกเครื่อง | `(staff)/receive.tsx` + `Staff_receive/DeviceFormCard` | `createDevice()` | `POST /api/devices` | `device.create` | `device` | ต้องมี `device_type_id`; ยี่ห้อใหม่สร้างอัตโนมัติ |
+| เปิดใบซ่อม | `(staff)/receive.tsx` | `createRepairJob()` | `POST /api/repairs` | `repair.create` | `repair_job` | **201**, สถานะ = **1 รอตรวจเช็ค** |
+| บันทึก log รับเครื่อง | `(staff)/receive.tsx` | `logRepairJobDetail()` | `POST /api/repairs/:id/detail` | `repair.addDetail` | `repair_job_detail` | `action_type_id = 1` |
+
+### FLOW-03 ตรวจเช็คและวินิจฉัย
+| ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
+|---|---|---|---|---|---|---|
+| เริ่มตรวจเช็ค | `(technicain)/checking.tsx` | `updateRepairStatus()` | `PATCH /api/repairs/:id/status` | `repair.updateStatus` | `repair_job`, `repair_job_detail` | 1 → **2** |
+| บันทึกอาการที่ตรวจพบ | `make-quote.tsx` / `job-detail.tsx` | `updateRepair()` | `PUT /api/repairs/:id` | `repair.update` | `repair_job.actual_symptom` | |
+
+### FLOW-04 ออก/แก้ไขใบเสนอราคา
+| ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
+|---|---|---|---|---|---|---|
+| เลือกอะไหล่/ค่าบริการ | `make-quote.tsx` + `Technicain_make_quote/*` | `getItems()` | `GET /api/items` | `item.getAll` | `item` | ดึงจากแคตตาล็อกเท่านั้น |
+| ส่งใบเสนอราคา | `make-quote.tsx` | `createQuotation()` | `POST /api/quotations` | `quotation.create` | `quotation`, `quotation_details` | **201**; snapshot `unit_cost` = `item.cost_price`; มีค่าบริการอย่างน้อย 1 รายการถ้ามีอะไหล่; งาน → **4 รออนุมัติ** |
+| แก้ไขใบเสนอราคา | `make-quote.tsx` | `updateQuotation()` | `PUT /api/quotations/:id` | `quotation.update` | `quotation`, `quotation_details` | แทนรายการเดิมทั้งชุด |
+| ลบใบเสนอราคา | `(technicain)/repairing.tsx` | `deleteQuotation()` | `DELETE /api/quotations/:id` | `quotation.remove` | `quotation` | งานถอยกลับเป็น **3 กำลังทำใบเสนอราคา** |
+
+### FLOW-05 อนุมัติ / ขอแก้ไข / ยกเลิกใบเสนอราคา (ลูกค้า)
+| ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
+|---|---|---|---|---|---|---|
+| อนุมัติ | `verify-quote.tsx` | `updateQuotationStatus(id, 2)` | `PATCH /api/quotations/:id/status` | `quotation.updateStatus` | `quotation`, `repair_job` | งาน → **5 อนุมัติแล้ว/รอซ่อม** |
+| ขอแก้ไข | `verify-quote.tsx` | `updateQuotationStatus(id, 4/5, remark)` | เดียวกัน | เดียวกัน | `quotation.customer_remark` | งาน → **3 กำลังทำใบเสนอราคา** |
+| ยกเลิกซ่อม | `verify-quote.tsx` | `updateQuotationStatus(id, 3)` | เดียวกัน | เดียวกัน | `quotation`, `repair_job` | งาน → **9 ยกเลิก**, เก็บค่าตรวจเช็ค 300 |
+| ตรวจเจ้าของ | — | — | — | `quotation.updateStatus` | `device.customer_id` | ไม่ใช่เจ้าของ → **403** |
+
+### FLOW-06 ซ่อมและส่งต่อรอชำระ
+| ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
+|---|---|---|---|---|---|---|
+| เริ่มซ่อม | `(technicain)/repairing.tsx` | `logRepairJobDetail()` | `POST /api/repairs/:id/detail` | `repair.addDetail` | `repair_job_detail` | `action_type_id = 4` |
+| ซ่อมเสร็จ | `(technicain)/repairing.tsx` | `updateRepairStatus(7)` | `PATCH /api/repairs/:id/status` | `repair.updateStatus` | `repair_job` | 5 → **7 รอชำระ** + บันทึก `repaired_at` |
+
+### FLOW-07 ชำระเงินและตรวจสอบ (สำคัญ: ทุกอย่างต้องยืนยันได้)
+| ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
+|---|---|---|---|---|---|---|
+| แจ้งชำระ (+สลิป) | `(customer)/index.tsx`, `slips.tsx` | `createPayment()` | `POST /api/payments` | `payment.create` | `repair_job`, `slips_records` | **201** (Phase 1 แก้จาก 200); โอนต้องมีสลิป; เขียน `payment_method_id`, `payment_date` |
+| ตีกลับสลิป | `verify-payment.tsx` | `rejectPayment()` | `PATCH /api/payments/:jobId/reject` | `payment.reject` | `repair_job` | รีเซ็ตข้อมูลชำระ ให้ส่งใหม่ได้ |
+| ยืนยันการชำระ | `verify-payment.tsx` | `verifyPayment()` | `PATCH /api/payments/:jobId/verify` | `payment.verify` | `repair_job` | `payment_verified = true`, งาน → **6 รอลูกค้ามารับเครื่อง** |
+
+### FLOW-08 ส่งมอบ + ลายเซ็น + ปิดงาน + ใบเสร็จ
+| ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
+|---|---|---|---|---|---|---|
+| เซ็นรับเครื่อง | `deliver-handover.tsx` | `updateRepairSignature()` | `PATCH /api/repairs/:id/signature` | `repair.updateSignature` | `repair_job.customer_receive_signature` | บันทึกไฟล์ลายเซ็น + ตั้ง `return_date` |
+| ปิดงาน | `deliver-handover.tsx` | `updateRepairStatus(8)` | `PATCH /api/repairs/:id/status` | `repair.updateStatus` | `repair_job` | 6 → **8 เสร็จสิ้น** = เริ่มนับรายได้ |
+| พิมพ์ใบเสร็จ | `receipt.tsx` | (ใช้ข้อมูลงานที่มี) | — | — | — | PDF ผ่าน `expo-print` |
+
+### FLOW-09 ติดตามงานและแจ้งเตือน (ลูกค้า)
+| ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
+|---|---|---|---|---|---|---|
+| ดูงานของตนเอง | `(customer)/index.tsx` | `getRepairs()` | `GET /api/repairs` | `repair.getAll` | `repair_jobs_view` | ลูกค้าเห็นเฉพาะงานตัวเอง |
+| รายละเอียดงาน | `detail.tsx`, `job-detail.tsx` | `getRepair(id)` | `GET /api/repairs/:id` | `repair.getById` | `repair_job`, `repair_job_detail` | รวม log/ลายเซ็น/การชำระ |
+| แจ้งเตือน | `(customer)/notifications.tsx` | — | — | — | — | อ่านจากรายการงาน + badge บนแท็บ |
+
+### FLOW-10 แดชบอร์ดและรายงาน
+| ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
+|---|---|---|---|---|---|---|
+| การ์ดสรุป | `Shared_Dashboard/MetricCards.tsx` | `getDashboardMetrics()` | `GET /api/dashboard/metrics` | `dashboard.getMetrics` | `repair_job`, `quotation_details` | Manager เห็นเงิน / Staff เห็นแค่จำนวนงาน |
+| แนวโน้ม | `RepairTrendChart`, `RevenueTrendChart` | `getDashboardTrend()` | `GET /api/dashboard/trend` | `dashboard.getTrend` | `repair_job` | `metric_type=revenue` + Staff → **403** |
+| สัดส่วนประเภทเครื่อง | `CategoryChart` | `getDashboardCategory()` | `GET /api/dashboard/category` | `dashboard.getCategory` | `repair_jobs_view` | ตัวกรองดึงจาก DB |
+| การใช้อะไหล่ | `PartsUsageChart` | `getDashboardPartsUsage()` | `GET /api/dashboard/parts-usage` | `dashboard.getPartsUsage` | `quotation_details`, `item` | Staff ได้ `total_cost = 0` |
+| ผลงานช่าง/กิจกรรม | `WorkActivityChart` | `getDashboardWorkActivity()` | `GET /api/dashboard/work-activity` | `dashboard.getWorkActivity` | `repair_job_detail` | |
+| อาการเสียที่พบบ่อย | `SymptomsChart` | `getDashboardSymptoms()` | `GET /api/dashboard/symptoms` | `dashboard.getSymptoms` | `repair_job` | |
+
+### FLOW-11 จัดการข้อมูล (Manager)
+| ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
+|---|---|---|---|---|---|---|
+| อะไหล่/ค่าบริการ | `(meneger)/item.tsx`, `Meneger_item/*` | `getItems/createItem/updateItem/deleteItem` | `/api/items` | `item.*` | `item` | CRUD; ต้องมี `cost_price` เพื่อคิดกำไร; **Phase 1 ปิดสิทธิ์เป็น Manager** |
+| ประเภทเครื่อง/ยี่ห้อ/รุ่น | `(meneger)/devices.tsx`, `Meneger_devices/*` | `*CatalogDeviceType/Brand/Model` | `/api/catalog/*` | `catalog.*` | `device_types`, `brands`, `device_models` | ลบไม่ได้ถ้ามีเครื่อง/รุ่นผูกอยู่ |
+| พนักงาน | `(meneger)/staff.tsx`, `Meneger_staff/*` | `getStaff/updateStaff/deleteStaff` | `/api/staff` | `staff.*` | `profiles` | ลบพนักงาน → ลบ token รีเซ็ตรหัสด้วย |
+| รายการงานซ่อม | `(meneger)/repairs.tsx` | `getRepairs()` | `GET /api/repairs` | `repair.getAll` | `repair_jobs_view` | อ่านเท่านั้น (ไม่มีปุ่มลบงานบนหน้าจอ) |
+
+### FLOW-12 ความปลอดภัย (ทุกคำขอ)
+| ขั้น | ที่ทำงาน | กฎ |
+|---|---|---|
+| 1 | `server.js` | helmet, cors, rate limit (`/api/` ทั่วไป + auth 50/15 นาที) |
+| 2 | `middleware/auth.js` | ตรวจ `Bearer` JWT → โหลด user สดจาก DB → `req.user = {id, role_id, role_name}` |
+| 3 | `middleware/role.js` | เทียบชื่อบทบาทที่ route กำหนด |
+| 4 | controller | ตรวจเจ้าของข้อมูล/กฎธุรกิจ → `403` |
+| 5 | front-end | แสดงผลตาม `role` แต่ **ไม่ใช่** กลไกความปลอดภัย |
+
+---
+
+## 6. รายการไม่สอดคล้องที่พบ และสถานะการแก้
+
+| ID | อาการที่พบ | มาตรฐานที่ควรเป็น | สถานะ |
+|---|---|---|---|
+| ISS-01 | `constants.ROLES` = STAFF 2 / TECHNICIAN 3 **สลับกับตาราง `roles` จริง** (2=Technician, 3=Staff) → `staff.controller.js:211` เช็คผิดคน | ต้องตรงกับตาราง `roles` | ✅ **แก้แล้ว (Phase 1)** |
+| ISS-02 | `POST/PUT/DELETE /api/items` ไม่มี `role(...)` → บทบาทใดก็ลบอะไหล่ได้ | จำกัด Manager | ✅ **แก้แล้ว (Phase 1)** |
+| ISS-03 | `POST /api/payments` ตอบ `200` ขณะที่ create อื่นตอบ `201` | create = `201` ทุกที่ | ✅ **แก้แล้ว (Phase 1)** |
+| ISS-04 | `quotation.controller` ใช้ชื่อ `delete` แต่ `repair/item/staff/slip` ใช้ `remove` | ใช้ `remove` ทั้งหมด | ✅ **แก้แล้ว (Phase 1)** |
+| ISS-05 | `repair.controller` + `staff.controller` มี alias ตายตัว `exports.delete = exports.remove` (ไม่มีใครเรียก) | ห้ามมี alias — ใช้ `remove` ชื่อเดียว | ✅ **แก้แล้ว (Phase 1)** |
+| ISS-06 | `showAlert` ถูกประกาศซ้ำ **14 ไฟล์** + `setAlertConfig` ตรง ๆ อีก 6 ไฟล์ + popup เขียนเองใน `slips.tsx` (รวม 20 ไฟล์, 4 signature, มี `'error'` ที่ไม่ใช่ค่ามาตรฐาน) | ใช้ hook กลาง `useAlert()` ตัวเดียว | ✅ **แก้แล้ว (Phase 2a)** — เหลือ `CustomAlert` ที่เดียวในระบบ (ใน hook) |
+| ISS-07 | สีแดง hardcode 2 เฉด (`#DC2626`, `#D32F2F`) ทั้งที่ `theme.ts` มี `Colors.primary` | อ้างจาก theme | ⏳ Phase 2 |
+| ISS-08 | โฟลเดอร์สะกดผิด `Meneger_*`, `Technicain_*` | `Manager_*`, `Technician_*` | ⏳ Phase 3 |
+| ISS-09 | SQL อยู่inline ใน 8 controller แต่แยก `queries/` แค่ 4 | งานยาว/ซ้ำ → ย้ายเข้า `queries/` | ⏳ รอพิจารณา |
+| ISS-10 | `AGENTS.md` ยังบอกว่าแอปใช้ Supabase query ตรง | ตัดออก/แก้ให้ตรงจริง | ⏳ Phase 4 |
+| ISS-11 | `quotation_status` มี id 5 ในฐานข้อมูล แต่ `constants.QUOTE_STATUS` ไม่มี | เพิ่มให้ครบ | ⏳ Phase 1.1 |
+
+---
+
+## 7. ขั้นตอนปรับใช้ (Migration Plan)
+
+**Phase 1 — Back-end (ทำแล้วรอบนี้)**
+1. `constants/index.js` → แก้ `ROLES` ให้ตรง DB (ISS-01)
+2. `routes/item.routes.js` → เพิ่ม `role('Manager')` (ISS-02)
+3. `controllers/payment.controller.js` → create ตอบ `201` (ISS-03)
+4. `controllers/quotation.controller.js` + `routes/quotation.routes.js` → `delete` → `remove` (ISS-04)
+5. `controllers/repair.controller.js` → ลบ alias (ISS-05)
+6. ตรวจผล: `node --check` ทุกไฟล์ + ทดสอบ flow จริงผ่าน HTTP (รับเครื่อง → ใบเสนอราคา → อนุมัติ → ชำระ → ยืนยัน → ส่งมอบ)
+
+**Phase 2a — Front-end: การแจ้งเตือน (ทำแล้วรอบนี้)**
+1. สร้าง `hooks/use-alert.tsx` → `useAlert()` เปิด `showAlert` / `showConfirm` / `closeAlert` / `alertElement` (ห่อ `components/ui/CustomAlert.tsx` ที่เดียว)
+2. ย้าย **20 หน้าจอ** มาใช้ hook: `item`, `staff`, `devices`, `login`, `register`, `forgot-password`, `reset-password`, `report-error`, `receipt`, `CustomerFormCard`, `AddPartModal`, `detail`, `make-quote`, `job-detail`, `deliver-handover`, `repairing`, `verify-quote`, `verify-payment`, `receive`, `slips`
+3. แปลง `'error'` → `'danger'` (4 จุดใน `slips.tsx`) และเติม `type` ให้ชัดเจนทุกจุดที่เดิมพึ่งค่า default (`'danger'` ในกลุ่ม auth/manager)
+4. จุดที่เดิมเช็ค `alertConfig.type` ใน JSX เพื่อตัดสินใจนำทาง (เช่น `verify-quote`, `deliver-handover`) → ย้าย logic นั้นไปเป็น `onConfirm` ของแต่ละจุดแทน (พฤติกรรมเหมือนเดิม ไม่มี `hideAlert()` แล้ว)
+5. ตรวจผล: `tsc --noEmit` ผ่าน (exit 0) + `eslint` ไม่เพิ่ม error (เหลือ 4 error เดิมใน `app/receipt.tsx` ที่ไม่เกี่ยวกับงานนี้)
+
+**Phase 2b — Front-end (ถัดไป):** ย้ายสี hardcode `#DC2626`/`#D32F2F` ให้มาจาก `constants/theme.ts` (ISS-07)
+
+**Phase 3 — Naming:** เปลี่ยนชื่อโฟลเดอร์/คอมโพเนนต์ `Meneger_*` → `Manager_*`, `Technicain_*` → `Technician_*` พร้อมแก้ import และทดสอบ `tsc`/`eslint`
+
+**Phase 4 — Docs:** ซิงก์ `README.md`/`AGENTS.md` (`devices` tab, ไม่มี Supabase)
+
+---
+
+*เอกสารนี้เป็นมาตรฐานกลาง — แก้โค้ดให้ตรงเอกสาร ไม่ใช่แก้เอกสารให้ตรงโค้ด*
