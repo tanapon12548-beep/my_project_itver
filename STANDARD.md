@@ -17,6 +17,7 @@
 | **Phase 3** | Front-end — แก้ชื่อโฟลเดอร์/กลุ่มเส้นทางที่สะกดผิด (`Meneger_*`/`(meneger)` → `Manager_*`/`(manager)`, `Technicain_*`/`(technicain)` → `Technician_*`/`(technician)`) | ✅ ทำแล้ว |
 | **Phase 4** | เอกสาร — ซิงก์ `README.md` / `AGENTS.md` / `handoff.md` / `eas.json` ให้ตรงความจริง | ✅ ทำแล้ว |
 | **Phase 5** | Back-end — ย้าย SQL ที่ฝังใน controller **ทั้งหมด** เข้า `queries/*.queries.js` (ISS-09) | ✅ ทำแล้ว |
+| **Phase 6** | โลจิกธุรกิจ — ตัดการสร้างบัญชีลูกค้าโดยพนักงาน (ISS-16), เติมการแจ้งเตือนลูกค้าให้ครบทุกเหตุการณ์ (ISS-17), พนักงานตีกลับสลิปแล้วกลับหน้ารายการ (ISS-18) | ✅ ทำแล้ว |
 
 **หลักการสำคัญ:** การปรับทุกเฟส **ห้ามเปลี่ยนพฤติกรรมที่ผู้ใช้เห็น** ยกเว้นรายการที่ระบุว่าเป็น "แก้บั๊ก/ปิดช่องโหว่" ไว้ชัดเจน
 
@@ -210,8 +211,8 @@
 ### FLOW-02 รับเครื่อง / เปิดใบรับซ่อม
 | ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
 |---|---|---|---|---|---|---|
-| ค้นหาลูกค้าเดิม | `(staff)/receive.tsx` | `searchProfiles()` | `GET /api/lookup/profiles` | `lookup.searchProfiles` | `profiles` | ค้นด้วยชื่อ/เบอร์/อีเมล, เฉพาะ role Customer |
-| บันทึกเครื่อง | `(staff)/receive.tsx` + `Staff_receive/DeviceFormCard` | `createDevice()` | `POST /api/devices` | `device.create` | `device` | ต้องมี `device_type_id`; ยี่ห้อใหม่สร้างอัตโนมัติ |
+| ค้นหาลูกค้าเดิม | `(staff)/receive.tsx` | `searchProfiles()` / `lookupProfiles()` | `GET /api/lookup/profiles` | `lookup.searchProfiles` | `profiles` | ค้นด้วยชื่อ/เบอร์/อีเมล, เฉพาะ role Customer · **ไม่พบ = ห้ามเปิดงาน** (พนักงานสร้างบัญชีลูกค้าเองไม่ได้ — ต้องให้ลูกค้าสมัครผ่านแอปก่อน) |
+| บันทึกเครื่อง | `(staff)/receive.tsx` + `Staff_receive/DeviceFormCard` | `createDevice()` | `POST /api/devices` | `device.create` | `device` | ต้องมี `device_type_id` + **`customer_id` ต้องไม่ว่าง**; ยี่ห้อใหม่สร้างอัตโนมัติ |
 | เปิดใบซ่อม | `(staff)/receive.tsx` | `createRepairJob()` | `POST /api/repairs` | `repair.create` | `repair_job` | **201**, สถานะ = **1 รอตรวจเช็ค** |
 | บันทึก log รับเครื่อง | `(staff)/receive.tsx` | `logRepairJobDetail()` | `POST /api/repairs/:id/detail` | `repair.addDetail` | `repair_job_detail` | `action_type_id = 1` |
 
@@ -247,7 +248,7 @@
 | ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
 |---|---|---|---|---|---|---|
 | แจ้งชำระ (+สลิป) | `(customer)/index.tsx`, `slips.tsx` | `createPayment()` | `POST /api/payments` | `payment.create` | `repair_job`, `slips_records` | **201** (Phase 1 แก้จาก 200); โอนต้องมีสลิป; เขียน `payment_method_id`, `payment_date` |
-| ตีกลับสลิป | `verify-payment.tsx` | `rejectPayment()` | `PATCH /api/payments/:jobId/reject` | `payment.reject` | `repair_job` | รีเซ็ตข้อมูลชำระ ให้ส่งใหม่ได้ |
+| ตีกลับสลิป | `verify-payment.tsx` | `rejectPayment()` | `PATCH /api/payments/:jobId/reject` | `payment.reject` | `repair_job` | รีเซ็ตข้อมูลชำระ ให้ส่งใหม่ได้ · **พนักงานกด "ยืนยัน" ในกล่องสำเร็จแล้วกลับหน้ารายการซ่อมทันที** (ไม่ค้างที่การ์ด "รอลูกค้าเลือกช่องทางชำระเงินและแนบสลิป") |
 | ยืนยันการชำระ | `verify-payment.tsx` | `verifyPayment()` | `PATCH /api/payments/:jobId/verify` | `payment.verify` | `repair_job` | `payment_verified = true`, งาน → **6 รอลูกค้ามารับเครื่อง** |
 
 ### FLOW-08 ส่งมอบ + ลายเซ็น + ปิดงาน + ใบเสร็จ
@@ -262,7 +263,7 @@
 |---|---|---|---|---|---|---|
 | ดูงานของตนเอง | `(customer)/index.tsx` | `getRepairs()` | `GET /api/repairs` | `repair.getAll` | `repair_jobs_view` | ลูกค้าเห็นเฉพาะงานตัวเอง |
 | รายละเอียดงาน | `detail.tsx`, `job-detail.tsx` | `getRepair(id)` | `GET /api/repairs/:id` | `repair.getById` | `repair_job`, `repair_job_detail` | รวม log/ลายเซ็น/การชำระ |
-| แจ้งเตือน | `(customer)/notifications.tsx` | — | — | — | — | อ่านจากรายการงาน + badge บนแท็บ |
+| แจ้งเตือน | `(customer)/notifications.tsx` | `getRepairs()` | `GET /api/repairs` | `repair.getAll` | `repair_job`, `repair_job_detail` | **คำนวณจากสถานะงานจริง — ไม่มีตารางแจ้งเตือนใน DB** (ดู Phase 6) · ครอบทุกเหตุการณ์: รับเครื่อง → กำลังจัดทำใบเสนอราคา → ตีกลับ/ขอแก้ไขใบเสนอราคา → รออนุมัติ → กำลังซ่อม → รอชำระ/รอตรวจสอบการชำระ → ตีกลับการชำระเงิน → พร้อมรับเครื่อง → ใบเสร็จพร้อม (แตะแล้วเปิด `/receipt`) → ยกเลิกซ่อม + ค่าตรวจเช็ค · เวลาที่แสดง = `last_action_at` (การเคลื่อนไหวล่าสุด) เรียงใหม่ → เก่า · **ไม่มี tab badge** |
 
 ### FLOW-10 แดชบอร์ดและรายงาน
 | ขั้น | หน้าจอ | lib/api.ts | API | Controller | ตาราง | กฎ/สถานะ |
@@ -312,6 +313,9 @@
 | ISS-13 | `constants/status.ts` ฝั่งแอป มี `ROLES` **สลับ 2/3** (STAFF 2 / TECHNICIAN 3) เหมือนบั๊กเดิมของฝั่ง API | ต้องตรงกับตาราง `roles` | ✅ **แก้แล้ว (Follow-up)** — ตรวจแล้วไม่มีโค้ดใดอ้างถึง `ROLES` ฝั่งแอป จึงไม่กระทบพฤติกรรม แต่ปิดกับดักไว้ |
 | ISS-14 | **บั๊ก**: `DELETE /api/slips/:id` (`slip.controller.js`) เรียก `pool.query(..., [slipId])` โดย **ไม่มีตัวแปร `slipId`** (มีแต่ `numId`) → โยน `ReferenceError` ทุกครั้ง → ตอบ `500` และลบสลิปไม่ได้เลย | ต้องอ้าง `numId` | ✅ **แก้แล้ว (Phase 5)** — เปลี่ยนเป็น `numId`; ทดสอบจริง `DELETE /slips/:id → 200` และไฟล์ภาพถูกลบออกจากดิสก์ด้วย |
 | ISS-15 | ยังเหลือ **เลขดิบที่ไม่ใช่สถานะ** ในฝั่ง Back-end: `item.controller.js` ใช้ `![1, 2]` (ชนิดรายการ), `dashboard` SQL ใช้ `i.item_type_id = 1` และ `p.role_id IN (2, 3)`, `repair/staff` ใช้ `DEFAULTS.CANCEL_INSPECTION_FEE` ถูกต้องแล้วแต่มี `\|\| 300` สำรอง | ใช้ `ITEM_TYPES.*` / `ROLES.*` จาก `constants/index.js` | ⏳ รอพิจารณา (ตั้งใจไม่แตะใน Phase 5 เพราะ ISS-09 เป็นการ "ย้าย SQL เฉย ๆ" ต้องคงข้อความ SQL เดิมไว้พิสูจน์ได้) |
+| ISS-16 | **ปิดช่องโหว่บัญชีปลอม**: พนักงานสร้างบัญชีลูกค้าเองได้ 2 ทาง — modal "ลงทะเบียนลูกค้าใหม่หน้าร้าน" ใน `Staff_receive/CustomerFormCard.tsx` และการสร้าง **อัตโนมัติเมื่อหาเบอร์ไม่เจอ** ใน `(staff)/receive.tsx` โดยตั้งรหัสผ่านสำเร็จรูป `Customer1234Z` **ให้ทุกบัญชี** และ**แต่งอีเมลปลอม** `cus_<เบอร์>@itvertex.local` (แปลง `api.ts: registerCustomer()`) | บัญชี+รหัสผ่านต้องเป็นของลูกค้าเอง (สมัครผ่านแอป) — พนักงานทำได้แค่เลือกบัญชีที่มีอยู่ | ✅ **แก้แล้ว (Phase 6)** — ลบทั้ง 2 ทาง + ลบ `registerCustomer()`; ถ้าค้นไม่พบ → **บล็อกการเปิดใบรับซ่อม** พร้อมแจ้ง "ให้ลูกค้าสมัครผ่านแอปก่อน" (ตรวจแล้ว `POST /api/auth/register` ที่ลูกค้าสมัครเองไม่ถูกแตะ) |
+| ISS-17 | การแจ้งเตือนลูกค้าไม่ครบเหตุการณ์: **งานยกเลิกซ่อม (สถานะ 9) ไม่มีการแจ้งเตือนเลย** ทั้งที่ต้องชำระค่าตรวจเช็ค 300 บาท · ไม่แจ้งตอนลูกค้าตีกลับใบเสนอราคา · ไม่แจ้งตอนใบเสร็จพร้อม · และ **เวลาของทุกแจ้งเตือนใช้ `created_at` (วันรับเครื่อง) เหมือนกันหมด** | แจ้งครบทุกเหตุการณ์ + เวลาตรงเหตุการณ์ | ✅ **แก้แล้ว (Phase 6)** — ครอบทุกสถานะ + ตีกลับการชำระเงิน + ยกเลิกซ่อม/ค่าตรวจเช็ค + ใบเสร็จ (แตะแล้วเปิด `/receipt`) · เพิ่ม `last_action_at` ใน `queries/repair.queries.js` แล้วใช้เป็นเวลาที่แสดง · เรียงใหม่ → เก่า |
+| ISS-18 | **บั๊ก UX**: หลังพนักงานกด "ปฏิเสธ" การชำระเงิน (ตีกลับสลิป) แล้วกด "ยืนยัน" ในกล่องสำเร็จ **หน้าจอยังค้างที่การ์ด "รอลูกค้าเลือกช่องทางชำระเงินและแนบสลิป"** + ปุ่มรับเงินสด → ดูเหมือนกดแล้วไม่มีอะไรเกิดขึ้น | กดยืนยันแล้วกลับหน้ารายการซ่อม แล้วรอลูกค้าส่งหลักฐานใหม่ | ✅ **แก้แล้ว (Phase 6)** — `verify-payment.tsx: handleRejectPayment` เติม `onConfirm` → `router.back()` (fallback `router.replace('/')` เหมือนเส้นนำทางอื่นในไฟล์) |
 
 ---
 
@@ -379,6 +383,20 @@
 8. **ผลพลอยได้:** เขตเวลาไทยย้ายไปเป็นค่าคงที่กลาง `constants.TIMEZONE = 'Asia/Bangkok'` (เดิม `const TZ` ฝังอยู่ใน `dashboard.controller.js`) → `queries/dashboard.queries.js` และ controller อ้างค่าเดียวกัน ป้องกันการตัดวันเพี้ยน
 9. **บั๊กที่พบระหว่างทางและแก้แล้ว:** ISS-14 (`DELETE /api/slips/:id` อ้างตัวแปร `slipId` ที่ไม่มีจริง → `500` ทุกครั้ง)
 10. **ยังเหลือ (ตั้งใจไม่แตะรอบนี้):** ISS-15 เลขดิบที่ไม่ใช่สถานะ (`[1,2]`, `i.item_type_id = 1`, `p.role_id IN (2,3)`)
+
+**Phase 6 — โลจิกธุรกิจ: บัญชีลูกค้า / การแจ้งเตือน / การตีกลับสลิป (ทำแล้วรอบนี้)**
+
+1. **ตัดการสร้างบัญชีลูกค้าโดยพนักงาน (ISS-16)**
+   - `components/Staff_receive/CustomerFormCard.tsx` — ลบ modal "ลงทะเบียนลูกค้าใหม่หน้าร้าน" + สถานะ/ฟังก์ชันทั้งหมด (`openQuickRegister`, `handleConfirmQuickRegister`, `quickRegVisible`, `reg*`, `isRegistering`) · เปลี่ยนกล่อง "ไม่พบลูกค้า" จากปุ่ม **"สร้างลูกค้าใหม่"** → ข้อความแจ้งให้ **ลูกค้าสมัครบัญชีผ่านแอปเองก่อน**
+   - `app/(staff)/receive.tsx` — ลบการสร้างบัญชีอัตโนมัติ (เดิมรหัสผ่านสำเร็จรูป `Customer1234Z` + อีเมลปลอม `cus_…@itvertex.local`); เหลือเพียง **ค้นด้วยเบอร์โทร** แล้วถ้าไม่พบ → `showAlert` แล้ว `return` (ไม่เปิดงาน) · เพิ่ม guard ซ้ำตอนกดยืนยันใน `handleConfirmAndPrint` · payload เปลี่ยนจาก `customer_id: selectedCustomerId || null` → `selectedCustomerId` (ห้ามสร้างเครื่องไร้เจ้าของ)
+   - `lib/api.ts` — ลบ `registerCustomer()` (ตัวห่อ `POST /api/auth/register`) เพราะไม่มีใครใช้แล้ว · **ไม่แตะ** endpoint/เส้นทางสมัครเองของลูกค้า (`lib/auth.ts: register()` → `(auth)/register.tsx`)
+2. **การแจ้งเตือนลูกค้าให้ครบทุกเหตุการณ์ (ISS-17)** — `app/(customer)/notifications.tsx` เขียนใหม่ทั้งส่วนคำนวณ:
+   - เพิ่มเหตุการณ์: **กำลังจัดทำใบเสนอราคา / ได้รับคำขอแก้ไข (ลูกค้าตีกลับ)** · **ยกเลิกซ่อม → รอชำระค่าตรวจเช็ค** (เดิมไม่มีเลย) · **ปิดงานหลังยกเลิก + ใบเสร็จพร้อม** · **รอตรวจสอบการชำระเงิน** (ลูกค้าส่งสลิปแล้ว) · **ใบเสร็จพร้อมแล้ว** สำหรับงานที่เสร็จสิ้น (แตะแล้วเปิด `/receipt` — เพิ่มฟิลด์ `target` ในรายการแจ้งเตือน)
+   - **เวลาที่แสดง** เปลี่ยนจาก `created_at` (วันรับเครื่อง) → `last_action_at` = การเคลื่อนไหวล่าสุดจาก `repair_job_detail` (เพิ่มเป็น subquery ใน `SELECT_REPAIR_FIELDS` ของ `queries/repair.queries.js` — เป็นการ **เพิ่มฟิลด์** ไม่กระทบคำสั่งเดิม) แล้วเรียงใหม่ → เก่า
+   - **ไม่เพิ่มตาราง/endpoint ใหม่** — ยังคำนวณจาก `GET /api/repairs` ตามสถาปัตยกรรมเดิม (ไม่มี realtime/badge)
+3. **พนักงานตีกลับสลิปแล้วกลับหน้ารายการ (ISS-18)** — `app/verify-payment.tsx: handleRejectPayment` เติม `onConfirm` ให้กล่อง "ปฏิเสธการชำระเงินแล้ว" → `router.back()` (fallback `router.replace('/')`) พร้อมปรับข้อความบอกว่ากลับไปรอลูกค้าส่งหลักฐานใหม่
+4. **ตรวจผล:** `tsc --noEmit` = exit 0 · `eslint` = 4 error เดิม (`app/receipt.tsx`) / **warning ลดลง 30 → 29** (ลบ import ที่ไม่ใช้ `Platform`) · ทดสอบ API จริง: `GET /api/repairs` (ลูกค้า) คืน `last_action_at` ที่ต่างจาก `created_at` และมีครบทุกฟิลด์ที่หน้าจอใช้ (`quote_status_id`, `payment_verified`, `payment_method_id`, `payment_reject_reason`, `total_cancel_price`, `customer_remark`, `return_date`)
+5. **ข้อจำกัด:** หน้าจอ RN ไม่สามารถรันใน environment นี้ได้ → การยืนยันผลเป็นระดับ `tsc`/`eslint` + ยิง API จริง (แนวเดียวกับเฟสก่อนหน้า)
 
 ---
 

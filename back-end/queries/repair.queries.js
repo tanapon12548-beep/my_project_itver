@@ -29,7 +29,8 @@ const SELECT_REPAIR_FIELDS = `
     q.quote_status_id,
     q.customer_remark,
     q.total_repair_price,
-    q.total_cancel_price
+    q.total_cancel_price,
+    (SELECT MAX(rjd.created_at) FROM repair_job_detail rjd WHERE rjd.job_id = rj.job_id) AS last_action_at
   FROM repair_job rj
   LEFT JOIN device d ON rj.device_id = d.device_id
   LEFT JOIN device_types dt ON d.device_type_id = dt.device_type_id

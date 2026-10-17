@@ -278,7 +278,16 @@ export default function VerifyPaymentScreen() {
         setExistingSlipUrl(null);
         setExistingSlipFilename(null);
         setRejectInputText('');
-        showConfirm({ title: 'ปฏิเสธการชำระเงินแล้ว', message: 'ระบบได้แจ้งให้ลูกค้าทราบเพื่อส่งหลักฐานใหม่แล้ว', type: 'success', confirmText: 'ยืนยัน' });
+        showConfirm({
+          title: 'ปฏิเสธการชำระเงินแล้ว',
+          message: 'ระบบได้แจ้งให้ลูกค้าทราบเพื่อส่งหลักฐานใหม่แล้ว กลับสู่หน้ารายการซ่อมเพื่อรอลูกค้าส่งหลักฐานอีกครั้ง',
+          type: 'success',
+          confirmText: 'ยืนยัน',
+          onConfirm: () => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/');
+          },
+        });
       }
     } catch (err: any) {
       showAlert('ข้อผิดพลาด', err.message || 'ไม่สามารถปฏิเสธการชำระเงินได้', 'danger');

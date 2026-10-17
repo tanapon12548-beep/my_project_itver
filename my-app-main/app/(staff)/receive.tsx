@@ -8,7 +8,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // 3. API helpers
-import { createDevice, createRepairJob, logRepairJobDetail, lookupProfiles, registerCustomer } from '@/lib/api';
+import { createDevice, createRepairJob, logRepairJobDetail, lookupProfiles } from '@/lib/api';
 
 // 4. Components
 import CustomerFormCard from '@/components/Staff_receive/CustomerFormCard';
@@ -67,36 +67,28 @@ export default function StaffReceiveScreen() {
       return;
     }
 
-    // Auto-resolve or register customer if not selected from suggestions
+    // ลูกค้าต้องมีบัญชีในระบบอยู่แล้วเท่านั้น — พนักงานไม่สร้างบัญชีลูกค้าให้ (ดู STANDARD.md FLOW-03)
+    // ถ้าไม่ได้เลือกจากผลการค้นหา ให้ค้นด้วยเบอร์โทรอีกครั้งก่อนตัดสินใจ
     let finalCustId = selectedCustomerId;
-    if (!finalCustId && phone.trim()) {
+    if (!finalCustId) {
       try {
-        const cleanDigits = phone.replace(/[^0-9]/g, '').slice(0, 10);
         const lk = await lookupProfiles(cleanDigits, 'phone');
         if (lk.success && lk.data && lk.data.length > 0) {
           finalCustId = lk.data[0].id;
           setSelectedCustomerId(finalCustId);
-        } else {
-          // Auto-create customer profile on the fly so Staff is never blocked
-          const parts = customerName.trim().split(' ');
-          const fName = parts[0] || 'ลูกค้า';
-          const lName = parts.slice(1).join(' ') || '-';
-          const autoEmail = email.trim() || `cus_${cleanDigits || Date.now()}@itvertex.local`;
-          const reg = await registerCustomer({
-            first_name: fName,
-            last_name: lName,
-            phone: cleanDigits,
-            email: autoEmail,
-            password: 'Customer1234Z',
-          });
-          if (reg?.data?.user?.id) {
-            finalCustId = reg.data.user.id;
-            setSelectedCustomerId(finalCustId);
-          }
         }
       } catch (e) {
-        console.log('Auto resolve customer notice:', e);
+        console.log('Customer lookup notice:', e);
       }
+    }
+
+    if (!finalCustId) {
+      showAlert(
+        'ไม่พบลูกค้าในระบบ',
+        'ไม่พบเบอร์โทรนี้ในระบบ กรุณาให้ลูกค้าสมัครบัญชีผ่านแอป IT VERTEX ก่อน แล้วจึงเลือกลูกค้าจากผลการค้นหา',
+        'warning'
+      );
+      return;
     }
 
     if (!selectedDeviceTypeId) {
@@ -121,6 +113,15 @@ export default function StaffReceiveScreen() {
 
   const handleConfirmAndPrint = async () => {
     if (isSubmitting) return;
+    if (!selectedCustomerId) {
+      setPreviewModalVisible(false);
+      showAlert(
+        'ไม่พบลูกค้าในระบบ',
+        'งานซ่อมต้องผูกกับบัญชีลูกค้าที่มีอยู่ในระบบ กรุณาเลือกลูกค้าจากผลการค้นหาก่อน',
+        'warning'
+      );
+      return;
+    }
     try {
       setIsSubmitting(true);
       setPreviewModalVisible(false);
@@ -129,7 +130,7 @@ export default function StaffReceiveScreen() {
 
       // 1. สร้างอุปกรณ์ผ่าน POST /api/devices (ตรงตาม ER: device table)
       const devicePayload: any = {
-        customer_id: selectedCustomerId || null,
+        customer_id: selectedCustomerId,
         device_type_id: selectedDeviceTypeId,
         brand_id: selectedBrandId || null,
         brand_name: selectedBrandName.trim() || undefined,

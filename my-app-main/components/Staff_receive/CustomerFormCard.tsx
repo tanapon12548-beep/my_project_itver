@@ -2,20 +2,17 @@
 import { useState, useRef } from 'react';
 import {
   ActivityIndicator,
-  Modal,
   Text,
   TextInput,
   TouchableOpacity,
   View,
-  Platform,
 } from 'react-native';
 
 // 2. Third-party / Expo
 import { Ionicons } from '@expo/vector-icons';
-import { useAlert } from '@/hooks/use-alert';
 
 // 3. API helpers
-import { lookupProfiles, lookupProfilesAdvanced, registerCustomer } from '@/lib/api';
+import { lookupProfiles, lookupProfilesAdvanced } from '@/lib/api';
 
 import { Colors } from '@/constants/theme';
 
@@ -74,17 +71,6 @@ export default function CustomerFormCard({
   const [advEmail, setAdvEmail] = useState('');
   const [visibleAdvFilters, setVisibleAdvFilters] = useState<AdvFilterId[]>([]);
   const debounceTimerRef = useRef<any>(null);
-
-  // Quick Register Modal State
-  const [quickRegVisible, setQuickRegVisible] = useState(false);
-  const [regFirstName, setRegFirstName] = useState('');
-  const [regLastName, setRegLastName] = useState('');
-  const [regPhone, setRegPhone] = useState('');
-  const [regEmail, setRegEmail] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
-
-  // ── การแจ้งเตือน (มาตรฐานกลาง — ดู STANDARD.md §3.3) ──
-  const { showAlert, alertElement } = useAlert();
 
   // Single unified search (name / phone / email) with 300ms Debounce, min 1 char
   const searchProfiles = (query: string, filterOverride?: 'all' | 'name' | 'phone' | 'email') => {
@@ -250,73 +236,6 @@ export default function CustomerFormCard({
     setAdvPhone('');
     setAdvEmail('');
     setVisibleAdvFilters([]);
-  };
-
-  const openQuickRegister = () => {
-    const baseName = customerName.trim() || advName.trim() || searchText.trim();
-    const parts = baseName.split(' ');
-    const digitsInSearch = (searchText || advPhone).replace(/[^0-9]/g, '').slice(0, 10);
-    setRegFirstName(parts[0] || '');
-    setRegLastName(parts.slice(1).join(' ') || '');
-    setRegPhone(phone.trim() || advPhone.trim() || digitsInSearch);
-    setRegEmail(email.trim() || advEmail.trim());
-    setQuickRegVisible(true);
-  };
-
-  const handleConfirmQuickRegister = async () => {
-    if (!regFirstName.trim() || !regPhone.trim()) {
-      showAlert('ข้อมูลไม่ครบ', 'กรุณากรอกชื่อและเบอร์โทรศัพท์ของลูกค้า', 'warning');
-      return;
-    }
-
-    setIsRegistering(true);
-    try {
-      const cleanPhone = regPhone.replace(/[^0-9]/g, '').slice(0, 10);
-      const cleanEmail = regEmail.trim() || `cus_${cleanPhone || Date.now()}@itvertex.local`;
-      const res = await registerCustomer({
-        first_name: regFirstName.trim(),
-        last_name: regLastName.trim() || '-',
-        phone: cleanPhone,
-        email: cleanEmail,
-        password: 'Customer1234Z',
-      });
-
-      if (res.success && res.data?.user) {
-        const newUser = res.data.user;
-        const fullName = `${newUser.first_name || ''} ${newUser.last_name || ''}`.trim();
-        onChangeCustomerName(fullName);
-        onChangePhone(newUser.phone || cleanPhone);
-        onChangeEmail(newUser.email || cleanEmail);
-
-        onSelectCustomer?.({
-          id: newUser.id,
-          first_name: newUser.first_name,
-          last_name: newUser.last_name,
-          phone: newUser.phone,
-          email: newUser.email,
-        });
-
-        setQuickRegVisible(false);
-        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
-        setSearchText('');
-        setAdvName('');
-        setAdvPhone('');
-        setAdvEmail('');
-        setVisibleAdvFilters([]);
-        setSuggestions([]);
-        setShowSuggestions(false);
-        setHasSearched(false);
-        showAlert('สำเร็จ', 'ลงทะเบียนลูกค้าใหม่เรียบร้อยแล้ว', 'success');
-      } else {
-        throw new Error(res.message || 'ไม่สามารถลงทะเบียนได้');
-      }
-    } catch (err: any) {
-      console.error('Quick register error:', err);
-      const msg = err?.message || 'เกิดข้อผิดพลาดในการลงทะเบียนลูกค้า';
-      showAlert('เกิดข้อผิดพลาด', msg, 'danger');
-    } finally {
-      setIsRegistering(false);
-    }
   };
 
   return (
@@ -568,20 +487,15 @@ export default function CustomerFormCard({
           !loading &&
           suggestions.length === 0 &&
           (searchText.trim().length >= 1 || hasAdvancedFilter) && (
-            <View className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+            <View className="bg-amber-50 rounded-xl border border-amber-200 overflow-hidden">
               <View className="flex-col items-center p-4 gap-2">
-                <Ionicons name="person-add-outline" size={28} color="#94A3B8" />
-                <Text className="text-xs text-slate-600 font-body text-center">
-                  ไม่พบลูกค้า {"\""}{searchText.trim() || [advName.trim(), advPhone.trim(), advEmail.trim()].filter(Boolean).join(' • ')}{"\""}
+                <Ionicons name="person-add-outline" size={28} color="#D97706" />
+                <Text className="text-xs text-slate-700 font-body text-center">
+                  ไม่พบลูกค้า {"\""}{searchText.trim() || [advName.trim(), advPhone.trim(), advEmail.trim()].filter(Boolean).join(' • ')}{"\""} ในระบบ
                 </Text>
-                <TouchableOpacity
-                  onPress={openQuickRegister}
-                  activeOpacity={0.8}
-                  className="flex-row items-center bg-blue-600 px-4 py-2 rounded-full mt-1"
-                >
-                  <Ionicons name="add" size={14} color="#FFFFFF" />
-                  <Text className="text-xs font-bold text-white ml-1 font-heading">สร้างลูกค้าใหม่</Text>
-                </TouchableOpacity>
+                <Text className="text-[11px] text-amber-800 font-body text-center leading-4">
+                  พนักงานไม่สามารถสร้างบัญชีลูกค้าใหม่ได้ กรุณาให้ลูกค้าสมัครบัญชีผ่านแอป IT VERTEX ด้วยตนเองก่อน แล้วจึงค้นหาอีกครั้ง
+                </Text>
               </View>
             </View>
           )}
@@ -664,93 +578,6 @@ export default function CustomerFormCard({
         </View>
 
       </View>
-
-      {/* Quick Register Modal */}
-      <Modal visible={quickRegVisible} transparent animationType="fade">
-        <View className="flex-1 bg-black/50 justify-center items-center p-4">
-          <View className="bg-white rounded-2xl w-full max-w-sm p-5 shadow-lg border border-slate-200">
-            <View className="flex-row items-center justify-between mb-3 pb-2 border-b border-slate-100">
-              <View className="flex-row items-center gap-2">
-                <Ionicons name="person-add" size={20} color={Colors.primary} />
-                <Text className="text-base font-bold text-slate-900 font-heading">
-                  ลงทะเบียนลูกค้าใหม่หน้าร้าน
-                </Text>
-              </View>
-              <TouchableOpacity onPress={() => setQuickRegVisible(false)}>
-                <Ionicons name="close" size={20} color="#94A3B8" />
-              </TouchableOpacity>
-            </View>
-
-            <View className="flex-col gap-3">
-              <View>
-                <Text className="text-xs text-slate-600 font-body mb-1">ชื่อจริง *</Text>
-                <TextInput
-                  className="h-10 border border-slate-200 rounded-xl px-3 text-sm font-body"
-                  value={regFirstName}
-                  onChangeText={setRegFirstName}
-                  placeholder="เช่น สมชาย"
-                />
-              </View>
-
-              <View>
-                <Text className="text-xs text-slate-600 font-body mb-1">นามสกุล</Text>
-                <TextInput
-                  className="h-10 border border-slate-200 rounded-xl px-3 text-sm font-body"
-                  value={regLastName}
-                  onChangeText={setRegLastName}
-                  placeholder="เช่น ใจดี"
-                />
-              </View>
-
-              <View>
-                <Text className="text-xs text-slate-600 font-body mb-1">เบอร์โทรศัพท์ *</Text>
-                <TextInput
-                  className="h-10 border border-slate-200 rounded-xl px-3 text-sm font-body"
-                  value={regPhone}
-                  onChangeText={(t) => setRegPhone(t.replace(/[^0-9]/g, '').slice(0, 10))}
-                  keyboardType="phone-pad"
-                  placeholder="08xxxxxxxx"
-                  maxLength={10}
-                />
-              </View>
-
-              <View>
-                <Text className="text-xs text-slate-600 font-body mb-1">อีเมล (ถ้ามี)</Text>
-                <TextInput
-                  className="h-10 border border-slate-200 rounded-xl px-3 text-sm font-body"
-                  value={regEmail}
-                  onChangeText={setRegEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  placeholder="customer@email.com"
-                />
-              </View>
-            </View>
-
-            <View className="flex-row items-center gap-2 mt-5">
-              <TouchableOpacity
-                onPress={() => setQuickRegVisible(false)}
-                className="flex-1 py-2.5 rounded-xl border border-slate-200 items-center"
-              >
-                <Text className="text-xs font-bold text-slate-600 font-heading">ยกเลิก</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleConfirmQuickRegister}
-                disabled={isRegistering}
-                className="flex-1 py-2.5 rounded-xl bg-primary items-center"
-              >
-                {isRegistering ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text className="text-xs font-bold text-white font-heading">บันทึกลูกค้า</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {alertElement}
     </View>
   );
 }

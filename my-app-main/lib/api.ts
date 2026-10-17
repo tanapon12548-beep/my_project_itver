@@ -574,14 +574,3 @@ export function getLookupItemTypes() {
 export function getLookupQuotationStatuses() {
   return api.get('/lookup/quotation-statuses');
 }
-
-// --- Customer Register by Staff ---
-export function registerCustomer(data: {
-  first_name: string;
-  last_name?: string;
-  phone?: string;
-  email?: string;
-  password?: string;
-}) {
-  return api.post('/auth/register', data);
-}
