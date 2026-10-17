@@ -10,7 +10,7 @@
 --
 -- ที่มาของข้อมูล
 --   - โครงสร้าง (DDL / view / sequence / index) : คัดลอกจาก database.sql
---   - master data : ดึงจากฐานข้อมูลจริงปัจจุบัน (ตัวจริงล่าสุด ครบกว่าลิสต์ใน database.sql)
+--   - master data : ดึงจากฐานข้อมูลจริงปัจจุบัน (ครบกว่าลิสต์ใน database.sql)
 --
 -- วิธีใช้
 --   1) สร้างฐานข้อมูลใหม่   :  CREATE DATABASE app_mockup;
@@ -19,6 +19,7 @@
 -- *** คำเตือน: ไฟล์นี้ DROP ตารางเดิมทั้งหมด ***
 --   ใช้กับฐานข้อมูลใหม่/ฐานข้อมูล mockup เท่านั้น
 --   ห้ามรันกับฐานข้อมูลที่มีข้อมูลจริง (เช่น app_data) เพราะข้อมูลจะหายทั้งหมด
+--   หมายเหตุ: ไฟล์นี้ไม่มีบัญชีผู้ใช้ ต้องสมัคร/สร้างบัญชีเองก่อนใช้งาน
 -- ============================================================
 
 -- ============================================================
@@ -49,9 +50,10 @@ DROP TABLE IF EXISTS public.quotation_status CASCADE;
 DROP TABLE IF EXISTS public.action_type CASCADE;
 DROP TABLE IF EXISTS public.status CASCADE;
 DROP TABLE IF EXISTS public.roles CASCADE;
+DROP TABLE IF EXISTS public.device_models CASCADE;
+DROP TABLE IF EXISTS public.brand_device_types CASCADE;
 DROP TABLE IF EXISTS public.device_types CASCADE;
 DROP TABLE IF EXISTS public.brands CASCADE;
-DROP TABLE IF EXISTS public.device_models CASCADE;
 DROP TABLE IF EXISTS public.symptoms CASCADE;
 
 -- ============================================================
@@ -131,6 +133,14 @@ CREATE TABLE IF NOT EXISTS public.device_models
     model_name text NOT NULL,
     CONSTRAINT device_models_pkey PRIMARY KEY (model_id),
     CONSTRAINT uq_brand_model UNIQUE (brand_id, model_name)
+);
+
+-- 1.10 ตารางเชื่อม ยี่ห้อ ↔ ประเภทอุปกรณ์ (ยี่ห้อนี้ใช้ได้กับเครื่องประเภทไหน)
+CREATE TABLE IF NOT EXISTS public.brand_device_types
+(
+    brand_id integer NOT NULL,
+    device_type_id integer NOT NULL,
+    CONSTRAINT brand_device_types_pkey PRIMARY KEY (brand_id, device_type_id)
 );
 
 
@@ -287,6 +297,9 @@ ALTER TABLE IF EXISTS public.password_reset_tokens ADD CONSTRAINT password_reset
 ALTER TABLE IF EXISTS public.device ADD CONSTRAINT device_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.profiles (id) ON DELETE SET NULL;
 ALTER TABLE IF EXISTS public.device ADD CONSTRAINT device_device_type_id_fkey FOREIGN KEY (device_type_id) REFERENCES public.device_types (device_type_id) ON DELETE SET NULL;
 ALTER TABLE IF EXISTS public.device ADD CONSTRAINT device_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.brands (brand_id) ON DELETE SET NULL;
+
+ALTER TABLE IF EXISTS public.brand_device_types ADD CONSTRAINT brand_device_types_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.brands (brand_id) ON DELETE CASCADE;
+ALTER TABLE IF EXISTS public.brand_device_types ADD CONSTRAINT brand_device_types_device_type_id_fkey FOREIGN KEY (device_type_id) REFERENCES public.device_types (device_type_id) ON DELETE CASCADE;
 
 ALTER TABLE IF EXISTS public.item ADD CONSTRAINT item_item_type_id_fkey FOREIGN KEY (item_type_id) REFERENCES public.item_type (item_type_id) ON DELETE SET NULL;
 
@@ -470,6 +483,71 @@ VALUES
   (28, 'Western Digital (WD)'),
   (29, 'Seagate'),
   (30, 'อื่นๆ / ทั่วไป');
+
+-- brand_device_types (61 แถว)
+INSERT INTO public.brand_device_types (brand_id, device_type_id)
+VALUES
+  (1, 1),
+  (1, 2),
+  (1, 3),
+  (1, 4),
+  (2, 1),
+  (2, 2),
+  (2, 3),
+  (2, 4),
+  (3, 1),
+  (3, 2),
+  (3, 3),
+  (3, 4),
+  (4, 1),
+  (4, 2),
+  (4, 3),
+  (4, 5),
+  (5, 1),
+  (5, 2),
+  (5, 3),
+  (5, 7),
+  (6, 1),
+  (6, 2),
+  (6, 3),
+  (6, 7),
+  (7, 1),
+  (7, 2),
+  (7, 4),
+  (8, 1),
+  (8, 7),
+  (9, 1),
+  (9, 7),
+  (10, 4),
+  (10, 7),
+  (11, 1),
+  (11, 2),
+  (11, 4),
+  (12, 1),
+  (12, 2),
+  (12, 4),
+  (13, 1),
+  (14, 2),
+  (14, 3),
+  (14, 6),
+  (15, 3),
+  (15, 4),
+  (16, 4),
+  (17, 4),
+  (18, 4),
+  (19, 4),
+  (20, 5),
+  (21, 5),
+  (22, 5),
+  (23, 5),
+  (24, 5),
+  (25, 5),
+  (26, 4),
+  (26, 7),
+  (27, 6),
+  (28, 6),
+  (29, 6),
+  (30, 6);
 
 -- device_models (188 แถว)
 INSERT INTO public.device_models (model_id, brand_id, device_type_id, model_name)

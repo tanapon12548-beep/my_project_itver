@@ -22,6 +22,8 @@ DROP TABLE IF EXISTS public.quotation_status CASCADE;
 DROP TABLE IF EXISTS public.action_type CASCADE;
 DROP TABLE IF EXISTS public.status CASCADE;
 DROP TABLE IF EXISTS public.roles CASCADE;
+DROP TABLE IF EXISTS public.device_models CASCADE;
+DROP TABLE IF EXISTS public.brand_device_types CASCADE;
 DROP TABLE IF EXISTS public.device_types CASCADE;
 DROP TABLE IF EXISTS public.brands CASCADE;
 DROP TABLE IF EXISTS public.symptoms CASCADE;
@@ -103,6 +105,14 @@ CREATE TABLE IF NOT EXISTS public.device_models
     model_name text NOT NULL,
     CONSTRAINT device_models_pkey PRIMARY KEY (model_id),
     CONSTRAINT uq_brand_model UNIQUE (brand_id, model_name)
+);
+
+-- 1.10 ตารางเชื่อม ยี่ห้อ ↔ ประเภทอุปกรณ์ (ยี่ห้อนี้ใช้ได้กับเครื่องประเภทไหน)
+CREATE TABLE IF NOT EXISTS public.brand_device_types
+(
+    brand_id integer NOT NULL,
+    device_type_id integer NOT NULL,
+    CONSTRAINT brand_device_types_pkey PRIMARY KEY (brand_id, device_type_id)
 );
 
 
@@ -260,6 +270,9 @@ ALTER TABLE IF EXISTS public.device ADD CONSTRAINT device_customer_id_fkey FOREI
 ALTER TABLE IF EXISTS public.device ADD CONSTRAINT device_device_type_id_fkey FOREIGN KEY (device_type_id) REFERENCES public.device_types (device_type_id) ON DELETE SET NULL;
 ALTER TABLE IF EXISTS public.device ADD CONSTRAINT device_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.brands (brand_id) ON DELETE SET NULL;
 
+ALTER TABLE IF EXISTS public.brand_device_types ADD CONSTRAINT brand_device_types_brand_id_fkey FOREIGN KEY (brand_id) REFERENCES public.brands (brand_id) ON DELETE CASCADE;
+ALTER TABLE IF EXISTS public.brand_device_types ADD CONSTRAINT brand_device_types_device_type_id_fkey FOREIGN KEY (device_type_id) REFERENCES public.device_types (device_type_id) ON DELETE CASCADE;
+
 ALTER TABLE IF EXISTS public.item ADD CONSTRAINT item_item_type_id_fkey FOREIGN KEY (item_type_id) REFERENCES public.item_type (item_type_id) ON DELETE SET NULL;
 
 ALTER TABLE IF EXISTS public.repair_job ADD CONSTRAINT repair_job_device_id_fkey FOREIGN KEY (device_id) REFERENCES public.device (device_id) ON DELETE CASCADE;
@@ -401,12 +414,13 @@ ON CONFLICT (item_type_id) DO UPDATE SET item_type_name = EXCLUDED.item_type_nam
 
 -- 5.7 ประเภทอุปกรณ์ (Device Types)
 INSERT INTO public.device_types (device_type_id, device_type_name) VALUES
-(1, 'Notebook / Laptop'),
+(1, 'Notebook / Laptops'),
 (2, 'Desktop PC'),
 (3, 'All-in-One PC'),
 (4, 'Monitor'),
 (5, 'Printer / Scanner'),
-(6, 'Other')
+(6, 'Other'),
+(7, 'Tablet / iPad')
 ON CONFLICT (device_type_id) DO UPDATE SET device_type_name = EXCLUDED.device_type_name;
 
 -- 5.8 ยี่ห้ออุปกรณ์ (Brands)
@@ -438,7 +452,13 @@ INSERT INTO public.brands (brand_id, brand_name) VALUES
 (22, 'Brother'),
 (23, 'Pantum'),
 (24, 'Ricoh'),
-(25, 'Fuji Xerox')
+(25, 'Fuji Xerox'),
+-- ยี่ห้อเพิ่มเติม (อัปเดตล่าสุด)
+(26, 'Xiaomi'),
+(27, 'APC'),
+(28, 'Western Digital (WD)'),
+(29, 'Seagate'),
+(30, 'อื่นๆ / ทั่วไป')
 ON CONFLICT (brand_id) DO UPDATE SET brand_name = EXCLUDED.brand_name;
 
 -- 5.8.1 รุ่นอุปกรณ์ (Device Models)
@@ -488,6 +508,72 @@ INSERT INTO public.device_models (brand_id, device_type_id, model_name) VALUES
 (14, 2, 'Custom Office Desktop')
 ON CONFLICT (brand_id, model_name) DO NOTHING;
 
+-- 5.8.2 ตารางเชื่อม ยี่ห้อ ↔ ประเภทอุปกรณ์ (Brand–Device Type Mapping)
+-- ใช้กรองตัวเลือก "ยี่ห้อ" ในฟอร์มรับเครื่อง ให้เหลือเฉพาะยี่ห้อของประเภทเครื่องที่เลือก
+INSERT INTO public.brand_device_types (brand_id, device_type_id) VALUES
+(1, 1),
+(1, 2),
+(1, 3),
+(1, 4),
+(2, 1),
+(2, 2),
+(2, 3),
+(2, 4),
+(3, 1),
+(3, 2),
+(3, 3),
+(3, 4),
+(4, 1),
+(4, 2),
+(4, 3),
+(4, 5),
+(5, 1),
+(5, 2),
+(5, 3),
+(5, 7),
+(6, 1),
+(6, 2),
+(6, 3),
+(6, 7),
+(7, 1),
+(7, 2),
+(7, 4),
+(8, 1),
+(8, 7),
+(9, 1),
+(9, 7),
+(10, 4),
+(10, 7),
+(11, 1),
+(11, 2),
+(11, 4),
+(12, 1),
+(12, 2),
+(12, 4),
+(13, 1),
+(14, 2),
+(14, 3),
+(14, 6),
+(15, 3),
+(15, 4),
+(16, 4),
+(17, 4),
+(18, 4),
+(19, 4),
+(20, 5),
+(21, 5),
+(22, 5),
+(23, 5),
+(24, 5),
+(25, 5),
+(26, 4),
+(26, 7),
+(27, 6),
+(28, 6),
+(29, 6),
+(30, 6)
+ON CONFLICT DO NOTHING;
+
 -- 5.9 รายการอะไหล่และค่าบริการทั้งหมด (สอดคล้องกับประเภทอุปกรณ์และยี่ห้อ)
 INSERT INTO public.item (item_id, item_name, item_type_id, selling_price) VALUES
 -- [หมวดอะไหล่: item_type_id = 1]
@@ -534,14 +620,15 @@ ON CONFLICT (item_id) DO UPDATE SET
     selling_price = EXCLUDED.selling_price;
 
 -- 5.10 ผู้ใช้งานเริ่มต้น (Seed Profiles)
--- รหัสผ่านของทุกบัญชีคือ: <email>Z (เช่น technician1@gmail.comZ, staff1@gmail.comZ, Manager1234@gmai.comZ, cus1@gmail.comZ)
+-- รหัสผ่านของทุกบัญชีคือ <email> + Z (เช่น technician1@gmail.comZ, staff1@gmail.comZ, cus1@gmail.comZ)
+-- ยกเว้น Manager: รหัสผ่านคือ Manager1234@gmai.comZ (พิมพ์ "gmai" ตกตัว l ตามที่ตั้งไว้จริง)
 INSERT INTO public.profiles (id, email, password, first_name, last_name, phone, role_id) VALUES
-(1, 'Manager1234@gmai.com', '$2a$10$5cseq1UHtfgMQ.jbD.zTRe//MBxSOJYKtQkMLykyukyfirlVZYUam', 'ผู้จัดการ', 'ใจดี', '0698516971', 1),
+(1, 'Manager1234@gmail.com', '$2a$10$5cseq1UHtfgMQ.jbD.zTRe//MBxSOJYKtQkMLykyukyfirlVZYUam', 'ผู้จัดการ', 'ใจดี', '0698516971', 1),
 (2, 'staff1@gmail.com', '$2a$10$kWjXpL33HCwL52bb5HQcN.6hEQFMRLy3fJBOrwJz89xftFfwJyZYS', 'เสมียน', 'ใจดีมาก', '0698512699', 3),
 (3, 'technician1@gmail.com', '$2a$10$KiTnNlS41FgAXp7RbZ5SGeASDmZCvhUAQHPriwY2249ROtvm18AVC', 'ช่าง', 'ใจดี', '0896513966', 2),
 (4, 'cus1@gmail.com', '$2a$10$Yllgh222rcqyyNY.0yinHOJwJa.Z1FZ8TSxWMAX.39YQIFQN1SBlC', 'ลูกค้า', 'ใจดีที่สุด', '0896513688', 4),
 (5, 'test@gmail.com', '$2a$10$Yllgh222rcqyyNY.0yinHOJwJa.Z1FZ8TSxWMAX.39YQIFQN1SBlC', 'ลูกค้าตัวจริง', 'ใจดี', '0812345678', 4),
-(6, 'customer1@gamill.comz', '$2a$10$90K6qsrQE5pq/OtgsdpmxeET3FH8/fu9dcyYuXuUwWuEbMG4IT7fS', 'สมชาย', 'ใจดี', '0654987100', 4)
+(6, 'customer1@gamill.com', '$2a$10$90K6qsrQE5pq/OtgsdpmxeET3FH8/fu9dcyYuXuUwWuEbMG4IT7fS', 'สมชาย', 'ใจดี', '0654987100', 4)
 ON CONFLICT (id) DO UPDATE SET
     email = EXCLUDED.email,
     password = EXCLUDED.password,
